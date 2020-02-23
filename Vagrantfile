@@ -55,15 +55,15 @@ Vagrant.configure(2) do |config|
     v.default_prefix = ENV['USER'].to_s.dup.concat('_').concat(File.basename(Dir.pwd))
   end
 
-  #deiban10-based build VM
-  config.vm.define "bionic64", primary: true do |bionic64|
+  #ubuntu1804-based build VM
+  config.vm.define "ubuntu1804", primary: true do |ubuntu1804|
 
-    bionic64.vm.box = "ubuntu/bionic64"
+    ubuntu1804.vm.box = "generic/ubuntu1804"
 
-    bionic64.vm.synced_folder "./vagrant_share/", "/vagrant/", create: true, type: "sshfs", sshfs_opts_append: "-o cache=no"
-    bionic64.vm.synced_folder ".", "/home/vagrant/wine-ge", id: "wine-ge", type: "rsync", rsync__exclude: ["vagrant_share"]
+    ubuntu1804.vm.synced_folder "./vagrant_share/", "/vagrant/", create: true, type: "sshfs", sshfs_opts_append: "-o cache=no"
+    ubuntu1804.vm.synced_folder ".", "/home/vagrant/wine-ge", id: "wine-ge", type: "rsync", rsync__exclude: ["vagrant_share"]
 
-    bionic64.vm.provision "shell", privileged: "true", inline: <<-SHELL
+    ubuntu1804.vm.provision "shell", privileged: "true", inline: <<-SHELL
 
       #install dependencies
 
