@@ -115,10 +115,12 @@
     # staging winex11-WM_WINDOWPOSCHANGING
     #patch -Np1 < ../game-patches-testing/proton-hotfixes/proton-staging_winex11-WM_WINDOWPOSCHANGING.patch
 
-    echo "Valve VR patches"
+    echo "Valve dxgi patches"
     patch -Np1 < ../game-patches-testing/proton-valve-patches/proton-vr.patch
+
     echo "Valve vulkan patches"
     patch -Np1 < ../game-patches-testing/proton-valve-patches/proton-vk-bits-4.5.patch
+
     echo "FS Hack integer scaling"
     patch -Np1 < ../game-patches-testing/proton-valve-patches/proton_fs_hack_integer_scaling.patch
 

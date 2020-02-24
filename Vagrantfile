@@ -61,25 +61,56 @@ Vagrant.configure(2) do |config|
     ubuntu1804.vm.box = "generic/ubuntu1804"
 
     ubuntu1804.vm.synced_folder "./vagrant_share/", "/vagrant/", create: true, type: "sshfs", sshfs_opts_append: "-o cache=no"
-    ubuntu1804.vm.synced_folder ".", "/home/vagrant/wine-ge", id: "wine-ge", type: "rsync", rsync__exclude: ["vagrant_share"]
+    ubuntu1804.vm.synced_folder ".", "/home/vagrant/lutris-buildbot", id: "lutris-buildbot", type: "rsync", rsync__exclude: ["vagrant_share"]
 
     ubuntu1804.vm.provision "shell", privileged: "true", inline: <<-SHELL
 
       #install dependencies
 
       apt-get update
-      apt-get install -y lxd lxd-client
-
-      #allow vagrant user to run lxc containers
-      adduser vagrant lxd
+      apt-get install -y lxd lxd-client sshpass
 
       # setup lxc containers
-      sudo -u vagrant cat buildbot/preseed | lxd init --preseed
+      sudo -u vagrant cat lutris-buildbot/buildbot/preseed | lxd init --preseed
       sudo -u vagrant lxc launch images:ubuntu/bionic/amd64 buildbot-bionic-amd64
       sudo -u vagrant lxc launch images:ubuntu/bionic/i386 buildbot-bionic-i386
-      sudo -u vagrant lxc exec buildbot-bionic-amd64 bash $(echo ubuntu | passwd --stdin ubuntu)
-      sudo -u vagrant lxc exec buildbot-bionic-i386 bash $(echo ubuntu | passwd --stdin ubuntu)
 
+      sudo -u vagrant lxc exec buildbot-bionic-amd64 bash
+      echo -e "ubuntu\nubuntu" | passwd ubuntu
+      echo 'ubuntu ALL=NOPASSWD: /usr/bin/apt' | sudo EDITOR='tee -a' visudo
+      echo 'ubuntu ALL=NOPASSWD: /usr/bin/apt-get' | sudo EDITOR='tee -a' visudo
+      echo 'ubuntu ALL=NOPASSWD: /usr/bin/dpkg' | sudo EDITOR='tee -a' visudo
+      exit
+
+      sudo -u vagrant lxc exec buildbot-bionic-i386 bash
+      echo -e "ubuntu\nubuntu" | passwd ubuntu
+      echo 'ubuntu ALL=NOPASSWD: /usr/bin/apt' | sudo EDITOR='tee -a' visudo
+      echo 'ubuntu ALL=NOPASSWD: /usr/bin/apt-get' | sudo EDITOR='tee -a' visudo
+      echo 'ubuntu ALL=NOPASSWD: /usr/bin/dpkg' | sudo EDITOR='tee -a' visudo
+      exit
+
+      cd lutris-buildbot/buildbot
+      ./setup.sh buildbot-bionic-amd64 buildbot-bionic-i386
+      ./setup-container.sh buildbot-bionic-amd64
+      ./setup-container.sh buildbot-bionic-i386
+      cat /dev/zero | ssh-keygen -q -N ""
+      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-amd64
+      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-i386
+
+      ssh -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-amd64
+      chown -R ubuntu:ubuntu ~/.ssh/config
+      cat /dev/zero | ssh-keygen -q -N ""
+      sudo apt -y install sshpass
+      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot32
+      exit
+
+      ssh -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-i386
+      chown -R ubuntu:ubuntu ~/.ssh/config
+      cat /dev/zero | ssh-keygen -q -N ""
+      sudo apt -y install sshpass
+      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot64
+      exit
+      cd ../../
 
     SHELL
   end
