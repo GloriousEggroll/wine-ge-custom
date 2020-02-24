@@ -63,7 +63,7 @@ Vagrant.configure(2) do |config|
     ubuntu1804.vm.synced_folder "./vagrant_share/", "/vagrant/", create: true, type: "sshfs", sshfs_opts_append: "-o cache=no"
     ubuntu1804.vm.synced_folder ".", "/home/vagrant/lutris-buildbot", id: "lutris-buildbot", type: "rsync", rsync__exclude: ["vagrant_share"]
 
-    ubuntu1804.vm.provision "shell", privileged: "true", inline: <<-SHELL
+    ubuntu1804.vm.provision "shell-1", type: "shell", inline: <<-SHELL
 
       #install dependencies
 
@@ -71,25 +71,25 @@ Vagrant.configure(2) do |config|
       apt-get install -y lxd lxd-client sshpass
 
       # setup lxc containers
-      sudo -u vagrant cat lutris-buildbot/buildbot/preseed | lxd init --preseed
-      sudo -u vagrant lxc launch images:ubuntu/bionic/amd64 buildbot-bionic-amd64
-      sudo -u vagrant lxc launch images:ubuntu/bionic/i386 buildbot-bionic-i386
+      usermod -aG lxd vagrant
 
-      sudo -u vagrant lxc exec buildbot-bionic-amd64 bash
-      echo -e "ubuntu\nubuntu" | passwd ubuntu
-      echo 'ubuntu ALL=NOPASSWD: /usr/bin/apt' | sudo EDITOR='tee -a' visudo
-      echo 'ubuntu ALL=NOPASSWD: /usr/bin/apt-get' | sudo EDITOR='tee -a' visudo
-      echo 'ubuntu ALL=NOPASSWD: /usr/bin/dpkg' | sudo EDITOR='tee -a' visudo
-      exit
+    SHELL
+    ubuntu1804.vm.provision "shell-2", type: "shell", after: "shell-1", :privileged => false, inline: <<-SHELL
 
-      sudo -u vagrant lxc exec buildbot-bionic-i386 bash
-      echo -e "ubuntu\nubuntu" | passwd ubuntu
-      echo 'ubuntu ALL=NOPASSWD: /usr/bin/apt' | sudo EDITOR='tee -a' visudo
-      echo 'ubuntu ALL=NOPASSWD: /usr/bin/apt-get' | sudo EDITOR='tee -a' visudo
-      echo 'ubuntu ALL=NOPASSWD: /usr/bin/dpkg' | sudo EDITOR='tee -a' visudo
-      exit
+      cat lutris-buildbot/buildbot/preseed | lxd init --preseed
+      lxc launch images:ubuntu/bionic/amd64 buildbot-bionic-amd64
+      lxc launch images:ubuntu/bionic/i386 buildbot-bionic-i386
+
+      lxc file push lutris-buildbot/buildbot-usersetup.sh buildbot-bionic-amd64/home/ubuntu/
+      lxc exec buildbot-bionic-amd64 -- ./home/ubuntu/buildbot-usersetup.sh
+
+      lxc file push lutris-buildbot/buildbot-usersetup.sh buildbot-bionic-i386/home/ubuntu/
+      lxc exec buildbot-bionic-i386 -- ./home/ubuntu/buildbot-usersetup.sh
 
       cd lutris-buildbot/buildbot
+
+      #todo: sort out what the fuck is going on inside the vagrant provisioner here
+
       ./setup.sh buildbot-bionic-amd64 buildbot-bionic-i386
       ./setup-container.sh buildbot-bionic-amd64
       ./setup-container.sh buildbot-bionic-i386

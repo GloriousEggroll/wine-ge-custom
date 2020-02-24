@@ -29,9 +29,9 @@
     -W winex11-key_translation 
 
     #VKD3D-WINE
-    #echo "applying WoW vkd3d wine patches
-    #patch -Np1 < ../game-patches-testing/wine-patches/D3D12SerializeVersionedRootSignature.patch
-    #patch -Np1 < ../game-patches-testing/wine-patches/D3D12CreateVersionedRootSignatureDeserializer.patch
+    echo "applying WoW vkd3d wine patches
+    patch -Np1 < ../game-patches-testing/wine-patches/D3D12SerializeVersionedRootSignature.patch
+    patch -Np1 < ../game-patches-testing/wine-patches/D3D12CreateVersionedRootSignatureDeserializer.patch
 
     #WINE VULKAN
     echo "applying winevulkan patches"
