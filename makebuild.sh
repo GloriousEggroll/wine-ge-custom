@@ -7,6 +7,8 @@
 vagrant up
 vagrant ssh
 
+# TODO: fix this process:
+
 # cleanup any old builds first
 ssh ubuntu@buildbot-bionic-amd64
 cd buildbot
