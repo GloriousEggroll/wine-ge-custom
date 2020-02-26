@@ -65,52 +65,52 @@ Vagrant.configure(2) do |config|
 
     ubuntu1804.vm.provision "shell-1", type: "shell", inline: <<-SHELL
 
-      #install dependencies
-
+      #install dependencies on host vm
       apt-get update
       apt-get install -y lxd lxd-client sshpass
 
-      # setup lxc containers
+      # add vagrant user to lxd group to allow lxc permissions
       usermod -aG lxd vagrant
 
     SHELL
     ubuntu1804.vm.provision "shell-2", type: "shell", after: "shell-1", :privileged => false, inline: <<-SHELL
 
+      # setup lxc containers
       cat lutris-buildbot/buildbot/preseed | lxd init --preseed
-      lxc launch images:ubuntu/bionic/amd64 buildbot-bionic-amd64
       lxc launch images:ubuntu/bionic/i386 buildbot-bionic-i386
+      lxc launch images:ubuntu/bionic/amd64 buildbot-bionic-amd64
 
-      lxc file push lutris-buildbot/buildbot-usersetup.sh buildbot-bionic-amd64/home/ubuntu/
-      lxc exec buildbot-bionic-amd64 -- ./home/ubuntu/buildbot-usersetup.sh
-
+      # setup ubuntu user on both containers
       lxc file push lutris-buildbot/buildbot-usersetup.sh buildbot-bionic-i386/home/ubuntu/
-      lxc exec buildbot-bionic-i386 -- ./home/ubuntu/buildbot-usersetup.sh
+      lxc exec buildbot-bionic-i386 -- bash -c /home/ubuntu/buildbot-usersetup.sh
+      lxc file push lutris-buildbot/buildbot-usersetup.sh buildbot-bionic-amd64/home/ubuntu/
+      lxc exec buildbot-bionic-amd64 -- bash -c /home/ubuntu/buildbot-usersetup.sh
 
+      # setup host file on VM
       cd lutris-buildbot/buildbot
+      echo "Sleeping for 10 seconds to allow both containers to be fully started."
+      sleep 10 # this must be done otherwise one of the machines wont have an IP available for the setup.sh script.
+      ./setup.sh buildbot-bionic-i386 buildbot-bionic-amd64
+      cat ~/.ssh/config # view to verify IPs for both machines have been added to ~/.ssh/config
 
-      #todo: sort out what the fuck is going on inside the vagrant provisioner here
-
-      ./setup.sh buildbot-bionic-amd64 buildbot-bionic-i386
-      ./setup-container.sh buildbot-bionic-amd64
+      # setup dependencies, repositories, files on containers
       ./setup-container.sh buildbot-bionic-i386
+      ./setup-container.sh buildbot-bionic-amd64
+
+      cd ~
+
+      # setup ssh keys from host to both containers
       cat /dev/zero | ssh-keygen -q -N ""
-      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-amd64
       sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-i386
+      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-amd64
 
-      ssh -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-amd64
-      chown -R ubuntu:ubuntu ~/.ssh/config
-      cat /dev/zero | ssh-keygen -q -N ""
-      sudo apt -y install sshpass
-      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot32
-      exit
+      # setup ssh keys from 32 bit container to 64 bit container
+      lxc file push lutris-buildbot/buildbot32-sshsetup.sh buildbot-bionic-i386/home/ubuntu/
+      lxc exec buildbot-bionic-i386 -- sudo --login --user ubuntu ./buildbot32-sshsetup.sh
 
-      ssh -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-i386
-      chown -R ubuntu:ubuntu ~/.ssh/config
-      cat /dev/zero | ssh-keygen -q -N ""
-      sudo apt -y install sshpass
-      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot64
-      exit
-      cd ../../
+      # setup ssh keys from 64 bit container to 32 bit container
+      lxc file push lutris-buildbot/buildbot64-sshsetup.sh buildbot-bionic-amd64/home/ubuntu/
+      lxc exec buildbot-bionic-amd64 -- sudo --login --user ubuntu ./buildbot64-sshsetup.sh
 
     SHELL
   end
