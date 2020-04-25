@@ -15,5 +15,6 @@ vagrant ssh -c "ssh ubuntu@buildbot-bionic-amd64 \"cd buildbot/runners/wine && .
 
 vagrant ssh -c 'ssh ubuntu@buildbot-bionic-amd64 "mv buildbot/runners/wine/wine-*.tar.xz ~/"'
 vagrant ssh -c 'scp ubuntu@buildbot-bionic-amd64:/home/ubuntu/wine-*.tar.xz /vagrant/'
+vagrant ssh -c 'ssh ubuntu@buildbot-bionic-amd64 "rm ~/wine-*.tar.xz"'
 
 vagrant halt
