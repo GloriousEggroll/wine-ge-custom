@@ -205,12 +205,12 @@
     echo "proton winevulkan"
     patch -Np1 < ../patches/proton/proton-winevulkan.patch
     
-    echo "msvcrt overrides"
-    patch -Np1 < ../patches/proton/proton-msvcrt_nativebuiltin.patch
+#    echo "msvcrt overrides"
+#    patch -Np1 < ../patches/proton/proton-msvcrt_nativebuiltin.patch
 
-    echo "valve registry entries"
-    patch -Np1 < ../patches/proton/proton-apply_LargeAddressAware_fix_for_Bayonetta.patch
-    patch -Np1 < ../patches/proton/proton-Set_amd_ags_x64_to_built_in_for_Wolfenstein_2.patch
+#    echo "valve registry entries"
+#    patch -Np1 < ../patches/proton/proton-apply_LargeAddressAware_fix_for_Bayonetta.patch
+#    patch -Np1 < ../patches/proton/proton-Set_amd_ags_x64_to_built_in_for_Wolfenstein_2.patch
     
     echo "set prefix win10"
     patch -Np1 < ../patches/proton/proton-win10_default.patch
