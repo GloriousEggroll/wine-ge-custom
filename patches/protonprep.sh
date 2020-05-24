@@ -228,6 +228,9 @@
     echo "guy's media foundation alpha patches"
     patch -Np1 < ../patches/wine-hotfixes/media_foundation_alpha.patch
     
+    echo "proton-specific manual mfplat dll register patch"
+    patch -Np1 < ../patches/wine-hotfixes/proton_mediafoundation_dllreg.patch
+    
     #WINE CUSTOM PATCHES
     #add your own custom patch lines below
     patch -Np1 < ../patches/wine-hotfixes/user32-Set_PAINTSTRUCT_fErase_field_depending_on_the_last_WM_ERASEBKGND_result.patch
