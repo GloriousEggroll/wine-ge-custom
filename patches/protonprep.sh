@@ -174,8 +174,8 @@
 #    echo "steamclient swap"
 #    patch -Np1 < ../patches/proton/proton-steamclient_swap.patch
 
-#    echo "protonify"
-#    patch -Np1 < ../patches/proton/proton-protonify_staging.patch
+    echo "protonify"
+    patch -Np1 < ../patches/proton/proton-protonify_staging.patch
 
     echo "protonify-audio"
     patch -Np1 < ../patches/proton/proton-pa-staging.patch
