@@ -1,0 +1,2322 @@
+From 7bd039f34f5fc1123524ddb22769f6e16e7d9c88 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Thu, 11 May 2017 10:01:16 -0500
+Subject: [PATCH] HACK: ws2_32: Fake success when trying to bind to an IPX
+ address
+
+---
+ dlls/ws2_32/socket.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index 164a48ce751..b9248c9bd5e 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -3332,6 +3332,13 @@ int WINAPI WS_bind(SOCKET s, const struct WS_sockaddr* name, int namelen)
+                     else if (interface_bind(s, fd, &uaddr.addr))
+                         in4->sin_addr.s_addr = htonl(INADDR_ANY);
+                 }
++
++                if(name->sa_family ==  WS_AF_IPX){
++                    /* Quake (and similar family) fails if we can't bind to an IPX address. This often
++                     * doesn't work on Linux, so just fake success. */
++                    return 0;
++                }
++
+                 if (bind(fd, &uaddr.addr, uaddrlen) < 0)
+                 {
+                     int loc_errno = errno;
+
+From 134fa05a0e39b63bfec75d0823ebe49e4c9cae64 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Thu, 7 Jun 2018 14:37:03 -0500
+Subject: [PATCH] HACK: winex11.drv: Disable XIM by default
+
+libx11 has a race condition that causes XIM to crash with "double free
+or corruption" errors, see winehq bug 35041. Disabling XIM works around
+this, though special input methods (CJK, etc.) will no longer work.
+---
+ dlls/winex11.drv/x11drv_main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
+index db87d188236..81a63a20689 100644
+--- a/dlls/winex11.drv/x11drv_main.c
++++ b/dlls/winex11.drv/x11drv_main.c
+@@ -93,7 +93,7 @@ static void *err_callback_arg;               /* error callback argument */
+ static int err_callback_result;              /* error callback result */
+ static unsigned long err_serial;             /* serial number of first request */
+ static int (*old_error_handler)( Display *, XErrorEvent * );
+-static BOOL use_xim = TRUE;
++static BOOL use_xim = FALSE;
+ static char input_style[20];
+ 
+ #define IS_OPTION_TRUE(ch) \
+From 1091eaf13692b16ed66328ceeebfc587075fec6c Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Thu, 25 Oct 2018 12:50:45 -0500
+Subject: [PATCH] HACK: wined3d: Fake an AMD card in place of Nvidia cards
+
+Some games assume they can load the nvapi library if the hardware is an
+nvidia card. This obviously fails in Wine. So fake that all nvidia
+hardware is actually an AMD card, so they don't try to load nvapi.
+---
+ dlls/wined3d/adapter_gl.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/dlls/wined3d/adapter_gl.c b/dlls/wined3d/adapter_gl.c
+index b8a2060cf46..8259d92ebac 100644
+--- a/dlls/wined3d/adapter_gl.c
++++ b/dlls/wined3d/adapter_gl.c
+@@ -1009,6 +1009,14 @@ static const struct wined3d_gpu_description *query_gpu_description(const struct
+         vendor = wined3d_settings.pci_vendor_id;
+         TRACE("Overriding vendor PCI ID with 0x%04x.\n", vendor);
+     }
++    else if(vendor == HW_VENDOR_NVIDIA)
++    {
++        /* XXX: Fake having an AMD card in order to avoid games trying to load
++         * the Windows-only nvapi library. */
++        WARN("Nvidia card detected. Faking an AMD RX 480!\n");
++        vendor = HW_VENDOR_AMD;
++        device = CARD_AMD_RADEON_RX_480;
++    }
+ 
+     if (wined3d_settings.pci_device_id != PCI_DEVICE_NONE)
+     {
+
+From aa7fa7ce94bd4e49e3843a8ea398d29882518e43 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 6 Aug 2018 08:06:03 -0500
+Subject: [PATCH] server: Set default timeout to 0
+
+The Steam client will be waiting for the wineserver to exit to set up
+some environment variables, so make it wait as short as possible.
+---
+ server/main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/server/main.c b/server/main.c
+index 20d3c48c4d9..aca8738c4c0 100644
+--- a/server/main.c
++++ b/server/main.c
+@@ -42,7 +42,7 @@
+ /* command-line options */
+ int debug_level = 0;
+ int foreground = 0;
+-timeout_t master_socket_timeout = 3 * -TICKS_PER_SEC;  /* master socket timeout, default is 3 seconds */
++timeout_t master_socket_timeout = 0; /* master socket timeout, default is 3 seconds */
+ const char *server_argv0;
+ 
+ /* parse-line args */
+
+From 971dc3c4225b33fb5346187cd37e8355f265800f Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 18 Jun 2018 07:56:35 -0500
+Subject: [PATCH] ntdll: Notice THREADNAME_INFO exceptions and set thread name
+ on Linux
+
+Patch by Zeb.
+---
+ dlls/ntdll/exception.c | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/dlls/ntdll/exception.c b/dlls/ntdll/exception.c
+index f85381079a2..ffe048de8c0 100644
+--- a/dlls/ntdll/exception.c
++++ b/dlls/ntdll/exception.c
+@@ -26,6 +26,9 @@
+ #include <errno.h>
+ #include <signal.h>
+ #include <stdarg.h>
++#ifdef HAVE_PRCTL
++#include <sys/prctl.h>
++#endif
+ 
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+@@ -143,6 +146,16 @@ void wait_suspend( CONTEXT *context )
+ }
+ 
+ 
++/* "How to: Set a Thread Name in Native Code"
++ * https://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx */
++typedef struct tagTHREADNAME_INFO
++{
++   DWORD   dwType;     /* Must be 0x1000 */
++   LPCSTR  szName;     /* Pointer to name - limited to 9 bytes (8 characters + terminator) */
++   DWORD   dwThreadID; /* Thread ID (-1 = caller thread) */
++   DWORD   dwFlags;    /* Reserved for future use.  Must be zero. */
++} THREADNAME_INFO;
++
+ /**********************************************************************
+  *           send_debug_event
+  *
+@@ -162,6 +175,21 @@ NTSTATUS send_debug_event( EXCEPTION_RECORD *rec, int first_chance, CONTEXT *con
+     for (i = 0; i < min( rec->NumberParameters, EXCEPTION_MAXIMUM_PARAMETERS ); i++)
+         params[i] = rec->ExceptionInformation[i];
+ 
++    if (rec->ExceptionCode == 0x406d1388)
++    {
++        const THREADNAME_INFO *threadname = (const THREADNAME_INFO *)rec->ExceptionInformation;
++
++        if (threadname->dwThreadID == -1)
++        {
++#ifdef HAVE_PRCTL
++#ifndef PR_SET_NAME
++# define PR_SET_NAME 15
++#endif
++            prctl( PR_SET_NAME, threadname->szName );
++#endif
++        }
++    }
++
+     SERVER_START_REQ( queue_exception_event )
+     {
+         req->first   = first_chance;
+From 7e91b897e69854cb3afe761f48ef7c9b496ecf95 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?J=C3=B3zef=20Kucia?= <jkucia@codeweavers.com>
+Date: Wed, 1 May 2019 12:28:12 +0200
+Subject: [PATCH] vulkan-1: Prefer built-in DLL.
+
+Games may ship with their own Vulkan loader.
+---
+ dlls/vulkan-1/vulkan.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/dlls/vulkan-1/vulkan.c b/dlls/vulkan-1/vulkan.c
+index d3b35603a17..4926cf9bf4f 100644
+--- a/dlls/vulkan-1/vulkan.c
++++ b/dlls/vulkan-1/vulkan.c
+@@ -32,10 +32,6 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, void *reserved)
+ 
+     switch (reason)
+     {
+-        case DLL_WINE_PREATTACH:
+-            /* Prefer native as it provides more functionality. */
+-            return FALSE;
+-
+         case DLL_PROCESS_ATTACH:
+             DisableThreadLibraryCalls(hinst);
+             return TRUE;
+
+From 90e3616c89ef7ed38763a3e3af3e9f0cd59697da Mon Sep 17 00:00:00 2001
+From: Nikolay Sivov <nsivov@codeweavers.com>
+Date: Wed, 8 Mar 2017 20:15:40 +0300
+Subject: [PATCH] HACK: dwrite: Don't recommend outline rendering mode
+
+---
+ dlls/dwrite/font.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/dwrite/font.c b/dlls/dwrite/font.c
+index e22559912c3..41ec809b727 100644
+--- a/dlls/dwrite/font.c
++++ b/dlls/dwrite/font.c
+@@ -740,7 +740,8 @@ static HRESULT WINAPI dwritefontface_GetRecommendedRenderingMode(IDWriteFontFace
+ 
+     ppem = emSize * ppdip;
+ 
+-    if (ppem >= RECOMMENDED_OUTLINE_AA_THRESHOLD) {
++    /* HACK: disable outline rendering mode to workaround d2d issue */
++    if (0 && ppem >= RECOMMENDED_OUTLINE_AA_THRESHOLD) {
+         *mode = DWRITE_RENDERING_MODE_OUTLINE;
+         return S_OK;
+     }
+From 5c59517008697ce74becddb59a3e6702a963bb49 Mon Sep 17 00:00:00 2001
+From: Zhiyi Zhang <zzhang@codeweavers.com>
+Date: Fri, 16 Aug 2019 09:46:25 +0000
+Subject: [PATCH] msctf: Use list to keep thread managers.
+
+Thread managers were stored in thread local storage,
+which have a major flaw that they can't not be released
+by another thread.
+
+Signed-off-by: Zhiyi Zhang <zzhang@codeweavers.com>
+---
+ dlls/msctf/msctf.c          | 46 +++++++----------------
+ dlls/msctf/msctf_internal.h |  1 -
+ dlls/msctf/threadmgr.c      | 73 ++++++++++++++++++++++++++++++++-----
+ 3 files changed, 76 insertions(+), 44 deletions(-)
+
+diff --git a/dlls/msctf/msctf.c b/dlls/msctf/msctf.c
+index c6e3a2ca597..fd919295c5a 100644
+--- a/dlls/msctf/msctf.c
++++ b/dlls/msctf/msctf.c
+@@ -69,7 +69,6 @@ static UINT array_size;
+ static struct list AtsList = LIST_INIT(AtsList);
+ static UINT activated = 0;
+ 
+-DWORD tlsIndex = 0;
+ TfClientId processId = 0;
+ ITfCompartmentMgr *globalCompartmentMgr = NULL;
+ 
+@@ -397,23 +396,19 @@ HRESULT add_active_textservice(TF_LANGUAGEPROFILE *lp)
+     ActivatedTextService *actsvr;
+     ITfCategoryMgr *catmgr;
+     AtsEntry *entry;
+-    ITfThreadMgrEx *tm = TlsGetValue(tlsIndex);
++    ITfThreadMgr *tm;
+     ITfClientId *clientid;
+ 
+-    if (!tm) return E_UNEXPECTED;
++    if (FAILED(TF_GetThreadMgr(&tm))) return E_UNEXPECTED;
+ 
+     actsvr = HeapAlloc(GetProcessHeap(),0,sizeof(ActivatedTextService));
+-    if (!actsvr) return E_OUTOFMEMORY;
++    if (!actsvr) goto fail;
+ 
+-    ITfThreadMgrEx_QueryInterface(tm, &IID_ITfClientId, (void **)&clientid);
++    ITfThreadMgr_QueryInterface(tm, &IID_ITfClientId, (void **)&clientid);
+     ITfClientId_GetClientId(clientid, &lp->clsid, &actsvr->tid);
+     ITfClientId_Release(clientid);
+ 
+-    if (!actsvr->tid)
+-    {
+-        HeapFree(GetProcessHeap(),0,actsvr);
+-        return E_OUTOFMEMORY;
+-    }
++    if (!actsvr->tid) goto fail;
+ 
+     actsvr->pITfTextInputProcessor = NULL;
+     actsvr->LanguageProfile = *lp;
+@@ -440,20 +435,21 @@ HRESULT add_active_textservice(TF_LANGUAGEPROFILE *lp)
+         deactivate_remove_conflicting_ts(&actsvr->LanguageProfile.catid);
+ 
+     if (activated > 0)
+-        activate_given_ts(actsvr, tm);
++        activate_given_ts(actsvr, (ITfThreadMgrEx *)tm);
+ 
+     entry = HeapAlloc(GetProcessHeap(),0,sizeof(AtsEntry));
+-
+-    if (!entry)
+-    {
+-        HeapFree(GetProcessHeap(),0,actsvr);
+-        return E_OUTOFMEMORY;
+-    }
++    if (!entry) goto fail;
+ 
+     entry->ats = actsvr;
+     list_add_head(&AtsList, &entry->entry);
+ 
++    ITfThreadMgr_Release(tm);
+     return S_OK;
++
++fail:
++    ITfThreadMgr_Release(tm);
++    HeapFree(GetProcessHeap(), 0, actsvr);
++    return E_OUTOFMEMORY;
+ }
+ 
+ BOOL get_active_textservice(REFCLSID rclsid, TF_LANGUAGEPROFILE *profile)
+@@ -560,11 +556,9 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD fdwReason, LPVOID fImpLoad)
+             return FALSE;   /* prefer native version */
+         case DLL_PROCESS_ATTACH:
+             MSCTF_hinstance = hinst;
+-            tlsIndex = TlsAlloc();
+             break;
+         case DLL_PROCESS_DETACH:
+             if (fImpLoad) break;
+-            TlsFree(tlsIndex);
+             break;
+     }
+     return TRUE;
+@@ -622,20 +616,6 @@ HRESULT WINAPI TF_CreateThreadMgr(ITfThreadMgr **pptim)
+     return ThreadMgr_Constructor(NULL,(IUnknown**)pptim);
+ }
+ 
+-/***********************************************************************
+- *              TF_GetThreadMgr (MSCTF.@)
+- */
+-HRESULT WINAPI TF_GetThreadMgr(ITfThreadMgr **pptim)
+-{
+-    TRACE("\n");
+-    *pptim = TlsGetValue(tlsIndex);
+-
+-    if (*pptim)
+-        ITfThreadMgr_AddRef(*pptim);
+-
+-    return S_OK;
+-}
+-
+ /***********************************************************************
+  *              SetInputScope(MSCTF.@)
+  */
+diff --git a/dlls/msctf/msctf_internal.h b/dlls/msctf/msctf_internal.h
+index 584bb1044ed..ace2bee23d9 100644
+--- a/dlls/msctf/msctf_internal.h
++++ b/dlls/msctf/msctf_internal.h
+@@ -35,7 +35,6 @@
+ #define COOKIE_MAGIC_UIELEMENTSINK 0x00a0
+ #define COOKIE_MAGIC_INPUTPROCESSORPROFILEACTIVATIONSINK 0x00b0
+ 
+-extern DWORD tlsIndex DECLSPEC_HIDDEN;
+ extern TfClientId processId DECLSPEC_HIDDEN;
+ extern ITfCompartmentMgr *globalCompartmentMgr DECLSPEC_HIDDEN;
+ 
+diff --git a/dlls/msctf/threadmgr.c b/dlls/msctf/threadmgr.c
+index 2c208fbc04f..2119ea2193b 100644
+--- a/dlls/msctf/threadmgr.c
++++ b/dlls/msctf/threadmgr.c
+@@ -37,6 +37,17 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(msctf);
+ 
++static CRITICAL_SECTION ThreadMgrCs;
++static CRITICAL_SECTION_DEBUG ThreadMgrCsDebug =
++{
++    0, 0, &ThreadMgrCs,
++    {&ThreadMgrCsDebug.ProcessLocksList,
++     &ThreadMgrCsDebug.ProcessLocksList },
++     0, 0, {(DWORD_PTR)(__FILE__ ": ThreadMgrCs")}
++};
++static CRITICAL_SECTION ThreadMgrCs = {&ThreadMgrCsDebug, -1, 0, 0, 0, 0};
++struct list ThreadMgrList = LIST_INIT(ThreadMgrList);
++
+ typedef struct tagPreservedKey
+ {
+     struct list     entry;
+@@ -98,6 +109,9 @@ typedef struct tagACLMulti {
+     struct list     ThreadMgrEventSink;
+     struct list     UIElementSink;
+     struct list     InputProcessorProfileActivationSink;
++
++    DWORD threadId;
++    struct list entry;
+ } ThreadMgr;
+ 
+ typedef struct tagEnumTfDocumentMgr {
+@@ -110,6 +124,11 @@ typedef struct tagEnumTfDocumentMgr {
+ 
+ static HRESULT EnumTfDocumentMgr_Constructor(struct list* head, IEnumTfDocumentMgrs **ppOut);
+ 
++static inline ThreadMgr *impl_from_ITfThreadMgr(ITfThreadMgr *iface)
++{
++    return CONTAINING_RECORD(iface, ThreadMgr, ITfThreadMgrEx_iface);
++}
++
+ static inline ThreadMgr *impl_from_ITfThreadMgrEx(ITfThreadMgrEx *iface)
+ {
+     return CONTAINING_RECORD(iface, ThreadMgr, ITfThreadMgrEx_iface);
+@@ -155,6 +174,35 @@ static inline EnumTfDocumentMgr *impl_from_IEnumTfDocumentMgrs(IEnumTfDocumentMg
+     return CONTAINING_RECORD(iface, EnumTfDocumentMgr, IEnumTfDocumentMgrs_iface);
+ }
+ 
++/***********************************************************************
++ *              TF_GetThreadMgr (MSCTF.@)
++ */
++HRESULT WINAPI TF_GetThreadMgr(ITfThreadMgr **pptim)
++{
++    DWORD id = GetCurrentThreadId();
++    ThreadMgr *cursor;
++
++    TRACE("%p\n", pptim);
++
++    if (!pptim)
++        return E_INVALIDARG;
++
++    EnterCriticalSection(&ThreadMgrCs);
++    LIST_FOR_EACH_ENTRY(cursor, &ThreadMgrList, ThreadMgr, entry)
++    {
++        if (cursor->threadId == id)
++        {
++            ITfThreadMgrEx_AddRef(&cursor->ITfThreadMgrEx_iface);
++            *pptim = (ITfThreadMgr *)&cursor->ITfThreadMgrEx_iface;
++            LeaveCriticalSection(&ThreadMgrCs);
++            return S_OK;
++        }
++    }
++    LeaveCriticalSection(&ThreadMgrCs);
++    *pptim = NULL;
++    return E_FAIL;
++}
++
+ static void ThreadMgr_Destructor(ThreadMgr *This)
+ {
+     struct list *cursor, *cursor2;
+@@ -163,7 +211,9 @@ static void ThreadMgr_Destructor(ThreadMgr *This)
+     if (This->focusHook)
+         UnhookWindowsHookEx(This->focusHook);
+ 
+-    TlsSetValue(tlsIndex,NULL);
++    EnterCriticalSection(&ThreadMgrCs);
++    list_remove(&This->entry);
++    LeaveCriticalSection(&ThreadMgrCs);
+     TRACE("destroying %p\n", This);
+     if (This->focus)
+         ITfDocumentMgr_Release(This->focus);
+@@ -386,17 +436,20 @@ static HRESULT WINAPI ThreadMgr_SetFocus(ITfThreadMgrEx *iface, ITfDocumentMgr *
+ 
+ static LRESULT CALLBACK ThreadFocusHookProc(int nCode, WPARAM wParam, LPARAM lParam)
+ {
++    ITfThreadMgr *ThreadMgr_iface;
+     ThreadMgr *This;
+ 
+-    This = TlsGetValue(tlsIndex);
+-    if (!This)
++    if (FAILED(TF_GetThreadMgr(&ThreadMgr_iface)))
+     {
+         ERR("Hook proc but no ThreadMgr for this thread. Serious Error\n");
+         return 0;
+     }
++
++    This = impl_from_ITfThreadMgr(ThreadMgr_iface);
+     if (!This->focusHook)
+     {
+         ERR("Hook proc but no ThreadMgr focus Hook. Serious Error\n");
++        ITfThreadMgr_Release(ThreadMgr_iface);
+         return 0;
+     }
+ 
+@@ -417,6 +470,7 @@ static LRESULT CALLBACK ThreadFocusHookProc(int nCode, WPARAM wParam, LPARAM lPa
+         }
+     }
+ 
++    ITfThreadMgr_Release(ThreadMgr_iface);
+     return CallNextHookEx(This->focusHook, nCode, wParam, lParam);
+ }
+ 
+@@ -1338,13 +1392,8 @@ HRESULT ThreadMgr_Constructor(IUnknown *pUnkOuter, IUnknown **ppOut)
+         return CLASS_E_NOAGGREGATION;
+ 
+     /* Only 1 ThreadMgr is created per thread */
+-    This = TlsGetValue(tlsIndex);
+-    if (This)
+-    {
+-        ThreadMgr_AddRef(&This->ITfThreadMgrEx_iface);
+-        *ppOut = (IUnknown*)&This->ITfThreadMgrEx_iface;
++    if (SUCCEEDED(TF_GetThreadMgr((ITfThreadMgr **)ppOut)))
+         return S_OK;
+-    }
+ 
+     This = HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,sizeof(ThreadMgr));
+     if (This == NULL)
+@@ -1359,7 +1408,6 @@ HRESULT ThreadMgr_Constructor(IUnknown *pUnkOuter, IUnknown **ppOut)
+     This->ITfUIElementMgr_iface.lpVtbl = &ThreadMgrUIElementMgrVtbl;
+     This->ITfSourceSingle_iface.lpVtbl = &SourceSingleVtbl;
+     This->refCount = 1;
+-    TlsSetValue(tlsIndex,This);
+ 
+     CompartmentMgr_Constructor((IUnknown*)&This->ITfThreadMgrEx_iface, &IID_IUnknown, (IUnknown**)&This->CompartmentMgr);
+ 
+@@ -1376,6 +1424,11 @@ HRESULT ThreadMgr_Constructor(IUnknown *pUnkOuter, IUnknown **ppOut)
+     list_init(&This->UIElementSink);
+     list_init(&This->InputProcessorProfileActivationSink);
+ 
++    This->threadId = GetCurrentThreadId();
++    EnterCriticalSection(&ThreadMgrCs);
++    list_add_tail(&ThreadMgrList, &This->entry);
++    LeaveCriticalSection(&ThreadMgrCs);
++
+     TRACE("returning %p\n", This);
+     *ppOut = (IUnknown *)&This->ITfThreadMgrEx_iface;
+     return S_OK;
+From ed04e35d3f7af02267fb4e21578b3ccb27703836 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 23 Sep 2019 13:29:16 -0500
+Subject: [PATCH] dxdiag: Dump to stdout if no filename is given
+
+---
+ programs/dxdiag/main.c   |  8 +++++++-
+ programs/dxdiag/output.c | 10 +++++++---
+ 2 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/programs/dxdiag/main.c b/programs/dxdiag/main.c
+index 4533236f0f5..353e9f50fb9 100644
+--- a/programs/dxdiag/main.c
++++ b/programs/dxdiag/main.c
+@@ -71,7 +71,13 @@ static BOOL process_file_name(const WCHAR *cmdline, enum output_type output_type
+         endptr = cmdline + lstrlenW(cmdline);
+ 
+     len = endptr - cmdline;
+-    if (len == 0 || len >= filename_len)
++    if (len == 0)
++    {
++        *filename = 0;
++        return TRUE;
++    }
++
++    if (len >= filename_len)
+         return FALSE;
+ 
+     memcpy(filename, cmdline, len * sizeof(WCHAR));
+diff --git a/programs/dxdiag/output.c b/programs/dxdiag/output.c
+index 50240fb2860..f0f6a6da0c3 100644
+--- a/programs/dxdiag/output.c
++++ b/programs/dxdiag/output.c
+@@ -169,8 +169,12 @@ static BOOL output_text_information(struct dxdiag_information *dxdiag_info, cons
+ 
+     fill_system_text_output_table(dxdiag_info, output_table[0].fields);
+ 
+-    hFile = CreateFileW(filename, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+-                        NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
++    if (filename && *filename)
++        hFile = CreateFileW(filename, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
++                            NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
++    else
++        hFile = GetStdHandle(STD_OUTPUT_HANDLE);
++
+     if (hFile == INVALID_HANDLE_VALUE)
+     {
+         WINE_ERR("File creation failed, last error %u\n", GetLastError());
+@@ -227,7 +231,7 @@ static HRESULT save_xml_document(IXMLDOMDocument *xmldoc, const WCHAR *filename)
+     VARIANT destVar;
+     HRESULT hr;
+ 
+-    if (!bstr)
++    if (!bstr || !filename || !*filename)
+         return E_OUTOFMEMORY;
+ 
+     V_VT(&destVar) = VT_BSTR;
+From e485252dfad51a7e463643d56fe138129597e4b6 Mon Sep 17 00:00:00 2001
+From: Brendan Shanks <bshanks@codeweavers.com>
+Date: Mon, 23 Sep 2019 08:56:04 -0500
+Subject: [PATCH] ntdll: Always add a tail to heap allocations.
+
+Fixes the Rockstar Games Launcher installer (and possibly other
+NSIS-based installers) from crashing due to passing a too-small buffer
+to GetWindowInfo().
+---
+ dlls/ntdll/heap.c | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/ntdll/heap.c b/dlls/ntdll/heap.c
+index 6344157f384..6fefe5d6d80 100644
+--- a/dlls/ntdll/heap.c
++++ b/dlls/ntdll/heap.c
+@@ -118,9 +118,8 @@ C_ASSERT( sizeof(ARENA_LARGE) % LARGE_ALIGNMENT == 0 );
+ #define HEAP_MIN_SHRINK_SIZE  (HEAP_MIN_DATA_SIZE+sizeof(ARENA_FREE))
+ /* minimum size to start allocating large blocks */
+ #define HEAP_MIN_LARGE_BLOCK_SIZE  0x7f000
+-/* extra size to add at the end of block for tail checking */
+-#define HEAP_TAIL_EXTRA_SIZE(flags) \
+-    ((flags & HEAP_TAIL_CHECKING_ENABLED) || RUNNING_ON_VALGRIND ? ALIGNMENT : 0)
++/* extra size to add at the end of block to mitigate overruns and allow tail checking */
++#define HEAP_TAIL_EXTRA_SIZE ALIGNMENT
+ 
+ /* size of the blocks on the free lists */
+ #define HEAP_FREELIST_SIZE(index) \
+@@ -800,7 +799,7 @@ static void HEAP_ShrinkBlock(SUBHEAP *subheap, ARENA_INUSE *pArena, SIZE_T size)
+ static void *allocate_large_block( HEAP *heap, DWORD flags, SIZE_T size )
+ {
+     ARENA_LARGE *arena;
+-    SIZE_T block_size = sizeof(*arena) + ROUND_SIZE(size) + HEAP_TAIL_EXTRA_SIZE(flags);
++    SIZE_T block_size = sizeof(*arena) + ROUND_SIZE(size) + HEAP_TAIL_EXTRA_SIZE;
+     LPVOID address = NULL;
+ 
+     if (block_size < size) return NULL;  /* overflow */
+@@ -1814,7 +1813,7 @@ void * WINAPI DECLSPEC_HOTPATCH RtlAllocateHeap( HANDLE heap, ULONG flags, SIZE_
+     if (!heapPtr) return NULL;
+     flags &= HEAP_GENERATE_EXCEPTIONS | HEAP_NO_SERIALIZE | HEAP_ZERO_MEMORY;
+     flags |= heapPtr->flags;
+-    rounded_size = ROUND_SIZE(size) + HEAP_TAIL_EXTRA_SIZE( flags );
++    rounded_size = ROUND_SIZE(size) + HEAP_TAIL_EXTRA_SIZE;
+     if (rounded_size < size)  /* overflow */
+     {
+         if (flags & HEAP_GENERATE_EXCEPTIONS) RtlRaiseStatus( STATUS_NO_MEMORY );
+@@ -1968,7 +1967,7 @@ PVOID WINAPI RtlReAllocateHeap( HANDLE heap, ULONG flags, PVOID ptr, SIZE_T size
+     flags |= heapPtr->flags;
+     if (!(flags & HEAP_NO_SERIALIZE)) RtlEnterCriticalSection( &heapPtr->critSection );
+ 
+-    rounded_size = ROUND_SIZE(size) + HEAP_TAIL_EXTRA_SIZE(flags);
++    rounded_size = ROUND_SIZE(size) + HEAP_TAIL_EXTRA_SIZE;
+     if (rounded_size < size) goto oom;  /* overflow */
+     if (rounded_size < HEAP_MIN_DATA_SIZE) rounded_size = HEAP_MIN_DATA_SIZE;
+ 
+From 33cd3de313071c787bece5acc31351c36abd74e9 Mon Sep 17 00:00:00 2001
+From: Brendan Shanks <bshanks@codeweavers.com>
+Date: Tue, 22 Oct 2019 16:27:51 -0700
+Subject: [PATCH] HACK: ntdll: Run WT_EXECUTEINWAITTHREAD wait callbacks
+ serially.
+
+On Windows, waits registered with the WT_EXECUTEINWAITTHREAD flag will
+often have their callbacks run serially (since they're all handled by
+the same wait thread). Running them in parallel can expose race
+conditions.
+Use a process-wide critical section to serialize these callbacks.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=47843
+---
+ dlls/ntdll/threadpool.c | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/dlls/ntdll/threadpool.c b/dlls/ntdll/threadpool.c
+index 639e032f629..dbd9577d6bc 100644
+--- a/dlls/ntdll/threadpool.c
++++ b/dlls/ntdll/threadpool.c
+@@ -84,6 +84,17 @@ struct wait_work_item
+     int CallbackInProgress;
+ };
+ 
++static RTL_CRITICAL_SECTION_DEBUG wait_thread_executeinwaitthread_cs_debug;
++
++static RTL_CRITICAL_SECTION wait_thread_executeinwaitthread_cs = {&wait_thread_executeinwaitthread_cs_debug, -1, 0, 0, 0, 0};
++
++static RTL_CRITICAL_SECTION_DEBUG wait_thread_executeinwaitthread_cs_debug =
++{
++    0, 0, &wait_thread_executeinwaitthread_cs,
++    { &wait_thread_executeinwaitthread_cs_debug.ProcessLocksList, &wait_thread_executeinwaitthread_cs_debug.ProcessLocksList },
++      0, 0, { (DWORD_PTR)(__FILE__ ": wait_thread_executeinwaitthread_cs") }
++};
++
+ struct timer_queue;
+ struct queue_timer
+ {
+@@ -527,7 +538,20 @@ static DWORD CALLBACK wait_thread_proc(LPVOID Arg)
+                 TRACE( "Work has been canceled.\n" );
+                 break;
+             }
++
++            /* HACK: On Windows, waits created with WT_EXECUTEINWAITTHREAD often end up on the same wait thread
++             * and run serialized. Running these waits simultaneously on separate threads may expose race conditions
++             * not seen on Windows.
++             * Use a critical section to ensure these callbacks run serially.
++             */
++            if (wait_work_item->Flags & WT_EXECUTEINWAITTHREAD)
++                enter_critical_section(&wait_thread_executeinwaitthread_cs);
++
+             wait_work_item->Callback( wait_work_item->Context, TimerOrWaitFired );
++
++            if (wait_work_item->Flags & WT_EXECUTEINWAITTHREAD)
++                leave_critical_section(&wait_thread_executeinwaitthread_cs);
++
+             InterlockedExchange( &wait_work_item->CallbackInProgress, FALSE );
+ 
+             if (wait_work_item->Flags & WT_EXECUTEONLYONCE)
+From 5cd65deffffad9073538acf4fd8e794ac07824a5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 9 Oct 2019 09:47:12 +0200
+Subject: [PATCH] makedep: Align PE sections so they can be directly mmaped.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This should help linux perf tool match the binary files on disk with the
+code regions in memory.
+
+Signed-off-by: Rémi Bernon <rbernon@codeweavers.com>
+---
+ tools/makedep.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tools/makedep.c b/tools/makedep.c
+index 6079d1fe28b..18e7b8a913e 100644
+--- a/tools/makedep.c
++++ b/tools/makedep.c
+@@ -3245,6 +3245,7 @@ static void output_module( struct makefile *make )
+     output_filenames_obj_dir( make, make->res_files );
+     output_filenames( all_libs );
+     output_filename( make->is_cross ? "$(CROSSLDFLAGS)" : "$(LDFLAGS)" );
++    output_filename( make->is_cross ? "-Wl,--file-alignment,4096" : "" );
+     output( "\n" );
+ 
+     if (spec_file && make->importlib)
+From 213905a322620eb326b655ab89fbca07316e6357 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Tue, 19 Nov 2019 09:59:17 -0600
+Subject: [PATCH] HACK: dxgi: Return empty GPU string for Crazy Machines 3
+
+If the GPU string is long enough, the game will crash trying to
+dereference part of it. Probably this is due to missing Media Foundation
+support. Try to remove this hack after the game's videos successfully
+play back.
+---
+ dlls/dxgi/adapter.c | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/dlls/dxgi/adapter.c b/dlls/dxgi/adapter.c
+index d2fc629c843..5a97590dbce 100644
+--- a/dlls/dxgi/adapter.c
++++ b/dlls/dxgi/adapter.c
+@@ -161,12 +161,32 @@ static HRESULT dxgi_adapter_get_desc(struct dxgi_adapter *adapter, DXGI_ADAPTER_
+     if (FAILED(hr = wined3d_get_adapter_identifier(adapter->factory->wined3d, adapter->ordinal, 0, &adapter_id)))
+         return hr;
+ 
++    {
++        /* HACK for Proton issue #3204
++         *
++         * Due to reading uninitialized memory, the game tries to dereference
++         * part of the GPU Description string if it is long enough. So return
++         * an empty string instead.
++         *
++         * See the bug report for the full description, but we may be able to
++         * remove this hack after implementing enough of Media Foundation for
++         * this game's videos to play back.
++         */
++        const char *sgi = getenv("SteamGameId");
++        if(sgi && !strcmp(sgi, "351920"))
++        {
++            desc->Description[0] = 0;
++            goto skip_description;
++        }
++    }
++
+     if (!MultiByteToWideChar(CP_ACP, 0, description, -1, desc->Description, ARRAY_SIZE(description)))
+     {
+         DWORD err = GetLastError();
+         ERR("Failed to translate description %s (%#x).\n", debugstr_a(description), err);
+         hr = E_FAIL;
+     }
++skip_description:
+ 
+     desc->VendorId = adapter_id.vendor_id;
+     desc->DeviceId = adapter_id.device_id;
+From 304683886016ec940a9b331ce33fcbaf47e893c3 Mon Sep 17 00:00:00 2001
+From: Sven Baars <sbaars@codeweavers.com>
+Date: Thu, 5 Dec 2019 13:48:38 +0100
+Subject: [PATCH] HACK: ntdll: Return a handle to kernel32 when being asked for
+ mfc42.
+
+For some applications mfc42 is loaded, but never actually used. We can
+add Steam game IDs when we find more of such applications.
+---
+ dlls/ntdll/loader.c | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 431c247a072..c9fcad79316 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -159,6 +159,18 @@ static inline void ascii_to_unicode( WCHAR *dst, const char *src, size_t len )
+     while (len--) *dst++ = (unsigned char)*src++;
+ }
+ 
++static WCHAR *strcasestrW( const WCHAR *str, const WCHAR *sub )
++{
++    while (*str)
++    {
++        const WCHAR *p1 = str, *p2 = sub;
++        while (*p1 && *p2 && tolowerW(*p1) == tolowerW(*p2)) { p1++; p2++; }
++        if (!*p2) return (WCHAR *)str;
++        str++;
++    }
++    return NULL;
++}
++
+ #define RTL_UNLOAD_EVENT_TRACE_NUMBER 64
+ 
+ typedef struct _RTL_UNLOAD_EVENT_TRACE
+@@ -2869,6 +2881,25 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname,
+ done:
+     RtlFreeHeap( GetProcessHeap(), 0, dllname );
+     if (wow64_old_value) RtlWow64EnableFsRedirectionEx( 1, &wow64_old_value );
++
++    if (status != STATUS_SUCCESS)
++    {
++        /* HACK for Proton issue #17
++         *
++         * Some games try to load mfc42.dll, but then proceed to not use it.
++         * Just return a handle to kernel32 in that case.
++         */
++        static const WCHAR mfc42W[] = {'m','f','c','4','2',0};
++        static const WCHAR kernel32W[] = {'k','e','r','n','e','l','3','2','.','d','l','l',0};
++        const char *sgi = getenv( "SteamGameId" );
++        if (sgi &&
++            !strcmp( sgi, "105450" ) && /* AoE3 */
++            strcasestrW( libname, mfc42W ))
++        {
++            WARN_(loaddll)( "Using a fake mfc42 handle\n" );
++            status = find_dll_file( load_path, kernel32W, nt_name, pwm, mfc42W, module, image_info, st );
++        }
++    }
+     return status;
+ }
+ 
+From 4aa052e0c8ae276fc07afcd93d6e290a88214837 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Wed, 15 Jan 2020 10:17:23 -0600
+Subject: [PATCH] dsound: Initialize primary buffer with device's channel
+ layout
+
+Fixes surround sound in some games, like Borderlands GOTY and Dead
+Space.
+---
+ dlls/dsound/dsound.c         | 77 +-----------------------------------
+ dlls/dsound/dsound_private.h |  1 -
+ dlls/dsound/primary.c        | 75 ++++++++++++++++++++++++++++++++++-
+ 3 files changed, 76 insertions(+), 77 deletions(-)
+
+diff --git a/dlls/dsound/dsound.c b/dlls/dsound/dsound.c
+index 8e2b839fe89..630d8c7e16a 100644
+--- a/dlls/dsound/dsound.c
++++ b/dlls/dsound/dsound.c
+@@ -23,7 +23,6 @@
+ #include <assert.h>
+ #include <stdarg.h>
+ #include <stdio.h>
+-#include <math.h>
+ 
+ #define COBJMACROS
+ 
+@@ -138,9 +137,9 @@ static HRESULT DirectSoundDevice_Create(DirectSoundDevice ** ppDevice)
+     device->ref            = 1;
+     device->priolevel      = DSSCL_NORMAL;
+     device->stopped        = 1;
+-    device->speaker_config = DSSPEAKER_COMBINED(DSSPEAKER_STEREO, DSSPEAKER_GEOMETRY_WIDE);
+ 
+-    DSOUND_ParseSpeakerConfig(device);
++    device->speaker_config = 0;
++    device->num_speakers = 0;
+ 
+     /* 3D listener initial parameters */
+     device->ds3dl.dwSize   = sizeof(DS3DLISTENER);
+@@ -1127,75 +1126,3 @@ HRESULT WINAPI DirectSoundCreate8(
+ 
+     return hr;
+ }
+-
+-void DSOUND_ParseSpeakerConfig(DirectSoundDevice *device)
+-{
+-    switch (DSSPEAKER_CONFIG(device->speaker_config)) {
+-        case DSSPEAKER_MONO:
+-            device->speaker_angles[0] = M_PI/180.0f * 0.0f;
+-            device->speaker_num[0] = 0;
+-            device->num_speakers = 1;
+-            device->lfe_channel = -1;
+-        break;
+-
+-        case DSSPEAKER_STEREO:
+-        case DSSPEAKER_HEADPHONE:
+-            device->speaker_angles[0] = M_PI/180.0f * -90.0f;
+-            device->speaker_angles[1] = M_PI/180.0f *  90.0f;
+-            device->speaker_num[0] = 0; /* Left */
+-            device->speaker_num[1] = 1; /* Right */
+-            device->num_speakers = 2;
+-            device->lfe_channel = -1;
+-        break;
+-
+-        case DSSPEAKER_QUAD:
+-            device->speaker_angles[0] = M_PI/180.0f * -135.0f;
+-            device->speaker_angles[1] = M_PI/180.0f *  -45.0f;
+-            device->speaker_angles[2] = M_PI/180.0f *   45.0f;
+-            device->speaker_angles[3] = M_PI/180.0f *  135.0f;
+-            device->speaker_num[0] = 2; /* Rear left */
+-            device->speaker_num[1] = 0; /* Front left */
+-            device->speaker_num[2] = 1; /* Front right */
+-            device->speaker_num[3] = 3; /* Rear right */
+-            device->num_speakers = 4;
+-            device->lfe_channel = -1;
+-        break;
+-
+-        case DSSPEAKER_5POINT1_BACK:
+-            device->speaker_angles[0] = M_PI/180.0f * -135.0f;
+-            device->speaker_angles[1] = M_PI/180.0f *  -45.0f;
+-            device->speaker_angles[2] = M_PI/180.0f *    0.0f;
+-            device->speaker_angles[3] = M_PI/180.0f *   45.0f;
+-            device->speaker_angles[4] = M_PI/180.0f *  135.0f;
+-            device->speaker_angles[5] = 9999.0f;
+-            device->speaker_num[0] = 4; /* Rear left */
+-            device->speaker_num[1] = 0; /* Front left */
+-            device->speaker_num[2] = 2; /* Front centre */
+-            device->speaker_num[3] = 1; /* Front right */
+-            device->speaker_num[4] = 5; /* Rear right */
+-            device->speaker_num[5] = 3; /* LFE */
+-            device->num_speakers = 6;
+-            device->lfe_channel = 3;
+-        break;
+-
+-        case DSSPEAKER_5POINT1_SURROUND:
+-            device->speaker_angles[0] = M_PI/180.0f *  -90.0f;
+-            device->speaker_angles[1] = M_PI/180.0f *  -30.0f;
+-            device->speaker_angles[2] = M_PI/180.0f *    0.0f;
+-            device->speaker_angles[3] = M_PI/180.0f *   30.0f;
+-            device->speaker_angles[4] = M_PI/180.0f *   90.0f;
+-            device->speaker_angles[5] = 9999.0f;
+-            device->speaker_num[0] = 4; /* Rear left */
+-            device->speaker_num[1] = 0; /* Front left */
+-            device->speaker_num[2] = 2; /* Front centre */
+-            device->speaker_num[3] = 1; /* Front right */
+-            device->speaker_num[4] = 5; /* Rear right */
+-            device->speaker_num[5] = 3; /* LFE */
+-            device->num_speakers = 6;
+-            device->lfe_channel = 3;
+-        break;
+-
+-        default:
+-            WARN("unknown speaker_config %u\n", device->speaker_config);
+-    }
+-}
+diff --git a/dlls/dsound/dsound_private.h b/dlls/dsound/dsound_private.h
+index 69c4a2f3902..1a3e88a0d29 100644
+--- a/dlls/dsound/dsound_private.h
++++ b/dlls/dsound/dsound_private.h
+@@ -202,7 +202,6 @@ HRESULT IKsPrivatePropertySetImpl_Create(REFIID riid, void **ppv) DECLSPEC_HIDDE
+ HRESULT DSOUND_Create(REFIID riid, void **ppv) DECLSPEC_HIDDEN;
+ HRESULT DSOUND_Create8(REFIID riid, void **ppv) DECLSPEC_HIDDEN;
+ HRESULT IDirectSoundImpl_Create(IUnknown *outer_unk, REFIID riid, void **ppv, BOOL has_ds8) DECLSPEC_HIDDEN;
+-void DSOUND_ParseSpeakerConfig(DirectSoundDevice *device) DECLSPEC_HIDDEN;
+ 
+ /* primary.c */
+ 
+diff --git a/dlls/dsound/primary.c b/dlls/dsound/primary.c
+index 852ec51b7ff..fdbbc00cd33 100644
+--- a/dlls/dsound/primary.c
++++ b/dlls/dsound/primary.c
+@@ -24,6 +24,7 @@
+  */
+ 
+ #include <stdarg.h>
++#include <math.h>
+ 
+ #define COBJMACROS
+ #define NONAMELESSUNION
+@@ -110,6 +111,78 @@ static DWORD DSOUND_FindSpeakerConfig(IMMDevice *mmdevice, int channels)
+     return def;
+ }
+ 
++static void DSOUND_ParseSpeakerConfig(DirectSoundDevice *device)
++{
++    switch (DSSPEAKER_CONFIG(device->speaker_config)) {
++        case DSSPEAKER_MONO:
++            device->speaker_angles[0] = M_PI/180.0f * 0.0f;
++            device->speaker_num[0] = 0;
++            device->num_speakers = 1;
++            device->lfe_channel = -1;
++        break;
++
++        case DSSPEAKER_STEREO:
++        case DSSPEAKER_HEADPHONE:
++            device->speaker_angles[0] = M_PI/180.0f * -90.0f;
++            device->speaker_angles[1] = M_PI/180.0f *  90.0f;
++            device->speaker_num[0] = 0; /* Left */
++            device->speaker_num[1] = 1; /* Right */
++            device->num_speakers = 2;
++            device->lfe_channel = -1;
++        break;
++
++        case DSSPEAKER_QUAD:
++            device->speaker_angles[0] = M_PI/180.0f * -135.0f;
++            device->speaker_angles[1] = M_PI/180.0f *  -45.0f;
++            device->speaker_angles[2] = M_PI/180.0f *   45.0f;
++            device->speaker_angles[3] = M_PI/180.0f *  135.0f;
++            device->speaker_num[0] = 2; /* Rear left */
++            device->speaker_num[1] = 0; /* Front left */
++            device->speaker_num[2] = 1; /* Front right */
++            device->speaker_num[3] = 3; /* Rear right */
++            device->num_speakers = 4;
++            device->lfe_channel = -1;
++        break;
++
++        case DSSPEAKER_5POINT1_BACK:
++            device->speaker_angles[0] = M_PI/180.0f * -135.0f;
++            device->speaker_angles[1] = M_PI/180.0f *  -45.0f;
++            device->speaker_angles[2] = M_PI/180.0f *    0.0f;
++            device->speaker_angles[3] = M_PI/180.0f *   45.0f;
++            device->speaker_angles[4] = M_PI/180.0f *  135.0f;
++            device->speaker_angles[5] = 9999.0f;
++            device->speaker_num[0] = 4; /* Rear left */
++            device->speaker_num[1] = 0; /* Front left */
++            device->speaker_num[2] = 2; /* Front centre */
++            device->speaker_num[3] = 1; /* Front right */
++            device->speaker_num[4] = 5; /* Rear right */
++            device->speaker_num[5] = 3; /* LFE */
++            device->num_speakers = 6;
++            device->lfe_channel = 3;
++        break;
++
++        case DSSPEAKER_5POINT1_SURROUND:
++            device->speaker_angles[0] = M_PI/180.0f *  -90.0f;
++            device->speaker_angles[1] = M_PI/180.0f *  -30.0f;
++            device->speaker_angles[2] = M_PI/180.0f *    0.0f;
++            device->speaker_angles[3] = M_PI/180.0f *   30.0f;
++            device->speaker_angles[4] = M_PI/180.0f *   90.0f;
++            device->speaker_angles[5] = 9999.0f;
++            device->speaker_num[0] = 4; /* Rear left */
++            device->speaker_num[1] = 0; /* Front left */
++            device->speaker_num[2] = 2; /* Front centre */
++            device->speaker_num[3] = 1; /* Front right */
++            device->speaker_num[4] = 5; /* Rear right */
++            device->speaker_num[5] = 3; /* LFE */
++            device->num_speakers = 6;
++            device->lfe_channel = 3;
++        break;
++
++        default:
++            WARN("unknown speaker_config %u\n", device->speaker_config);
++    }
++}
++
+ static HRESULT DSOUND_WaveFormat(DirectSoundDevice *device, IAudioClient *client,
+ 				 BOOL forcewave, WAVEFORMATEX **wfx)
+ {
+@@ -124,7 +197,7 @@ static HRESULT DSOUND_WaveFormat(DirectSoundDevice *device, IAudioClient *client
+         if (FAILED(hr))
+             return hr;
+ 
+-        if (mixwfe->Format.nChannels < device->num_speakers) {
++        if (device->num_speakers == 0 || mixwfe->Format.nChannels < device->num_speakers) {
+             device->speaker_config = DSOUND_FindSpeakerConfig(device->mmdevice, mixwfe->Format.nChannels);
+             DSOUND_ParseSpeakerConfig(device);
+         } else if (mixwfe->Format.nChannels > device->num_speakers) {
+From 749bf5fcd5f41a39301428a7fccd1e4febcd6f90 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
+Date: Fri, 13 Dec 2019 15:54:28 +0200
+Subject: [PATCH] dwmapi: Improve DwmGetWindowAttribute stub.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
+---
+ dlls/dwmapi/dwmapi_main.c | 26 ++++++++++++++++++++++++--
+ 1 file changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dwmapi/dwmapi_main.c b/dlls/dwmapi/dwmapi_main.c
+index 6378a091f0b..e976fda77f2 100644
+--- a/dlls/dwmapi/dwmapi_main.c
++++ b/dlls/dwmapi/dwmapi_main.c
+@@ -205,9 +205,31 @@ BOOL WINAPI DwmDefWindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam,
+  */
+ HRESULT WINAPI DwmGetWindowAttribute(HWND hwnd, DWORD attribute, PVOID pv_attribute, DWORD size)
+ {
+-    FIXME("(%p %d %p %d) stub\n", hwnd, attribute, pv_attribute, size);
++    if (!hwnd) return E_HANDLE;
++    if (!pv_attribute) return E_INVALIDARG;
+ 
+-    return E_NOTIMPL;
++    switch (attribute)
++    {
++    case DWMWA_NCRENDERING_ENABLED:
++        if (size < sizeof(BOOL)) return E_INVALIDARG;
++
++        WARN("DWMWA_NCRENDERING_ENABLED: always returning FALSE.\n");
++        *(BOOL*)(pv_attribute) = FALSE;
++        break;
++
++    case DWMWA_CLOAKED:
++        if (size < sizeof(DWORD)) return E_INVALIDARG;
++
++        WARN("DWMWA_CLOAKED: always returning 0.\n");
++        *(DWORD*)(pv_attribute) = 0;
++        break;
++
++    default:
++        FIXME("unimplemented attribute %d, size %u, for hwnd %p.\n", attribute, size, hwnd);
++        return E_INVALIDARG;
++    }
++
++    return S_OK;
+ }
+ 
+ /**********************************************************************
+From 60ac9b821daf372aac3bc85fa97b60f2b6d56c82 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
+Date: Fri, 13 Dec 2019 15:54:29 +0200
+Subject: [PATCH] dwmapi/tests: Add basic tests for DwmGetWindowAttribute.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
+---
+diff --git a/dlls/dwmapi/tests/Makefile.in b/dlls/dwmapi/tests/Makefile.in
+index f365f96c72..947e3312b5 100644
+--- a/dlls/dwmapi/tests/Makefile.in
++++ b/dlls/dwmapi/tests/Makefile.in
+@@ -1,5 +1,5 @@
+ TESTDLL   = dwmapi.dll
+-IMPORTS   = dwmapi
++IMPORTS   = dwmapi gdi32 user32
+ 
+ C_SRCS = \
+ 	dwmapi.c
+diff --git a/dlls/dwmapi/tests/dwmapi.c b/dlls/dwmapi/tests/dwmapi.c
+index 7c51e77c4a..68babd6eb2 100644
+--- a/dlls/dwmapi/tests/dwmapi.c
++++ b/dlls/dwmapi/tests/dwmapi.c
+@@ -19,13 +19,40 @@
+  *
+  */
+ 
++#include <windows.h>
+ #include "dwmapi.h"
+-
+ #include "wine/test.h"
+ 
+ static HRESULT (WINAPI *pDwmIsCompositionEnabled)(BOOL*);
+ static HRESULT (WINAPI *pDwmEnableComposition)(UINT);
+ static HRESULT (WINAPI *pDwmGetTransportAttributes)(BOOL*,BOOL*,DWORD*);
++static HWND test_wnd;
++static LRESULT WINAPI test_wndproc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
++{
++    return DefWindowProcA(hwnd, message, wParam, lParam);
++}
++
++static void test_DwmGetWindowAttribute(void)
++{
++    BOOL nc_rendering;
++    HRESULT hr;
++
++    hr = DwmGetWindowAttribute(NULL, DWMWA_NCRENDERING_ENABLED, &nc_rendering, sizeof(nc_rendering));
++    ok(hr == E_HANDLE || broken(hr == E_INVALIDARG) /* Vista */, "DwmGetWindowAttribute(DWMWA_NCRENDERING_ENABLED) returned 0x%08x.\n", hr);
++    hr = DwmGetWindowAttribute(test_wnd, DWMWA_NCRENDERING_ENABLED, NULL, sizeof(nc_rendering));
++    ok(hr == E_INVALIDARG, "DwmGetWindowAttribute(DWMWA_NCRENDERING_ENABLED) returned 0x%08x.\n", hr);
++    hr = DwmGetWindowAttribute(test_wnd, DWMWA_NCRENDERING_ENABLED, &nc_rendering, 0);
++    ok(hr == E_INVALIDARG, "DwmGetWindowAttribute(DWMWA_NCRENDERING_ENABLED) returned 0x%08x.\n", hr);
++    nc_rendering = FALSE;
++    hr = DwmGetWindowAttribute(test_wnd, 0xdeadbeef, &nc_rendering, sizeof(nc_rendering));
++    ok(hr == E_INVALIDARG, "DwmGetWindowAttribute(0xdeadbeef) returned 0x%08x.\n", hr);
++
++    nc_rendering = 0xdeadbeef;
++    hr = DwmGetWindowAttribute(test_wnd, DWMWA_NCRENDERING_ENABLED, &nc_rendering, sizeof(nc_rendering));
++    ok(hr == S_OK, "DwmGetWindowAttribute(DWMWA_NCRENDERING_ENABLED) failed 0x%08x.\n", hr);
++    ok(nc_rendering == FALSE || nc_rendering == TRUE, "non-boolean value 0x%x.\n", nc_rendering);
++}
++
+ 
+ BOOL dwmenabled;
+ 
+@@ -92,6 +119,21 @@ static void test_dwm_get_transport_attributes(void)
+ START_TEST(dwmapi)
+ {
+     HMODULE hmod = LoadLibraryA("dwmapi.dll");
++    HINSTANCE inst = GetModuleHandleA(NULL);
++    WNDCLASSA cls;
++
++    cls.style = 0;
++    cls.lpfnWndProc = test_wndproc;
++    cls.cbClsExtra = 0;
++    cls.cbWndExtra = 0;
++    cls.hInstance = inst;
++    cls.hIcon = 0;
++    cls.hCursor = LoadCursorA(0, (LPCSTR)IDC_ARROW);
++    cls.hbrBackground = GetStockObject(WHITE_BRUSH);
++    cls.lpszMenuName = NULL;
++    cls.lpszClassName = "Test";
++    RegisterClassA(&cls);
++
+ 
+     if (!hmod)
+     {
+@@ -105,4 +147,14 @@ START_TEST(dwmapi)
+ 
+     test_isdwmenabled();
+     test_dwm_get_transport_attributes();
++
++    test_wnd = CreateWindowExA(0, "Test", "Test Window", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
++                               100, 100, 200, 200, 0, 0, 0, NULL);
++    ok(test_wnd != NULL, "Failed to create test window.\n");
++
++    test_DwmGetWindowAttribute();
++
++    DestroyWindow(test_wnd);
++    UnregisterClassA("Test", inst);
++
+ }
+From 1a2e600a9c35a9558b32e7986668d7dc81c8b5ae Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
+Date: Fri, 13 Dec 2019 15:54:30 +0200
+Subject: [PATCH] dwmapi: Add partial implementation of
+ DWMWA_EXTENDED_FRAME_BOUNDS.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
+---
+ dlls/dwmapi/Makefile.in    |  1 +
+ dlls/dwmapi/dwmapi_main.c  |  7 +++++++
+ dlls/dwmapi/tests/dwmapi.c | 14 ++++++++++++++
+ 3 files changed, 22 insertions(+)
+
+diff --git a/dlls/dwmapi/Makefile.in b/dlls/dwmapi/Makefile.in
+index 3a3691326f8..d273a22c8f3 100644
+--- a/dlls/dwmapi/Makefile.in
++++ b/dlls/dwmapi/Makefile.in
+@@ -1,5 +1,6 @@
+ MODULE    = dwmapi.dll
+ IMPORTLIB = dwmapi
++IMPORTS   = user32
+ 
+ EXTRADLLFLAGS = -mno-cygwin
+ 
+diff --git a/dlls/dwmapi/dwmapi_main.c b/dlls/dwmapi/dwmapi_main.c
+index e976fda77f2..212c88c5a02 100644
+--- a/dlls/dwmapi/dwmapi_main.c
++++ b/dlls/dwmapi/dwmapi_main.c
+@@ -217,6 +217,13 @@ HRESULT WINAPI DwmGetWindowAttribute(HWND hwnd, DWORD attribute, PVOID pv_attrib
+         *(BOOL*)(pv_attribute) = FALSE;
+         break;
+ 
++    case DWMWA_EXTENDED_FRAME_BOUNDS:
++        if (size < sizeof(RECT)) return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
++
++        WARN("DWMWA_EXTENDED_FRAME_BOUNDS: returning window rect.\n");
++        GetWindowRect(hwnd, pv_attribute);
++        break;
++
+     case DWMWA_CLOAKED:
+         if (size < sizeof(DWORD)) return E_INVALIDARG;
+ 
+diff --git a/dlls/dwmapi/tests/dwmapi.c b/dlls/dwmapi/tests/dwmapi.c
+index 0fc8820b095..409f5c85876 100644
+--- a/dlls/dwmapi/tests/dwmapi.c
++++ b/dlls/dwmapi/tests/dwmapi.c
+@@ -29,6 +29,7 @@ static LRESULT WINAPI test_wndproc(HWND hwnd, UINT message, WPARAM wParam, LPARA
+ static void test_DwmGetWindowAttribute(void)
+ {
+     BOOL nc_rendering;
++    RECT rc, rc2;
+     HRESULT hr;
+ 
+     hr = DwmGetWindowAttribute(NULL, DWMWA_NCRENDERING_ENABLED, &nc_rendering, sizeof(nc_rendering));
+@@ -45,6 +46,19 @@ static void test_DwmGetWindowAttribute(void)
+     hr = DwmGetWindowAttribute(test_wnd, DWMWA_NCRENDERING_ENABLED, &nc_rendering, sizeof(nc_rendering));
+     ok(hr == S_OK, "DwmGetWindowAttribute(DWMWA_NCRENDERING_ENABLED) failed 0x%08x.\n", hr);
+     ok(nc_rendering == FALSE || nc_rendering == TRUE, "non-boolean value 0x%x.\n", nc_rendering);
++
++    hr = DwmGetWindowAttribute(test_wnd, DWMWA_EXTENDED_FRAME_BOUNDS, &rc, sizeof(rc) - 1);
++    ok(hr == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) || broken(hr == E_INVALIDARG) /* Vista */,
++       "DwmGetWindowAttribute(DWMWA_EXTENDED_FRAME_BOUNDS) returned 0x%08x.\n", hr);
++    hr = DwmGetWindowAttribute(test_wnd, DWMWA_EXTENDED_FRAME_BOUNDS, &rc, sizeof(rc));
++    if (hr != E_HANDLE && hr != DWM_E_COMPOSITIONDISABLED /* Vista */)  /* composition is on */
++    {
++        /* For top-level Windows, the returned rect is always at least as large as GetWindowRect */
++        GetWindowRect(test_wnd, &rc2);
++        ok(hr == S_OK, "DwmGetWindowAttribute(DWMWA_EXTENDED_FRAME_BOUNDS) failed 0x%08x.\n", hr);
++        ok(rc.left >= rc2.left && rc.right <= rc2.right && rc.top >= rc2.top && rc.bottom <= rc2.bottom,
++           "returned rect %s not enclosed in window rect %s.\n", wine_dbgstr_rect(&rc), wine_dbgstr_rect(&rc2));
++    }
+ }
+ 
+ START_TEST(dwmapi)
+From c099ae745b3a63edee1677a2da01cab5aa5b8562 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Tue, 28 Jan 2020 14:30:43 -0600
+Subject: [PATCH] winegstreamer: HACK: Try harder to register winegstreamer
+ filters.
+
+The IDL declarations should actually be unnecessary with the quartz part, but there's a chance that an application will try to create filters before it creates the graph.
+---
+ dlls/quartz/filtergraph.c     | 17 +++++++++++++++++
+ dlls/winegstreamer/winegstreamer_classes.idl | 21 +++++++++++++++++++++
+ 2 files changed, 38 insertions(+)
+
+diff --git a/dlls/quartz/filtergraph.c b/dlls/quartz/filtergraph.c
+index 1ed41bdcec5..0af6e1ded5f 100644
+--- a/dlls/quartz/filtergraph.c
++++ b/dlls/quartz/filtergraph.c
+@@ -5681,11 +5681,28 @@ static const IUnknownVtbl IInner_VTable =
+     FilterGraphInner_Release
+ };
+ 
++static BOOL CALLBACK register_winegstreamer_proc(INIT_ONCE *once, void *param, void **ctx)
++{
++    HMODULE mod = LoadLibraryW(L"winegstreamer.dll");
++    if (mod)
++    {
++        HRESULT (WINAPI *proc)(void) = (void *)GetProcAddress(mod, "DllRegisterServer");
++        proc();
++        FreeLibrary(mod);
++    }
++    return TRUE;
++}
++
+ static HRESULT filter_graph_common_create(IUnknown *outer, IUnknown **out, BOOL threaded)
+ {
++    static INIT_ONCE once = INIT_ONCE_STATIC_INIT;
+     IFilterGraphImpl *fimpl;
+     HRESULT hr;
+ 
++    /* HACK: our build system makes it difficult to load gstreamer on prefix
++     * creation, so it won't get registered. Do that here instead. */
++    InitOnceExecuteOnce(&once, register_winegstreamer_proc, NULL, NULL);
++
+     *out = NULL;
+ 
+     fimpl = CoTaskMemAlloc(sizeof(*fimpl));
+From aa6ab7464758508b3348b3ce390c1524c9ce32a2 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Thu, 30 Jan 2020 10:16:19 -0600
+Subject: [PATCH] winegstreamer: HACK: Use a different gst registry file per
+ architecture
+
+---
+ dlls/winegstreamer/main.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/dlls/winegstreamer/main.c b/dlls/winegstreamer/main.c
+index 379f54ab4ec..0fb6b0b5ad3 100644
+--- a/dlls/winegstreamer/main.c
++++ b/dlls/winegstreamer/main.c
+@@ -421,9 +421,25 @@ static BOOL CALLBACK init_gstreamer_proc(INIT_ONCE *once, void *param, void **ct
+     char **argv = args;
+     int argc = 2;
+     GError *err = NULL;
++    const char *e;
+ 
+     TRACE("Initializing...\n");
+ 
++    if ((e = getenv("WINE_GST_REGISTRY_DIR")))
++    {
++        char gst_reg[PATH_MAX];
++#if defined(__x86_64__)
++        const char *arch = "/registry.x86_64.bin";
++#elif defined(__i386__)
++        const char *arch = "/registry.i386.bin";
++#else
++#error Bad arch
++#endif
++        strcpy(gst_reg, e);
++        strcat(gst_reg, arch);
++        setenv("GST_REGISTRY_1_0", gst_reg, 1);
++    }
++
+     argv[0] = argv0;
+     argv[1] = argv1;
+     argv[2] = NULL;
+From a4310c0cf1e27f0a90f737c2e7cfe9cdbde07522 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 20 Jan 2020 10:36:48 -0600
+Subject: [PATCH] xaudio2: Stop engine thread in IXAudio2::StopEngine
+
+---
+ dlls/xaudio2_7/xaudio_dll.c     | 60 ++++++++++++++++++++++++---------
+ dlls/xaudio2_7/xaudio_private.h |  1 +
+ 2 files changed, 45 insertions(+), 16 deletions(-)
+
+diff --git a/dlls/xaudio2_7/xaudio_dll.c b/dlls/xaudio2_7/xaudio_dll.c
+index 483e2b4138a..3a6ae546349 100644
+--- a/dlls/xaudio2_7/xaudio_dll.c
++++ b/dlls/xaudio2_7/xaudio_dll.c
+@@ -82,6 +82,8 @@ static HINSTANCE instance;
+ 
+ static XA2VoiceImpl *impl_from_IXAudio2Voice(IXAudio2Voice *iface);
+ 
++static void stop_engine_thread(XA2VoiceImpl *This);
++
+ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD reason, void *pReserved)
+ {
+     TRACE("(%p, %d, %p)\n", hinstDLL, reason, pReserved);
+@@ -1305,13 +1307,7 @@ static void WINAPI XA2M_DestroyVoice(IXAudio2MasteringVoice *iface)
+     EnterCriticalSection(&This->lock);
+ 
+     destroy_voice(This);
+-    pthread_mutex_lock(&This->engine_lock);
+-    This->engine_params.proc = NULL;
+-    pthread_cond_broadcast(&This->engine_ready);
+-    pthread_mutex_unlock(&This->engine_lock);
+-
+-    WaitForSingleObject(This->engine_thread, INFINITE);
+-    This->engine_thread = NULL;
++    stop_engine_thread(This);
+ 
+     LeaveCriticalSection(&This->lock);
+ }
+@@ -1716,15 +1712,49 @@ DWORD WINAPI engine_thread(void *user)
+         if(This->engine_params.proc){
+             This->engine_params.proc(This->engine_params.faudio, This->engine_params.stream);
+             This->engine_params.proc = NULL;
+-            pthread_cond_broadcast(&This->engine_done);
+         }
+-    }while(This->in_use);
++
++        pthread_cond_broadcast(&This->engine_done);
++    }while(!This->stop_engine_thread);
+ 
+     pthread_mutex_unlock(&This->engine_lock);
+ 
+     return 0;
+ }
+ 
++static void start_engine_thread(XA2VoiceImpl *This)
++{
++    pthread_mutex_lock(&This->engine_lock);
++
++    if(!This->engine_thread){
++        This->stop_engine_thread = FALSE;
++
++        This->engine_thread = CreateThread(NULL, 0, &engine_thread, This, 0, NULL);
++
++        pthread_cond_wait(&This->engine_done, &This->engine_lock);
++    }
++
++    pthread_mutex_unlock(&This->engine_lock);
++}
++
++static void stop_engine_thread(XA2VoiceImpl *This)
++{
++    pthread_mutex_lock(&This->engine_lock);
++
++    if(This->engine_thread){
++        This->stop_engine_thread = TRUE;
++
++        pthread_cond_broadcast(&This->engine_ready);
++
++        pthread_cond_wait(&This->engine_done, &This->engine_lock);
++
++        WaitForSingleObject(This->engine_thread, INFINITE);
++        This->engine_thread = NULL;
++    }
++
++    pthread_mutex_unlock(&This->engine_lock);
++}
++
+ static HRESULT WINAPI IXAudio2Impl_CreateMasteringVoice(IXAudio2 *iface,
+         IXAudio2MasteringVoice **ppMasteringVoice, UINT32 inputChannels,
+         UINT32 inputSampleRate, UINT32 flags, const WCHAR *deviceId,
+@@ -1758,13 +1788,7 @@ static HRESULT WINAPI IXAudio2Impl_CreateMasteringVoice(IXAudio2 *iface,
+ 
+     This->mst.effect_chain = wrap_effect_chain(pEffectChain);
+ 
+-    pthread_mutex_lock(&This->mst.engine_lock);
+-
+-    This->mst.engine_thread = CreateThread(NULL, 0, &engine_thread, &This->mst, 0, NULL);
+-
+-    pthread_cond_wait(&This->mst.engine_done, &This->mst.engine_lock);
+-
+-    pthread_mutex_unlock(&This->mst.engine_lock);
++    start_engine_thread(&This->mst);
+ 
+     FAudio_SetEngineProcedureEXT(This->faudio, &engine_cb, &This->mst);
+ 
+@@ -1785,6 +1809,8 @@ static HRESULT WINAPI IXAudio2Impl_StartEngine(IXAudio2 *iface)
+ 
+     TRACE("(%p)->()\n", This);
+ 
++    start_engine_thread(&This->mst);
++
+     return FAudio_StartEngine(This->faudio);
+ }
+ 
+@@ -1795,6 +1821,8 @@ static void WINAPI IXAudio2Impl_StopEngine(IXAudio2 *iface)
+     TRACE("(%p)->()\n", This);
+ 
+     FAudio_StopEngine(This->faudio);
++
++    stop_engine_thread(&This->mst);
+ }
+ 
+ static HRESULT WINAPI IXAudio2Impl_CommitChanges(IXAudio2 *iface,
+diff --git a/dlls/xaudio2_7/xaudio_private.h b/dlls/xaudio2_7/xaudio_private.h
+index 46d842bf4c1..8a485ca7fd5 100644
+--- a/dlls/xaudio2_7/xaudio_private.h
++++ b/dlls/xaudio2_7/xaudio_private.h
+@@ -97,6 +97,7 @@ typedef struct _XA2VoiceImpl {
+         float *stream;
+     } engine_params;
+ 
++    BOOL stop_engine_thread;
+     HANDLE engine_thread;
+     pthread_cond_t engine_done, engine_ready;
+     pthread_mutex_t engine_lock;
+From ddb3e721daa73dc07079e7a15612e274f96f104b Mon Sep 17 00:00:00 2001
+From: Derek Lesho <dlesho@codeweavers.com>
+Date: Fri, 6 Dec 2019 11:48:10 -0600
+Subject: [PATCH] bcrypt: Allow importing private ECDSA keys.
+
+Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
+---
+ dlls/bcrypt/bcrypt_main.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/dlls/bcrypt/bcrypt_main.c b/dlls/bcrypt/bcrypt_main.c
+index 2ac36d3db01..1daaa8ab599 100644
+--- a/dlls/bcrypt/bcrypt_main.c
++++ b/dlls/bcrypt/bcrypt_main.c
+@@ -1175,6 +1175,10 @@ static NTSTATUS key_import_pair( struct algorithm *alg, const WCHAR *type, BCRYP
+             key_size = 32;
+             magic = BCRYPT_ECDH_PRIVATE_P256_MAGIC;
+             break;
++        case ALG_ID_ECDSA_P256:
++            key_size = 32;
++            magic = BCRYPT_ECDSA_PRIVATE_P256_MAGIC;
++            break;
+ 
+         default:
+             FIXME( "algorithm %u does not yet support importing blob of type %s\n", alg->id, debugstr_w(type) );
+From 52c36274080a6edc1f1420b08df1ecf0defa9ca3 Mon Sep 17 00:00:00 2001
+From: Derek Lesho <dlesho@codeweavers.com>
+Date: Thu, 5 Dec 2019 12:41:57 -0600
+Subject: [PATCH] bcrypt: Fallback to _gnutls_decode_ber_rs_raw if
+ gnutls_decode_rs_value is unavailable.
+
+This can be removed when the runtime ships gnutls >= 3.6
+---
+ dlls/bcrypt/gnutls.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/bcrypt/gnutls.c b/dlls/bcrypt/gnutls.c
+index 868f898bbbb..95f498123ea 100644
+--- a/dlls/bcrypt/gnutls.c
++++ b/dlls/bcrypt/gnutls.c
+@@ -267,8 +267,11 @@ BOOL gnutls_initialize(void)
+     }
+     if (!(pgnutls_decode_rs_value = dlsym( libgnutls_handle, "gnutls_decode_rs_value" )))
+     {
+-        WARN("gnutls_decode_rs_value not found\n");
+-        pgnutls_decode_rs_value = compat_gnutls_decode_rs_value;
++        if (!(pgnutls_decode_rs_value = dlsym( libgnutls_handle, "_gnutls_decode_ber_rs_raw" )))
++        {
++            WARN("gnutls_decode_rs_value and legacy alternative _gnutls_decode_ber_rs_raw not found\n");
++            pgnutls_decode_rs_value = compat_gnutls_decode_rs_value;
++        }
+     }
+ 
+     if (TRACE_ON( bcrypt ))
+From f70d26ade963aab370f80ca33744ca258f839b25 Mon Sep 17 00:00:00 2001
+From: Derek Lesho <dlesho@codeweavers.com>
+Date: Mon, 24 Feb 2020 13:32:38 -0600
+Subject: [PATCH] ntdll: Partially implement
+ JobObjectBasicAccountingInformation.
+
+---
+ dlls/kernel32/tests/process.c  |  9 +++++++++
+ dlls/ntdll/sync.c              | 20 +++++++++++++++++---
+ include/wine/server_protocol.h | 18 +++++++++++++++++-
+ server/process.c               | 14 ++++++++++++++
+ server/protocol.def            |  8 ++++++++
+ server/request.h               |  7 +++++++
+ server/trace.c                 | 14 ++++++++++++++
+ 7 files changed, 86 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/kernel32/tests/process.c b/dlls/kernel32/tests/process.c
+index 89ad4175c7e..0489f4c285f 100644
+--- a/dlls/kernel32/tests/process.c
++++ b/dlls/kernel32/tests/process.c
+@@ -2543,6 +2543,7 @@ static void test_QueryInformationJobObject(void)
+     PJOBOBJECT_BASIC_PROCESS_ID_LIST pid_list = (JOBOBJECT_BASIC_PROCESS_ID_LIST *)buf;
+     JOBOBJECT_EXTENDED_LIMIT_INFORMATION ext_limit_info;
+     JOBOBJECT_BASIC_LIMIT_INFORMATION *basic_limit_info = &ext_limit_info.BasicLimitInformation;
++    JOBOBJECT_BASIC_ACCOUNTING_INFORMATION basic_accounting_info;
+     DWORD ret_len;
+     PROCESS_INFORMATION pi[2];
+     char buffer[50];
+@@ -2647,6 +2648,14 @@ static void test_QueryInformationJobObject(void)
+     ok(ret_len == sizeof(ext_limit_info), "QueryInformationJobObject returned ret_len=%u\n", ret_len);
+     expect_eq_d(0, basic_limit_info->LimitFlags);
+ 
++    /* test JobObjectBasicAccountingInformation */
++    ret = pQueryInformationJobObject(job, JobObjectBasicAccountingInformation, &basic_accounting_info,
++                                     sizeof(basic_accounting_info), &ret_len);
++    ok(ret, "QueryInformationJobObject error %u\n", GetLastError());
++    ok(ret_len == sizeof(basic_accounting_info), "QueryInformationJobObject returned ret_len=%u\n", ret_len);
++    expect_eq_d(3, basic_accounting_info.TotalProcesses);
++    expect_eq_d(2, basic_accounting_info.ActiveProcesses);
++
+     TerminateProcess(pi[0].hProcess, 0);
+     CloseHandle(pi[0].hProcess);
+     CloseHandle(pi[0].hThread);
+diff --git a/dlls/ntdll/sync.c b/dlls/ntdll/sync.c
+index 0265ff96661..a6fe27d00ec 100644
+--- a/dlls/ntdll/sync.c
++++ b/dlls/ntdll/sync.c
+@@ -784,7 +784,9 @@ NTSTATUS WINAPI NtTerminateJobObject( HANDLE handle, NTSTATUS status )
+ NTSTATUS WINAPI NtQueryInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS class, PVOID info,
+                                              ULONG len, PULONG ret_len )
+ {
+-    FIXME( "stub: %p %u %p %u %p\n", handle, class, info, len, ret_len );
++    NTSTATUS ret;
++
++    TRACE( "semi-stub: %p %u %p %u %p\n", handle, class, info, len, ret_len );
+ 
+     if (class >= MaxJobObjectInfoClass)
+         return STATUS_INVALID_PARAMETER;
+@@ -798,9 +800,21 @@ NTSTATUS WINAPI NtQueryInformationJobObject( HANDLE handle, JOBOBJECTINFOCLASS c
+                 return STATUS_INFO_LENGTH_MISMATCH;
+ 
+             accounting = (JOBOBJECT_BASIC_ACCOUNTING_INFORMATION *)info;
+-            memset(accounting, 0, sizeof(*accounting));
++
++            SERVER_START_REQ(get_job_info)
++            {
++                req->handle = wine_server_obj_handle( handle );
++                if ((ret = wine_server_call( req )) == STATUS_SUCCESS)
++                {
++                    memset(accounting, 0, sizeof(*accounting));
++                    accounting->TotalProcesses = reply->total_processes;
++                    accounting->ActiveProcesses = reply->active_processes;
++                }
++            }
++            SERVER_END_REQ;
++
+             if (ret_len) *ret_len = sizeof(*accounting);
+-            return STATUS_SUCCESS;
++            return ret;
+         }
+ 
+     case JobObjectBasicProcessIdList:
+diff --git a/include/wine/server_protocol.h b/include/wine/server_protocol.h
+index 82d58f0f32b..5b8774a6aed 100644
+--- a/include/wine/server_protocol.h
++++ b/include/wine/server_protocol.h
+@@ -5794,6 +5794,19 @@ struct set_job_completion_port_reply
+ };
+ 
+ 
++struct get_job_info_request
++{
++    struct request_header __header;
++    obj_handle_t handle;
++};
++struct get_job_info_reply
++{
++    struct reply_header __header;
++    unsigned int total_processes;
++    unsigned int active_processes;
++};
++
++
+ 
+ struct terminate_job_request
+ {
+@@ -6301,6 +6314,7 @@ enum request
+     REQ_process_in_job,
+     REQ_set_job_limits,
+     REQ_set_job_completion_port,
++    REQ_get_job_info,
+     REQ_terminate_job,
+     REQ_suspend_process,
+     REQ_resume_process,
+@@ -6616,6 +6630,7 @@ union generic_request
+     struct process_in_job_request process_in_job_request;
+     struct set_job_limits_request set_job_limits_request;
+     struct set_job_completion_port_request set_job_completion_port_request;
++    struct get_job_info_request get_job_info_request;
+     struct terminate_job_request terminate_job_request;
+     struct suspend_process_request suspend_process_request;
+     struct resume_process_request resume_process_request;
+@@ -6929,6 +6944,7 @@ union generic_reply
+     struct process_in_job_reply process_in_job_reply;
+     struct set_job_limits_reply set_job_limits_reply;
+     struct set_job_completion_port_reply set_job_completion_port_reply;
++    struct get_job_info_reply get_job_info_reply;
+     struct terminate_job_reply terminate_job_reply;
+     struct suspend_process_reply suspend_process_reply;
+     struct resume_process_reply resume_process_reply;
+diff --git a/server/process.c b/server/process.c
+index f43f96cda08..dacca025572 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -164,6 +164,7 @@ struct job
+     struct object obj;             /* object header */
+     struct list process_list;      /* list of all processes */
+     int num_processes;             /* count of running processes */
++    int assign_counter;            /* Number of processes which have been assigned */
+     unsigned int limit_flags;      /* limit flags */
+     int terminating;               /* job is terminating */
+     int signaled;                  /* job is signaled */
+@@ -208,6 +209,7 @@ static struct job *create_job_object( struct object *root, const struct unicode_
+             /* initialize it if it didn't already exist */
+             list_init( &job->process_list );
+             job->num_processes = 0;
++            job->assign_counter = 0;
+             job->limit_flags = 0;
+             job->terminating = 0;
+             job->signaled = 0;
+@@ -250,6 +252,7 @@ static void add_job_process( struct job *job, struct process *process )
+     process->job = (struct job *)grab_object( job );
+     list_add_tail( &job->process_list, &process->job_entry );
+     job->num_processes++;
++    job->assign_counter++;
+ 
+     add_job_completion( job, JOB_OBJECT_MSG_NEW_PROCESS, get_process_id(process) );
+ }
+@@ -1750,6 +1753,17 @@ DECL_HANDLER(process_in_job)
+     release_object( process );
+ }
+ 
++/* retrieve information about a job */
++DECL_HANDLER(get_job_info)
++{
++    struct job *job = get_job_obj( current->process, req->handle, JOB_OBJECT_QUERY );
++
++    reply->total_processes = job->assign_counter;
++    reply->active_processes = job->num_processes;
++
++    release_object( job );
++}
++
+ /* terminate all processes associated with the job */
+ DECL_HANDLER(terminate_job)
+ {
+diff --git a/server/protocol.def b/server/protocol.def
+index 1dc9d81a2f5..932c67b1b00 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3966,6 +3966,14 @@ struct handle_info
+     client_ptr_t key;             /* key to send with completion messages */
+ @END
+ 
++/* Retrieve information about a job */
++@REQ(get_job_info)
++    obj_handle_t handle;
++@REPLY
++    unsigned int total_processes;
++    unsigned int active_processes;
++@END
++
+ 
+ /* Terminate all processes associated with the job  */
+ @REQ(terminate_job)
+diff --git a/server/request.h b/server/request.h
+index 57d71403d0c..8521cc955e8 100644
+--- a/server/request.h
++++ b/server/request.h
+@@ -408,6 +408,7 @@ DECL_HANDLER(assign_job);
+ DECL_HANDLER(process_in_job);
+ DECL_HANDLER(set_job_limits);
+ DECL_HANDLER(set_job_completion_port);
++DECL_HANDLER(get_job_info);
+ DECL_HANDLER(terminate_job);
+ DECL_HANDLER(suspend_process);
+ DECL_HANDLER(resume_process);
+@@ -722,6 +723,7 @@ static const req_handler req_handlers[REQ_NB_REQUESTS] =
+     (req_handler)req_process_in_job,
+     (req_handler)req_set_job_limits,
+     (req_handler)req_set_job_completion_port,
++    (req_handler)req_get_job_info,
+     (req_handler)req_terminate_job,
+     (req_handler)req_suspend_process,
+     (req_handler)req_resume_process,
+@@ -2463,6 +2465,11 @@ C_ASSERT( FIELD_OFFSET(struct set_job_completion_port_request, job) == 12 );
+ C_ASSERT( FIELD_OFFSET(struct set_job_completion_port_request, port) == 16 );
+ C_ASSERT( FIELD_OFFSET(struct set_job_completion_port_request, key) == 24 );
+ C_ASSERT( sizeof(struct set_job_completion_port_request) == 32 );
++C_ASSERT( FIELD_OFFSET(struct get_job_info_request, handle) == 12 );
++C_ASSERT( sizeof(struct get_job_info_request) == 16 );
++C_ASSERT( FIELD_OFFSET(struct get_job_info_reply, total_processes) == 8 );
++C_ASSERT( FIELD_OFFSET(struct get_job_info_reply, active_processes) == 12 );
++C_ASSERT( sizeof(struct get_job_info_reply) == 16 );
+ C_ASSERT( FIELD_OFFSET(struct terminate_job_request, handle) == 12 );
+ C_ASSERT( FIELD_OFFSET(struct terminate_job_request, status) == 16 );
+ C_ASSERT( sizeof(struct terminate_job_request) == 24 );
+diff --git a/server/trace.c b/server/trace.c
+index f9d13167eb2..b407a7c478e 100644
+--- a/server/trace.c
++++ b/server/trace.c
+@@ -4607,6 +4607,17 @@ static void dump_set_job_completion_port_request( const struct set_job_completio
+     dump_uint64( ", key=", &req->key );
+ }
+ 
++static void dump_get_job_info_request( const struct get_job_info_request *req )
++{
++    fprintf( stderr, " handle=%04x", req->handle );
++}
++
++static void dump_get_job_info_reply( const struct get_job_info_reply *req )
++{
++    fprintf( stderr, " total_processes=%08x", req->total_processes );
++    fprintf( stderr, ", active_processes=%08x", req->active_processes );
++}
++
+ static void dump_terminate_job_request( const struct terminate_job_request *req )
+ {
+     fprintf( stderr, " handle=%04x", req->handle );
+@@ -5028,6 +5039,7 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] = {
+     (dump_func)dump_process_in_job_request,
+     (dump_func)dump_set_job_limits_request,
+     (dump_func)dump_set_job_completion_port_request,
++    (dump_func)dump_get_job_info_request,
+     (dump_func)dump_terminate_job_request,
+     (dump_func)dump_suspend_process_request,
+     (dump_func)dump_resume_process_request,
+@@ -5339,6 +5351,7 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
+     NULL,
+     NULL,
+     NULL,
++    (dump_func)dump_get_job_info_reply,
+     NULL,
+     NULL,
+     NULL,
+@@ -5650,6 +5663,7 @@ static const char * const req_names[REQ_NB_REQUESTS] = {
+     "process_in_job",
+     "set_job_limits",
+     "set_job_completion_port",
++    "get_job_info",
+     "terminate_job",
+     "suspend_process",
+     "resume_process",
+From 2f720e9aa8ded781ff457bdfab96f3651017299c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 21 Jan 2020 21:05:05 +0100
+Subject: [PATCH] winex11.drv: Ignore ClipCursor if desktop window is
+ foreground.
+
+---
+ dlls/winex11.drv/mouse.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
+index a5235b69a8d..4b2c9bd41ae 100644
+--- a/dlls/winex11.drv/mouse.c
++++ b/dlls/winex11.drv/mouse.c
+@@ -1625,6 +1625,13 @@ BOOL CDECL X11DRV_ClipCursor( LPCRECT clip )
+         HWND foreground = GetForegroundWindow();
+         DWORD tid, pid;
+ 
++        if (foreground == GetDesktopWindow())
++        {
++            WARN( "desktop is foreground, ignoring ClipCursor\n" );
++            ungrab_clipping_window();
++            return TRUE;
++        }
++
+         /* forward request to the foreground window if it's in a different thread */
+         tid = GetWindowThreadProcessId( foreground, &pid );
+         if (tid && tid != GetCurrentThreadId() && pid == GetCurrentProcessId())
+From 02951753970f5b2a0dafe41aee9fe96bc1a24301 Mon Sep 17 00:00:00 2001
+From: Piotr Caban <piotr@codeweavers.com>
+Date: Wed, 4 Mar 2020 18:49:37 +0100
+Subject: [PATCH] HACK: ntdll: Mark first gta5.exe page as copied.
+
+---
+ dlls/ntdll/virtual.c | 30 +++++++++++++++++++++++++++---
+ 1 file changed, 27 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index dbcbd52c6d6..90a790241a9 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -58,6 +58,7 @@
+ #include "wine/exception.h"
+ #include "wine/rbtree.h"
+ #include "wine/debug.h"
++#include "wine/unicode.h"
+ #include "ntdll_misc.h"
+
+ WINE_DEFAULT_DEBUG_CHANNEL(virtual);
+@@ -84,6 +85,7 @@ struct file_view
+ #define VPROT_COMMITTED  0x20
+ #define VPROT_WRITEWATCH 0x40
+ #define VPROT_WRITTEN    0x80
++#define VPROT_COPIED     0x100
+ /* per-mapping protection flags */
+ #define VPROT_SYSTEM     0x0200  /* system view (underlying mmap not under our control) */
+
+@@ -304,7 +306,8 @@ static const char *VIRTUAL_GetProtStr( BYTE prot )
+     buffer[0] = (prot & VPROT_COMMITTED) ? 'c' : '-';
+     buffer[1] = (prot & VPROT_GUARD) ? 'g' : ((prot & VPROT_WRITEWATCH) ? 'H' : '-');
+     buffer[2] = (prot & VPROT_READ) ? 'r' : '-';
+-    buffer[3] = (prot & VPROT_WRITECOPY) ? 'W' : ((prot & VPROT_WRITE) ? 'w' : '-');
++    buffer[3] = (prot & VPROT_WRITECOPY) ? (prot & VPROT_COPIED ? 'w' : 'W')
++        : ((prot & VPROT_WRITE) ? 'w' : '-');
+     buffer[4] = (prot & VPROT_EXEC) ? 'x' : '-';
+     buffer[5] = 0;
+     return buffer;
+@@ -907,10 +907,9 @@ static DWORD VIRTUAL_GetWin32Prot( BYTE vprot, unsigned int map_prot )
+ {
+     DWORD ret;
+ 
+-    if ((vprot & VPROT_WRITECOPY) && (vprot & VPROT_WRITTEN))
++    if ((vprot & (VPROT_COPIED | VPROT_WRITECOPY)) == (VPROT_COPIED | VPROT_WRITECOPY))
+         vprot = (vprot & ~VPROT_WRITECOPY) | VPROT_WRITE;
+     ret = VIRTUAL_Win32Flags[vprot & 0x0f];
+-    if (vprot & VPROT_GUARD) ret |= PAGE_GUARD;
+     if (map_prot & SEC_NOCACHE) ret |= PAGE_NOCACHE;
+     return ret;
+ }
+@@ -2957,6 +2963,24 @@ NTSTATUS WINAPI DECLSPEC_HOTPATCH NtProtectVirtualMemory( HANDLE process, PVOID
+         {
+             old = VIRTUAL_GetWin32Prot( vprot, view->protect );
+             status = set_protection( view, base, size, new_prot );
++
++            /* GTA5 HACK: Mark first page as copied. */
++            if (status == STATUS_SUCCESS && (view->protect & SEC_IMAGE) &&
++                    base == (void*)NtCurrentTeb()->Peb->ImageBaseAddress)
++            {
++                const WCHAR gta5W[] = { 'g','t','a','5','.','e','x','e',0 };
++                WCHAR *name, *p;
++
++                name = NtCurrentTeb()->Peb->ProcessParameters->ImagePathName.Buffer;
++                p = strrchrW(name, '\\');
++                p = p ? p+1 : name;
++
++                if(!strcmpiW(p, gta5W))
++                {
++                    FIXME("HACK: changing GTA5.exe vprot\n");
++                    set_page_vprot_bits(base, page_size, VPROT_COPIED, 0);
++                }
++            }
+         }
+         else status = STATUS_NOT_COMMITTED;
+     }
+From 5e8fedb161bae24ecf6d9425e90e3c595ec2505c Mon Sep 17 00:00:00 2001
+From: Piotr Caban <piotr@codeweavers.com>
+Date: Wed, 11 Mar 2020 09:17:05 -0500
+Subject: [PATCH] ntdll: Restore PAGE_GUARD flag
+
+On rebase, squash into 'HACK: ntdll: Mark first gta5.exe page as
+copied.'
+---
+ dlls/ntdll/virtual.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/ntdll/virtual.c b/dlls/ntdll/virtual.c
+index 90a790241a9..d0cd2639ee9 100644
+--- a/dlls/ntdll/virtual.c
++++ b/dlls/ntdll/virtual.c
+@@ -909,6 +909,7 @@ static DWORD VIRTUAL_GetWin32Prot( BYTE vprot, unsigned int map_prot )
+     if ((vprot & (VPROT_COPIED | VPROT_WRITECOPY)) == (VPROT_COPIED | VPROT_WRITECOPY))
+         vprot = (vprot & ~VPROT_WRITECOPY) | VPROT_WRITE;
+     ret = VIRTUAL_Win32Flags[vprot & 0x0f];
++    if (vprot & VPROT_GUARD) ret |= PAGE_GUARD;
+     if (map_prot & SEC_NOCACHE) ret |= PAGE_NOCACHE;
+     return ret;
+ }
+
+From 24a8f709ec8fcf8fa4fcc349a7885c02cc184d74 Mon Sep 17 00:00:00 2001
+From: Derek Lesho <dlesho@codeweavers.com>
+Date: Wed, 26 Feb 2020 13:09:48 -0600
+Subject: [PATCH] ntdll: Don't support reading/writing debug registers
+
+Monster Hunter World continually retrieves these registers, so fast-path
+this code. This will break setting debug registers on other threads.
+---
+ dlls/ntdll/signal_x86_64.c | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index 04f3854388c..9752c3889b6 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -2115,13 +2115,13 @@ NTSTATUS WINAPI NtSetContextThread( HANDLE handle, const CONTEXT *context )
+     BOOL self = (handle == GetCurrentThread());
+ 
+     /* debug registers require a server call */
+-    if (self && (context->ContextFlags & (CONTEXT_DEBUG_REGISTERS & ~CONTEXT_AMD64)))
++    /*if (self && (context->ContextFlags & (CONTEXT_DEBUG_REGISTERS & ~CONTEXT_AMD64)))
+         self = (amd64_thread_data()->dr0 == context->Dr0 &&
+                 amd64_thread_data()->dr1 == context->Dr1 &&
+                 amd64_thread_data()->dr2 == context->Dr2 &&
+                 amd64_thread_data()->dr3 == context->Dr3 &&
+                 amd64_thread_data()->dr6 == context->Dr6 &&
+-                amd64_thread_data()->dr7 == context->Dr7);
++                amd64_thread_data()->dr7 == context->Dr7);*/
+ 
+     if (!self)
+     {
+@@ -2149,7 +2149,15 @@ NTSTATUS WINAPI NtGetContextThread( HANDLE handle, CONTEXT *context )
+     needed_flags = context->ContextFlags;
+ 
+     /* debug registers require a server call */
+-    if (context->ContextFlags & (CONTEXT_DEBUG_REGISTERS & ~CONTEXT_AMD64)) self = FALSE;
++    if (context->ContextFlags & (CONTEXT_DEBUG_REGISTERS & ~CONTEXT_AMD64)) //self = FALSE;
++    {
++        context->Dr0 = amd64_thread_data()->dr0;
++        context->Dr1 = amd64_thread_data()->dr1;
++        context->Dr2 = amd64_thread_data()->dr2;
++        context->Dr3 = amd64_thread_data()->dr3;
++        context->Dr6 = amd64_thread_data()->dr6;
++        context->Dr7 = amd64_thread_data()->dr7;
++    }
+ 
+     if (!self)
+     {
+From 8fd9d6bd3d567893f933b7d55615446476745654 Mon Sep 17 00:00:00 2001
+From: Vincent Povirk <vincent@codeweavers.com>
+Date: Wed, 1 Apr 2020 11:47:05 -0500
+Subject: [PATCH] winebrowser: Restore original LD_LIBRARY_PATH before calling
+ to system
+
+---
+ programs/winebrowser/main.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/programs/winebrowser/main.c b/programs/winebrowser/main.c
+index 9cd6812d032..9e5fe2f3129 100644
+--- a/programs/winebrowser/main.c
++++ b/programs/winebrowser/main.c
+@@ -69,6 +69,17 @@ static char *strdup_unixcp( const WCHAR *str )
+     return ret;
+ }
+ 
++static void restore_system_environment(void)
++{
++    const char* orig_ld_path = getenv("ORIG_LD_LIBRARY_PATH");
++
++    if (orig_ld_path)
++    {
++        setenv("LD_LIBRARY_PATH", orig_ld_path, 1);
++        unsetenv("ORIG_LD_LIBRARY_PATH");
++    }
++}
++
+ /* try to launch a unix app from a comma separated string of app names */
+ static int launch_app( const WCHAR *candidates, const WCHAR *argv1 )
+ {
+@@ -78,6 +89,11 @@ static int launch_app( const WCHAR *candidates, const WCHAR *argv1 )
+ 
+     if (!(cmdline = strdup_unixcp( argv1 ))) return 1;
+ 
++    /* PROTON HACK: Restore ORIG_LD_LIBRARY_PATH to LD_LIBRARY_PATH.
++     * System programs may not work correctly with our libraries, in
++     * particular gio on Ubuntu 19.04 is broken by our libgio. */
++    restore_system_environment();
++
+     while (*candidates)
+     {
+         WCHAR **args = CommandLineToArgvW( candidates, &count );
+From 3082a724542ba7527fa52eaac3611ed97ff91cac Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 10 Dec 2018 12:48:41 -0600
+Subject: [PATCH] xaudio2: Set PulseAudio application name property in the
+ environment
+
+So PA doesn't present all Wine applications as "wine-preloader", and
+allows PA to store per-application settings.
+---
+ dlls/winepulse.drv/mmdevdrv.c |  1 +
+ dlls/xaudio2_7/xaudio_dll.c   | 21 +++++++++++++++++++++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index c80ea4f9d04..6a2906761a7 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -571,6 +571,7 @@ static HRESULT pulse_connect(void)
+     WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
+     TRACE("Name: %s\n", str);
+     pulse_ctx = pa_context_new(pa_mainloop_get_api(pulse_ml), str);
++    setenv("PULSE_PROP_application.name", str, 1);
+     pa_xfree(str);
+     if (!pulse_ctx) {
+         ERR("Failed to create context\n");
+diff --git a/dlls/xaudio2_7/xaudio_dll.c b/dlls/xaudio2_7/xaudio_dll.c
+index 4ca04198b6e..483e2b4138a 100644
+--- a/dlls/xaudio2_7/xaudio_dll.c
++++ b/dlls/xaudio2_7/xaudio_dll.c
+@@ -38,6 +38,7 @@
+ #include "wine/asm.h"
+ #include "wine/debug.h"
+ #include "wine/heap.h"
++#include "wine/unicode.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(xaudio2);
+ 
+@@ -1948,6 +1949,26 @@ static HRESULT WINAPI XAudio2CF_CreateInstance(IClassFactory *iface, IUnknown *p
+     pthread_cond_init(&object->mst.engine_done, NULL);
+     pthread_cond_init(&object->mst.engine_ready, NULL);
+ 
++    /* set PulseAudio's application.name in the environment since FAudio and
++     * SDL provide no way to pass this in */
++    {
++        WCHAR path[MAX_PATH], *name;
++        char *str;
++        DWORD len;
++
++        GetModuleFileNameW(NULL, path, ARRAY_SIZE(path));
++        name = strrchrW(path, '\\');
++        if (!name)
++            name = path;
++        else
++            name++;
++        len = WideCharToMultiByte(CP_UNIXCP, 0, name, -1, NULL, 0, NULL, NULL);
++        str = HeapAlloc(GetProcessHeap(), 0, len);
++        WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
++        setenv("PULSE_PROP_application.name", str, 1);
++        HeapFree(GetProcessHeap(), 0, str);
++    }
++
+     FAudioCOMConstructWithCustomAllocatorEXT(
+         &object->faudio,
+         XAUDIO2_VER,
+From b739d48093cce805b7b4f48fdbd9d0bb62bc8013 Mon Sep 17 00:00:00 2001
+From: Brendan Shanks <bshanks@codeweavers.com>
+Date: Mon, 13 Apr 2020 16:25:47 -0700
+Subject: [PATCH] HACK: dxgi: Swap around memory sizes for GTA IV
+
+GTA IV ends up using its "Intel integrated" codepath for determining
+VRAM size (since nvapi/atiadlxx fail), but this requires that
+DedicatedVideoMemory is a very small dummy value, and SharedSystemMemory
+is the actual VRAM size.
+Swap the memory values around so this works.
+---
+ dlls/dxgi/adapter.c | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/dlls/dxgi/adapter.c b/dlls/dxgi/adapter.c
+index 5a97590dbce..a5563498cdd 100644
+--- a/dlls/dxgi/adapter.c
++++ b/dlls/dxgi/adapter.c
+@@ -200,6 +200,25 @@ static HRESULT dxgi_adapter_get_desc(struct dxgi_adapter *adapter, DXGI_ADAPTER_
+     desc->GraphicsPreemptionGranularity = 0; /* FIXME */
+     desc->ComputePreemptionGranularity = 0; /* FIXME */
+ 
++    {
++        /* HACK
++         *
++         * Grand Theft Auto IV first tries to get VRAM size using nvapi/atiadlxx,
++         * after that fails it falls back to the Intel integrated codepath which
++         * uses DXGI.
++         *
++         * DedicatedVideoMemory must be a dummy value less than 200 MB, then
++         * SharedSystemMemory will be used as the VRAM size.
++         * In case of failure, the game will just use 512 MB as VRAM size.
++         */
++        const char *sgi = getenv("SteamGameId");
++        if(sgi && !strcmp(sgi, "12210"))
++        {
++            desc->SharedSystemMemory = adapter_id.video_memory;
++            desc->DedicatedVideoMemory = 32 * 1024 * 1024;
++        }
++    }
++
+     return hr;
+ }
+ 
+From 9d1f0ead53a7f0ecf4120db6828f6008e605f4b8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 22 Apr 2020 15:04:43 +0200
+Subject: [PATCH] server: Make sure pids/tids are multiples of four.
+
+See: https://devblogs.microsoft.com/oldnewthing/?p=23283
+
+Street Fighter V unpacker relies on it when validating other processes
+for its anti-debug checks, it uses (PID&0xfffffffc)>>2 as an array index
+and then checks back indexes against PIDs, and terminates early if some
+PIDs do not match.
+---
+ server/process.c | 31 ++++++++++++++++++-------------
+ 1 file changed, 18 insertions(+), 13 deletions(-)
+
+diff --git a/server/process.c b/server/process.c
+index dacca025572..e8f801891f6 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -352,21 +352,24 @@ static void kill_all_processes(void);
+ 
+ #define PTID_OFFSET 8  /* offset for first ptid value */
+ 
++static unsigned int index_from_ptid(unsigned int id) { return id / 4; }
++static unsigned int ptid_from_index(unsigned int index) { return index * 4; }
++
+ /* allocate a new process or thread id */
+ unsigned int alloc_ptid( void *ptr )
+ {
+     struct ptid_entry *entry;
+-    unsigned int id;
++    unsigned int index;
+ 
+     if (used_ptid_entries < alloc_ptid_entries)
+     {
+-        id = used_ptid_entries + PTID_OFFSET;
++        index = used_ptid_entries + PTID_OFFSET;
+         entry = &ptid_entries[used_ptid_entries++];
+     }
+     else if (next_free_ptid && num_free_ptids >= 256)
+     {
+-        id = next_free_ptid;
+-        entry = &ptid_entries[id - PTID_OFFSET];
++        index = next_free_ptid;
++        entry = &ptid_entries[index - PTID_OFFSET];
+         if (!(next_free_ptid = entry->next)) last_free_ptid = 0;
+         num_free_ptids--;
+     }
+@@ -381,35 +384,37 @@ unsigned int alloc_ptid( void *ptr )
+         }
+         ptid_entries = entry;
+         alloc_ptid_entries = count;
+-        id = used_ptid_entries + PTID_OFFSET;
++        index = used_ptid_entries + PTID_OFFSET;
+         entry = &ptid_entries[used_ptid_entries++];
+     }
+ 
+     entry->ptr = ptr;
+-    return id;
++    return ptid_from_index( index );
+ }
+ 
+ /* free a process or thread id */
+ void free_ptid( unsigned int id )
+ {
+-    struct ptid_entry *entry = &ptid_entries[id - PTID_OFFSET];
++    unsigned int index = index_from_ptid( id );
++    struct ptid_entry *entry = &ptid_entries[index - PTID_OFFSET];
+ 
+     entry->ptr  = NULL;
+     entry->next = 0;
+ 
+     /* append to end of free list so that we don't reuse it too early */
+-    if (last_free_ptid) ptid_entries[last_free_ptid - PTID_OFFSET].next = id;
+-    else next_free_ptid = id;
+-    last_free_ptid = id;
++    if (last_free_ptid) ptid_entries[last_free_ptid - PTID_OFFSET].next = index;
++    else next_free_ptid = index;
++    last_free_ptid = index;
+     num_free_ptids++;
+ }
+ 
+ /* retrieve the pointer corresponding to a process or thread id */
+ void *get_ptid_entry( unsigned int id )
+ {
+-    if (id < PTID_OFFSET) return NULL;
+-    if (id - PTID_OFFSET >= used_ptid_entries) return NULL;
+-    return ptid_entries[id - PTID_OFFSET].ptr;
++    unsigned int index = index_from_ptid( id );
++    if (index < PTID_OFFSET) return NULL;
++    if (index - PTID_OFFSET >= used_ptid_entries) return NULL;
++    return ptid_entries[index - PTID_OFFSET].ptr;
+ }
+ 
+ /* return the main thread of the process */
+From 89537dedfba439efc6f89c9977b50bd7adb76fc7 Mon Sep 17 00:00:00 2001
+From: Brendan Shanks <bshanks@codeweavers.com>
+Date: Fri, 17 Apr 2020 11:35:07 -0700
+Subject: [PATCH] dinput: Fix DInput8 keyboard behavior for injected events
+ with scancode=0.
+
+Grand Theft Auto IV injects VK_F8 and scancode=0, and expects DirectInput not
+to report that F8 is pressed.
+
+Signed-off-by: Brendan Shanks <bshanks@codeweavers.com>
+Signed-off-by: Alexandre Julliard <julliard@winehq.org>
+(cherry picked from commit f65cfbfe9b20e38537c7cb8608e7f411c9e8b725)
+---
+ dlls/dinput/keyboard.c      | 8 ++++----
+ dlls/dinput8/tests/device.c | 2 --
+ 2 files changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/dinput/keyboard.c b/dlls/dinput/keyboard.c
+index 47f28cac52a..f842f1ca42e 100644
+--- a/dlls/dinput/keyboard.c
++++ b/dlls/dinput/keyboard.c
+@@ -68,9 +68,9 @@ static inline IDirectInputDevice8W *IDirectInputDevice8W_from_impl(SysKeyboardIm
+     return &This->base.IDirectInputDevice8W_iface;
+ }
+ 
+-static BYTE map_dik_code(DWORD scanCode, DWORD vkCode, DWORD subType)
++static BYTE map_dik_code(DWORD scanCode, DWORD vkCode, DWORD subType, DWORD version)
+ {
+-    if (!scanCode)
++    if (!scanCode && version < 0x0800)
+         scanCode = MapVirtualKeyW(vkCode, MAPVK_VK_TO_VSC);
+ 
+     if (subType == DIDEVTYPEKEYBOARD_JAPAN106)
+@@ -125,7 +125,7 @@ static int KeyboardCallback( LPDIRECTINPUTDEVICE8A iface, WPARAM wparam, LPARAM
+         case VK_NUMLOCK : dik_code = DIK_NUMLOCK; break;
+         case VK_SUBTRACT: dik_code = DIK_SUBTRACT; break;
+         default:
+-            dik_code = map_dik_code(hook->scanCode & 0xff, hook->vkCode, This->subtype);
++            dik_code = map_dik_code(hook->scanCode & 0xff, hook->vkCode, This->subtype, This->base.dinput->dwVersion);
+             if (hook->flags & LLKHF_EXTENDED) dik_code |= 0x80;
+     }
+     new_diks = hook->flags & LLKHF_UP ? 0 : 0x80;
+@@ -282,7 +282,7 @@ static SysKeyboardImpl *alloc_device(REFGUID rguid, IDirectInputImpl *dinput)
+         if (!GetKeyNameTextA(((i & 0x7f) << 16) | ((i & 0x80) << 17), buf, sizeof(buf)))
+             continue;
+ 
+-        dik_code = map_dik_code(i, 0, newDevice->subtype);
++        dik_code = map_dik_code(i, 0, newDevice->subtype, dinput->dwVersion);
+         memcpy(&df->rgodf[idx], &c_dfDIKeyboard.rgodf[dik_code], df->dwObjSize);
+         df->rgodf[idx++].dwType = DIDFT_MAKEINSTANCE(dik_code) | DIDFT_PSHBUTTON;
+     }
+diff --git a/dlls/dinput8/tests/device.c b/dlls/dinput8/tests/device.c
+index 665812e59f4..4440835284c 100644
+--- a/dlls/dinput8/tests/device.c
++++ b/dlls/dinput8/tests/device.c
+@@ -825,7 +825,6 @@ static void test_keyboard_events(void)
+     data_size = ARRAY_SIZE(obj_data);
+     hr = IDirectInputDevice8_GetDeviceData(di_keyboard, sizeof(DIDEVICEOBJECTDATA), obj_data, &data_size, 0);
+     ok(SUCCEEDED(hr), "Failed to get data hr=%08x\n", hr);
+-    todo_wine
+     ok(data_size == 0, "Expected 0 elements, received %d\n", data_size);
+ 
+     hr = IDirectInputDevice8_GetDeviceState(di_keyboard, sizeof(kbdata), kbdata);
+@@ -839,7 +838,6 @@ static void test_keyboard_events(void)
+     data_size = ARRAY_SIZE(obj_data);
+     hr = IDirectInputDevice8_GetDeviceData(di_keyboard, sizeof(DIDEVICEOBJECTDATA), obj_data, &data_size, 0);
+     ok(SUCCEEDED(hr), "Failed to get data hr=%08x\n", hr);
+-    todo_wine
+     ok(data_size == 0, "Expected 0 elements, received %d\n", data_size);
+ 
+     hr = IDirectInputDevice8_Unacquire(di_keyboard);
