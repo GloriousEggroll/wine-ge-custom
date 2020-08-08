@@ -1,0 +1,29 @@
+From 50f1b757fc461b1f5edcff8a325afbe326ea7d78 Mon Sep 17 00:00:00 2001
+From: Alexandre Abgrall <aabgrall98@gmail.com>
+Date: Wed, 29 Jul 2020 16:46:29 +0200
+Subject: [PATCH] ntdll: Always align value of FILE_NOTIFY_INFORMATION's
+ NextEntryOffset to int
+
+---
+ dlls/ntdll/file.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/file.c b/dlls/ntdll/file.c
+index 23b030b5f7b..efc19607897 100644
+--- a/dlls/ntdll/file.c
++++ b/dlls/ntdll/file.c
+@@ -2413,10 +2413,13 @@ static NTSTATUS read_changes_apc( void *user, IO_STATUS_BLOCK *iosb, NTSTATUS st
+                 pfni->Action = event->action;
+                 pfni->FileNameLength = ntdll_umbstowcs( event->name, event->len, pfni->FileName, len );
+                 last_entry_offset = &pfni->NextEntryOffset;
++                
++                pfni->NextEntryOffset = 0;
+ 
+                 if (pfni->FileNameLength == len) break;
+ 
+-                i = offsetof(FILE_NOTIFY_INFORMATION, FileName[pfni->FileNameLength]);
++                i = (offsetof(FILE_NOTIFY_INFORMATION, FileName[pfni->FileNameLength])
++                     + sizeof(int)-1) / sizeof(int) * sizeof(int);
+                 pfni->FileNameLength *= sizeof(WCHAR);
+                 pfni->NextEntryOffset = i;
+                 pfni = (FILE_NOTIFY_INFORMATION*)((char*)pfni + i);

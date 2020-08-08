@@ -1,0 +1,60 @@
+From e1db04b620ae8e441b9ecb735d52960a0bf044bc Mon Sep 17 00:00:00 2001
+From: Alexandre Abgrall <aabgrall98@gmail.com>
+Date: Mon, 27 Jul 2020 14:56:31 +0200
+Subject: [PATCH] iphlpapi: Implement GetIpInterfaceTable semi-stub.
+
+---
+ dlls/iphlpapi/iphlpapi_main.c | 40 +++++++++++++++++++++++++++++++++--
+ 1 file changed, 38 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/iphlpapi/iphlpapi_main.c b/dlls/iphlpapi/iphlpapi_main.c
+index ff9d0d3a536..9c512b96436 100644
+--- a/dlls/iphlpapi/iphlpapi_main.c
++++ b/dlls/iphlpapi/iphlpapi_main.c
+@@ -3384,8 +3384,44 @@ DWORD WINAPI GetIpNetTable2(ADDRESS_FAMILY family, PMIB_IPNET_TABLE2 *table)
+  */
+ DWORD WINAPI GetIpInterfaceTable(ADDRESS_FAMILY family, PMIB_IPINTERFACE_TABLE *table)
+ {
+-    FIXME("(%u %p): stub\n", family, table);
+-    return ERROR_NOT_SUPPORTED;
++    PMIB_IF_TABLE2 if_table2;
++    ULONG size;
++    ULONG i;
++    DWORD status;
++
++    FIXME("(%u %p): semi-stub\n", family, table);
++
++    if (!table || (family != AF_INET && family != AF_INET6 && family != AF_UNSPEC))
++        return ERROR_INVALID_PARAMETER;
++    size = sizeof(MIB_IFTABLE);
++    if (family != AF_INET)
++    {
++        if (!(*table = HeapAlloc( GetProcessHeap(), 0, size )))
++            return ERROR_OUTOFMEMORY;
++        return NO_ERROR;
++    }
++    if ((status = GetIfTable2Ex( MibIfTableNormal, &if_table2 )) != NO_ERROR)
++        return status;
++    if (if_table2->NumEntries > 1)
++      size += (if_table2->NumEntries - 1) * sizeof(MIB_IPINTERFACE_ROW);
++    if (!(*table = HeapAlloc( GetProcessHeap(), HEAP_ZERO_MEMORY, size )))
++        return ERROR_OUTOFMEMORY;
++    (*table)->NumEntries = if_table2->NumEntries;
++    for (i = 0; i < (*table)->NumEntries; i++) {
++        (*table)->Table[i].Family = AF_INET;
++        (*table)->Table[i].InterfaceLuid = if_table2->Table[i].InterfaceLuid;
++        (*table)->Table[i].InterfaceIndex = if_table2->Table[i].InterfaceIndex;
++        (*table)->Table[i].RouterDiscoveryBehavior = RouterDiscoveryDhcp;
++        (*table)->Table[i].DadTransmits = 3;
++        (*table)->Table[i].BaseReachableTime = 30000;
++        (*table)->Table[i].RetransmitTime = 1000;
++        (*table)->Table[i].LinkLocalAddressBehavior = LinkLocalDelayed;
++        (*table)->Table[i].NlMtu = if_table2->Table[i].Mtu;
++        if (if_table2->Table[i].AdminStatus == NET_IF_ADMIN_STATUS_UP)
++            (*table)->Table[i].Connected = 1;
++    }
++    HeapFree( GetProcessHeap(), 0, if_table2 );
++    return NO_ERROR;
+ }
+ 
+ /******************************************************************

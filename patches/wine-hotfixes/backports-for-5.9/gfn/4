@@ -1,0 +1,23 @@
+From 7fc2c97e1f467de964524208dae8b74032bc1215 Mon Sep 17 00:00:00 2001
+From: Alexandre Abgrall <aabgrall98@gmail.com>
+Date: Mon, 27 Jul 2020 15:20:55 +0200
+Subject: [PATCH] iphlpapi: Make NotifyUnicastIpAddressChange return an invalid
+ handle instead of NULL.
+
+---
+ dlls/iphlpapi/iphlpapi_main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/iphlpapi/iphlpapi_main.c b/dlls/iphlpapi/iphlpapi_main.c
+index 9c512b96436..d7bde79c270 100644
+--- a/dlls/iphlpapi/iphlpapi_main.c
++++ b/dlls/iphlpapi/iphlpapi_main.c
+@@ -2861,7 +2861,7 @@ DWORD WINAPI NotifyUnicastIpAddressChange(ADDRESS_FAMILY family, PUNICAST_IPADDR
+ {
+     FIXME("(family %d, callback %p, context %p, init_notify %d, handle %p): semi-stub\n",
+           family, callback, context, init_notify, handle);
+-    if (handle) *handle = NULL;
++    if (handle) *handle = INVALID_HANDLE_VALUE;
+ 
+     if (init_notify)
+         callback(context, NULL, MibInitialNotification);

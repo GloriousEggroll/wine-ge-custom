@@ -1,0 +1,20 @@
+commit 85cade20fa0fe59d09c372b901497bc76608bfcc
+Author: Richard Yao <ryao@gentoo.org>
+Date:   Mon Aug 3 16:01:15 2020 -0400
+
+    Enable DXVA2 video acceleration by default
+    
+    Signed-off-by: Richard Yao <ryao@gentoo.org>
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 037166ad159..69340c55135 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -717,6 +717,7 @@ HKLM,%MciExtStr%,"wmx",,"MPEGVideo"
+ HKLM,%MciExtStr%,"wvx",,"MPEGVideo"
+ 
+ [Misc]
++HKCU,Software\Wine\DXVA2,"backend",,"va"
+ HKLM,Software\Borland\Database Engine\Settings\SYSTEM\INIT,SHAREDMEMLOCATION,,9000
+ HKLM,Software\Clients\Mail,,2,"Native Mail Client"
+ HKLM,Software\Clients\Mail\Native Mail Client,,2,"Native Mail Client"

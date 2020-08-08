@@ -1,0 +1,24 @@
+From 24d51f6877b29343ce3f26431ccb0d47cced1b7a Mon Sep 17 00:00:00 2001
+From: Alexandre Abgrall <aabgrall98@gmail.com>
+Date: Mon, 27 Jul 2020 16:01:43 +0200
+Subject: [PATCH] winepulse.drv: Call pa_mainloop_new() in pulse_connect() if
+ it wasn't done before.
+
+---
+ dlls/winepulse.drv/mmdevdrv.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 4c500241d01..7e457428984 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -669,6 +669,9 @@ static HRESULT pulse_connect(void)
+     WCHAR path[MAX_PATH], *name;
+     char *str;
+ 
++    if (!pulse_ml)
++        pulse_ml = pa_mainloop_new();
++
+     if (!pulse_thread)
+     {
+         if (!(pulse_thread = CreateThread(NULL, 0, pulse_mainloop_thread, NULL, 0, NULL)))

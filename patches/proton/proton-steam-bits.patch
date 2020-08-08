@@ -125,22 +125,23 @@ This replaces Andrew's previous patch:
 https://github.com/ValveSoftware/wine/commit/2e2a874cb3a44b2856561c0630037ea587177350
 
 ---
- dlls/ntdll/env.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ dlls/dlls/ntdll/unix/env.c | 2 +
+ 1 file changed, 2 insertion(+)
 
-diff --git a/dlls/ntdll/env.c b/dlls/ntdll/env.c
-index be3586d..75e2e93 100644
---- a/dlls/ntdll/env.c
-+++ b/dlls/ntdll/env.c
-@@ -84,7 +84,7 @@ GetUserNameA( LPSTR lpszName, LPDWORD lpSize )
- 
-     /* set user name */
- 
--    if (!name) name = "wine";
-+    name = "steamuser"/*wine_get_user_name()*/;
-     if ((p = strrchr( name, '/' ))) name = p + 1;
-     if ((p = strrchr( name, '\\' ))) name = p + 1;
-     ntdll_umbstowcs( name, strlen(name) + 1, buf, ARRAY_SIZE(buf) );
+diff --git a/dlls/ntdll/unix/env.c b/dlls/ntdll/unix/env.c
+index d90990c092..a16e152086 100644
+--- a/dlls/ntdll/unix/env.c
++++ b/dlls/ntdll/unix/env.c
+@@ -939,6 +940,9 @@ NTSTATUS CDECL get_dynamic_environment( WCHAR *env, SIZE_T *size )
+     }
+     sprintf( dlldir, "WINEDLLDIR%u", i );
+     append_envW( buffer, &pos, dlldir, NULL );
++    user_name = "steamuser";
++    const char *sgi = getenv("WINEUSERNAME");
++    if ((sgi)) user_name = sgi /*set user to steamuser if running steam game*/;
+     append_envA( buffer, &pos, "WINEUSERNAME", user_name );
+     append_envA( buffer, &pos, "WINEDLLOVERRIDES", overrides );
+     assert( pos <= alloc );
 From ec9e7190ea7045012b6e33e5ee64cd678bec68c9 Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Mon, 22 Jan 2018 14:32:40 -0600
@@ -321,21 +322,22 @@ Date: Tue, 15 Jan 2019 10:10:47 -0600
 Subject: [PATCH] ntdll: Don't pass SDL_AUDIODRIVER from Linux environment
 
 ---
- dlls/ntdll/env.c | 1 +
+ dlls/ntdll/unix/env.c | 1 +
  1 file changed, 1 insertion(+)
 
-diff --git a/dlls/ntdll/env.c b/dlls/ntdll/env.c
-index 9c957f02c06..e14b514ccc1 100644
---- a/dlls/ntdll/env.c
-+++ b/dlls/ntdll/env.c
-@@ -137,6 +137,7 @@ static inline BOOL is_special_env_var( const char *var )
+diff --git a/dlls/ntdll/unix/env.c b/dlls/ntdll/unix/env.c
+index d90990c092..96b0c271ce 100644
+--- a/dlls/ntdll/unix/env.c
++++ b/dlls/ntdll/unix/env.c
+@@ -416,6 +416,7 @@ static inline BOOL is_special_env_var( const char *var )
+             !strncmp( var, "HOME=", sizeof("HOME=")-1 ) ||
              !strncmp( var, "TEMP=", sizeof("TEMP=")-1 ) ||
              !strncmp( var, "TMP=", sizeof("TMP=")-1 ) ||
-             !strncmp( var, "QT_", sizeof("QT_")-1 ) ||
 +            !strncmp( var, "SDL_AUDIODRIVER=", sizeof("SDL_AUDIODRIVER=")-1 ) ||
+             !strncmp( var, "QT_", sizeof("QT_")-1 ) ||
              !strncmp( var, "VK_", sizeof("VK_")-1 ));
  }
- From 8a781a3ab721a14fed0a8c1aaccd357cdd71d0ac Mon Sep 17 00:00:00 2001
+From 8a781a3ab721a14fed0a8c1aaccd357cdd71d0ac Mon Sep 17 00:00:00 2001
 From: Jactry Zeng <jzeng@codeweavers.com>
 Date: Thu, 13 Dec 2018 22:21:34 +0800
 Subject: [PATCH] gdi32: Add CJK font replacements.
@@ -745,3 +747,24 @@ index 7fe2f49dcd9..e72d0dcaba1 100644
  
  [DirectX]
  HKLM,Software\Microsoft\DirectX,"Version",,"4.09.00.0904"
+From a1cef95cf1500f6d94cf68d8bf6ae32b2883cb75 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Mon, 18 May 2020 14:20:30 -0500
+Subject: [PATCH] wine.inf: Associate the "steam" protocol with winebrowser.
+
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 247eb906422..0b014dce63c 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -317,6 +317,7 @@ HKCR,https\shell\open\ddeexec,"NoActivateHandler",2,""
+ HKCR,https\shell\open\ddeexec\Application,,2,"IExplore"
+ HKCR,https\shell\open\ddeexec\Topic,,2,"WWW_OpenURL"
+ HKCR,mailto\shell\open\command,,2,"%11%\winebrowser %1"
++HKCR,steam\shell\open\command,,2,"""%11%\winebrowser"" ""%1"""
+ 
+ HKCR,MIME\Database\Charset\_iso-2022-jp$ESC,"Codepage",0x10003,932
+ HKCR,MIME\Database\Charset\_iso-2022-jp$ESC,"InternetEncoding",0x10003,50221

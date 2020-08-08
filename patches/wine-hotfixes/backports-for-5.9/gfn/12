@@ -1,0 +1,45 @@
+From 4b309ea49d0f733ec814e51bac17d0583d1421f4 Mon Sep 17 00:00:00 2001
+From: Alexandre Abgrall <aabgrall98@gmail.com>
+Date: Fri, 31 Jul 2020 13:45:27 +0200
+Subject: [PATCH] dxva2: Hack: Consider NV12 format as valid if no
+ VASurfaceAttribPixelFormat attribute is provided. This is currently the case
+ with the VDPAU VAAPI backend. Similar bug:
+ https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/1887172
+
+---
+ dlls/dxva2/vaapi.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/dxva2/vaapi.c b/dlls/dxva2/vaapi.c
+index 9f580fe879f..d613cd58cd7 100644
+--- a/dlls/dxva2/vaapi.c
++++ b/dlls/dxva2/vaapi.c
+@@ -342,7 +342,7 @@ BOOL vaapi_is_format_supported( VADisplay va_display, struct vaapi_profile *prof
+     VAConfigID config;
+     VAStatus status;
+     unsigned int i;
+-    BOOL ret = FALSE;
++    BOOL ret = FALSE, found_pixel_format_attrib = FALSE;
+ 
+     attrib.type  = VAConfigAttribRTFormat;
+     attrib.value = format->vaformat;
+@@ -366,6 +366,8 @@ BOOL vaapi_is_format_supported( VADisplay va_display, struct vaapi_profile *prof
+             {
+                 for (i = 0; i < numSurfaceAttribs; i++)
+                 {
++                    if (surfaceAttribs[i].type == VASurfaceAttribPixelFormat)
++                        found_pixel_format_attrib = TRUE;
+                     if (surfaceAttribs[i].type == VASurfaceAttribPixelFormat &&
+                         surfaceAttribs[i].value.value.i == format->vafourcc)
+                     {
+@@ -373,6 +375,10 @@ BOOL vaapi_is_format_supported( VADisplay va_display, struct vaapi_profile *prof
+                         break;
+                     }
+                 }
++                /* The vdpau backend doesn't give us a VASurfaceAttribPixelFormat attribute. */
++                /* HACK: We consider that in this case, a VA_FOURCC_NV12 format is valid. This format is used by e.g. GeForceNOW. */
++                if (!found_pixel_format_attrib && format->vafourcc == VA_FOURCC_NV12)
++                    ret = TRUE;
+             }
+             HeapFree(GetProcessHeap(), 0, surfaceAttribs);
+         }

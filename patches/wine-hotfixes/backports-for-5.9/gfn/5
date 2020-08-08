@@ -1,0 +1,39 @@
+From c1058279f8a3c8ff2781d713cbda8952924fd79d Mon Sep 17 00:00:00 2001
+From: Alexandre Abgrall <aabgrall98@gmail.com>
+Date: Mon, 27 Jul 2020 15:46:54 +0200
+Subject: [PATCH] dxva2: Implement GetProcAmpRange semi-stub.
+
+---
+ dlls/dxva2/videoservices.c | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dxva2/videoservices.c b/dlls/dxva2/videoservices.c
+index 84222dce558..e3f9f52f4d2 100644
+--- a/dlls/dxva2/videoservices.c
++++ b/dlls/dxva2/videoservices.c
+@@ -367,11 +367,23 @@ static HRESULT WINAPI DirectXVideoProcessorService_GetProcAmpRange( IDirectXVide
+         const DXVA2_VideoDesc *pVideoDesc, D3DFORMAT RenderTargetFormat, UINT ProcAmpCap, DXVA2_ValueRange *pRange )
+ {
+     DirectXVideoAccelerationServiceImpl *This = impl_from_IDirectXVideoProcessorService(iface);
++    DXVA2_ValueRange range;
+ 
+-    FIXME("(%p/%p)->(%s, %p, %#x, %u, %p): stub\n",
++    FIXME("(%p/%p)->(%s, %p, %#x, %u, %p): semi-stub\n",
+         iface, This, debugstr_guid(VideoProcDeviceGuid), pVideoDesc, RenderTargetFormat, ProcAmpCap, pRange);
+ 
+-    return E_NOTIMPL;
++    range.MinValue.ll = 0;
++    range.MaxValue.ll = 100;
++    if (ProcAmpCap == DXVA2_ProcAmp_Brightness)
++        range.DefaultValue.ll = 100;
++    else
++        range.DefaultValue.ll = 50;
++    range.StepSize.ll = 1;
++
++    if (pRange)
++        *pRange = range;
++
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI DirectXVideoProcessorService_GetFilterPropertyRange( IDirectXVideoProcessorService *iface, REFGUID VideoProcDeviceGuid,
