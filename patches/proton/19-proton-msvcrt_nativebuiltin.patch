@@ -1,0 +1,76 @@
+From 9ab4f6a838eaefe8501eb8876a70ecf5f7792639 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Thu, 29 Mar 2018 11:09:53 -0500
+Subject: [PATCH] HACK: wine.inf: Add native,builtin overrides for msvcrt DLLs
+
+---
+ loader/wine.inf.in | 54 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 54 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index b2eec2e7190..39694cd555c 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -4361,8 +4361,62 @@ winehid.inf,"@winehid.sys,-1"
+ wineusb.inf,"@wineusb.sys,-1"
+ 
+ [SteamClient]
++;;Likely want *80 and *90 too, but those require removing Wine's manifest files.
++HKCU,Software\Wine\DllOverrides,"atl100",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcp100",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcr100",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcomp100",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"atl110",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcp110",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcr110",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcomp110",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"atl120",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcp120",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcr120",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcomp120",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-conio-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-heap-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-locale-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-math-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-runtime-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-stdio-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-time-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"atl140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"concrt140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcp140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcr140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"ucrtbase",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcomp140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcruntime140",0x2,"native,builtin"
+ 
+ [SteamClient.ntamd64]
++;;Likely want *80 and *90 too, but those require removing Wine's manifest files.
++HKCU,Software\Wine\DllOverrides,"atl100",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcp100",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcr100",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcomp100",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"atl110",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcp110",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcr110",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcomp110",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"atl120",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcp120",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcr120",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcomp120",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-conio-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-heap-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-locale-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-math-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-runtime-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-stdio-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-time-l1-1-0",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"atl140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"concrt140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcp140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"msvcr140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"ucrtbase",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcomp140",0x2,"native,builtin"
++HKCU,Software\Wine\DllOverrides,"vcruntime140",0x2,"native,builtin"
+ 
+ [NlsFiles]
+ c_037.nls

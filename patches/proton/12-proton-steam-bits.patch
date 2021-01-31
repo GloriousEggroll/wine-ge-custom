@@ -1,0 +1,132 @@
+From 60365fa2e1f55e51b44788d5eac68c6ddce77266 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Wed, 27 Dec 2017 13:31:59 -0600
+Subject: [PATCH] HACK: steam: wine.inf: Add required Steam registry entries.
+
+---
+ loader/wine.inf.in | 25 ++++++++++++++++++++++---
+ 1 file changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 5f9f61e2535..43cae2a2bc2 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -73,7 +73,8 @@ AddReg=\
+     Tapi,\
+     Timezones,\
+     VersionInfo,\
+-    LicenseInformation
++    LicenseInformation, \
++    SteamClient
+ 
+ [DefaultInstall.ntamd64]
+ RegisterDlls=RegisterDllsSection
+@@ -100,7 +101,8 @@ AddReg=\
+     Tapi,\
+     Timezones,\
+     VersionInfo.ntamd64,\
+-    LicenseInformation
++    LicenseInformation, \
++    SteamClient.ntamd64
+ 
+ [DefaultInstall.ntarm64]
+ RegisterDlls=RegisterDllsSection
+@@ -142,7 +144,8 @@ AddReg=\
+     Misc,\
+     Tapi,\
+     VersionInfo.ntamd64,\
+-    LicenseInformation
++    LicenseInformation, \
++    SteamClient.ntamd64
+ 
+ [Wow64Install.ntarm64]
+ WineFakeDlls=FakeDllsWin32
+@@ -4071,6 +4356,10 @@ winebus.inf,"@winebus.sys,-1"
+ winehid.inf,"@winehid.sys,-1"
+ wineusb.inf,"@wineusb.sys,-1"
+ 
++[SteamClient]
++
++[SteamClient.ntamd64]
++
+ [NlsFiles]
+ c_037.nls
+ c_10000.nls
+
+From d012d137e4099d1b12079a49a8a5632d205e0a9f Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 24 Sep 2018 12:37:49 -0500
+Subject: [PATCH] HACK: dbghelp: Disable DWARF parsing
+
+Patch by Zeb. Our DWARF parser has been known to crash winedbg in some
+cases. Since probably no concerned parties are going to be using plain
+winedbg, just don't bother parsing anything.
+---
+ dlls/dbghelp/dwarf.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/dlls/dbghelp/dwarf.c b/dlls/dbghelp/dwarf.c
+index 31c008abb8f..ce689dbe6cf 100644
+--- a/dlls/dbghelp/dwarf.c
++++ b/dlls/dbghelp/dwarf.c
+@@ -3516,6 +3516,11 @@ BOOL dwarf2_parse(struct module* module, unsigned long load_offset,
+     BOOL                ret = TRUE;
+     struct module_format* dwarf2_modfmt;
+ 
++/* Our DWARF parser has been known to crash winedbg in some cases. Since
++ * probably no concerned parties are going to be using plain winedbg, just don't
++ * bother parsing anything. */
++return FALSE;
++
+     if (!dwarf2_init_section(&eh_frame,                fmap, ".eh_frame",     NULL,             &eh_frame_sect))
+         /* lld produces .eh_fram to avoid generating a long name */
+         dwarf2_init_section(&eh_frame,                fmap, ".eh_fram",      NULL,             &eh_frame_sect);
+
+From a13270aea50af90aa6c721080b956870d67d81c2 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Fri, 30 Mar 2018 10:40:43 -0500
+Subject: [PATCH] winedbg: When crash dialog is not shown, dump crash info to
+ stderr
+
+This way the backtrace and such will appear in the log file instead of
+going to stdout, which we don't capture.
+---
+ programs/winedbg/tgt_active.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/programs/winedbg/tgt_active.c b/programs/winedbg/tgt_active.c
+index f632ca0414d..72e63327831 100644
+--- a/programs/winedbg/tgt_active.c
++++ b/programs/winedbg/tgt_active.c
+@@ -874,6 +874,9 @@ enum dbg_start dbg_active_auto(int argc, char* argv[])
+         if (event) thread = display_crash_details( event );
+         if (thread) dbg_houtput = output = create_temp_file();
+         break;
++    case TRUE:
++        dbg_houtput = GetStdHandle(STD_ERROR_HANDLE);
++        break;
+     }
+ 
+     input = parser_generate_command_file("echo Modules:", "info share",
+From a7542e9e279970c2ab3ac9c6c986b300135286a0 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Wed, 28 Mar 2018 09:17:30 -0500
+Subject: [PATCH] wine.inf: Don't show crash dialog by default
+
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 7fe2f49dcd9..e72d0dcaba1 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -540,6 +540,7 @@ HKLM,%CurrentVersionNT%\AeDebug,"Debugger",2,"winedbg --auto %ld %ld"
+ HKLM,%CurrentVersionNT%\AeDebug,"Auto",2,"1"
+ HKCU,Software\Wine\Debug,"RelayExclude",2,"ntdll.RtlEnterCriticalSection;ntdll.RtlTryEnterCriticalSection;ntdll.RtlLeaveCriticalSection;kernel32.48;kernel32.49;kernel32.94;kernel32.95;kernel32.96;kernel32.97;kernel32.98;kernel32.TlsGetValue;kernel32.TlsSetValue;kernel32.FlsGetValue;kernel32.FlsSetValue;kernel32.SetLastError"
+ HKCU,Software\Wine\Debug,"RelayFromExclude",2,"winex11.drv;winemac.drv;user32;gdi32;advapi32;kernel32"
++HKCU,Software\Wine\WineDbg,"ShowCrashDialog",0x00010003,0x00000000
+ 
+ [DirectX]
+ HKLM,Software\Microsoft\DirectX,"Version",,"4.09.00.0904"
+
