@@ -49,13 +49,6 @@ Vagrant.configure(2) do |config|
     v.memory = memory
   end
 
-  config.vm.provider "libvirt" do |v|
-    v.cpus = cpus
-    v.memory = memory
-    v.random_hostname = true
-    v.default_prefix = ENV['USER'].to_s.dup.concat('_').concat(File.basename(Dir.pwd))
-  end
-
   #ubuntu1804-based build VM
   config.vm.define "ubuntu1804", primary: true do |ubuntu1804|
 
@@ -96,14 +89,8 @@ Vagrant.configure(2) do |config|
       cat ~/.ssh/config
       
       # (2) setup /etc/hosts file and buildbot files on containers
-      ./lutris-buildbot/2-setup-container.sh buildbot-bionic-i386
-      ./lutris-buildbot/2-setup-container.sh buildbot-bionic-amd64
-
-      # enable password authentication on both containers
-      lxc exec buildbot-bionic-i386 -- bash -c 'sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication yes/g" /etc/ssh/sshd_config'
-      lxc exec buildbot-bionic-i386 -- bash -c "systemctl restart sshd"
-      lxc exec buildbot-bionic-amd64 -- bash -c 'sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication yes/g" /etc/ssh/sshd_config'
-      lxc exec buildbot-bionic-amd64 -- bash -c "systemctl restart sshd"
+      ./lutris-buildbot/buildbot/setup-container.sh buildbot-bionic-i386
+      ./lutris-buildbot/buildbot/setup-container.sh buildbot-bionic-amd64
 
       # setup ssh keys from host to both containers
       cat /dev/zero | ssh-keygen -q -N ""
