@@ -91,6 +91,8 @@ Vagrant.configure(2) do |config|
       # (2) setup /etc/hosts file and buildbot files on containers
       ./lutris-buildbot/buildbot/setup-container.sh buildbot-bionic-i386
       ./lutris-buildbot/buildbot/setup-container.sh buildbot-bionic-amd64
+      lxc file push -r lutris-buildbot/buildbot buildbot-bionic-i386/home/ubuntu/
+      lxc file push -r lutris-buildbot/buildbot buildbot-bionic-amd64/home/ubuntu/
 
       # setup ssh keys from host to both containers
       cat /dev/zero | ssh-keygen -q -N ""
