@@ -1,3 +1,3 @@
 #!/bin/bash
 echo -e "ubuntu\nubuntu" | passwd ubuntu
-echo 'ubuntu ALL=NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+sudo EDITOR='tee -a' echo 'ubuntu ALL=NOPASSWD: ALL' | visudo
