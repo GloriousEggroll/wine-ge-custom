@@ -12,16 +12,20 @@ Fedora:
 `# dnf install vagrant vagrant-sshfs`  
 
 (2) VirtualBox installed  
-Notes: 
+Notes:__
 * This differs per distro. You will need to find instructions for your distro.  
 * Please note that virtualbox is -required-. Libvirt will not work. Specifically libvirt causes segfaults when installing packages in the lxc 32 bit container. Why? who knows.__
 
-Additional notes:
-* It is important to note that the wine, wine-staging and game-patches-testing repos/folders are here for my personal use. The build bot does -NOT- pull from any of these folders directly. 
--- It is recommended to replace the wine repository with a clone of your own wine repository, then run ./game-patches-testing/protonprep.sh to apply my changes to your own wine repository, and commit + push those changes to a separate branch on your -own- repository. THEN follow the instructions below, using your own repository URL and branch.
+Additional notes:__
+* It is important to note that the wine, wine-staging and patches repos/folders are here for my personal use. The build bot does -NOT- pull from any of these folders directly.__
+* It is recommended to:__
+
+  1. replace the wine repository with a clone of your own wine repository,__
+  2. then run `./patches/protonprep.sh` to apply my changes to your own wine repository,__
+  3. then commit + push those changes to a separate branch on your -own- repository.__
+  4. THEN follow the instructions below, using your own repository URL and branch.__
 
 Instructions:  
-
 ```
 $ git clone --recurse-submodules https://github.com/gloriouseggroll/wine-ge-custom  
 $ cd wine-ge-custom  
