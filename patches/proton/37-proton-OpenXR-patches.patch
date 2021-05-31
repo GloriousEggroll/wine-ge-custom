@@ -11,7 +11,7 @@ diff --git a/dlls/winevulkan/vulkan.c b/dlls/winevulkan/vulkan.c
 index a0009ae85f5..c10a53e4acf 100644
 --- a/dlls/winevulkan/vulkan.c
 +++ b/dlls/winevulkan/vulkan.c
-@@ -402,14 +402,84 @@ static void wine_vk_device_free_create_info(VkDeviceCreateInfo *create_info)
+@@ -382,13 +382,83 @@ static void wine_vk_device_free_create_info(VkDeviceCreateInfo *create_info)
      free_VkDeviceCreateInfo_struct_chain(create_info);
  }
  
@@ -91,7 +91,6 @@ index a0009ae85f5..c10a53e4acf 100644
 -    unsigned int i;
 +    unsigned int i, append_xr = 0, wine_extension_count;
      VkResult res;
-     const char** extensions;
  
 +    static const char *wine_xr_extension_name = "VK_WINE_openxr_device_extensions";
 +
@@ -195,24 +194,3 @@ index a0009ae85f5..c10a53e4acf 100644
      WINE_VK_ADD_DISPATCHABLE_MAPPING(phys_dev->instance, object, object->device);
      if (res != VK_SUCCESS)
      {
-From ee64c2b291290753eefdca064b89ad86e2e6fcbe Mon Sep 17 00:00:00 2001
-From: Andrew Eikum <aeikum@codeweavers.com>
-Date: Mon, 4 Jan 2021 14:25:06 -0600
-Subject: [PATCH] wine.inf: Add OpenXR registry entries
-
----
- loader/wine.inf.in | 1 +
- 1 file changed, 1 insertion(+)
-
-diff --git a/loader/wine.inf.in b/loader/wine.inf.in
-index 009dd58600d..928c6883372 100644
---- a/loader/wine.inf.in
-+++ b/loader/wine.inf.in
-@@ -4017,6 +4017,7 @@ HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll",,"%16426%\Steam\steamcl
- HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll64",,"%16426%\Steam\steamclient64.dll"
- HKCU,Software\Valve\Steam\ActiveProcess,"SteamPath",,"%16426%\Steam"
- HKLM,Software\Wow6432Node\Valve\Steam,"InstallPath",,"%16422%\Steam"
-+HKLM,Software\Khronos\OpenXR\1,"ActiveRuntime",,"C:\openxr\wineopenxr64.json"
- HKCU,Software\Wine\AppDefaults\NewColossus_x64vk.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
- HKCU,Software\Wine\AppDefaults\RDR2.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
- HKCU,Software\Wine\AppDefaults\DarkSoulsIII.exe\X11 Driver,"LimitNumberOfResolutions",0x2,"32"

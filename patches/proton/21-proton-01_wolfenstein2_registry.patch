@@ -12,9 +12,9 @@ index 988e8598214..645b66c6dd9 100644
 --- a/loader/wine.inf.in
 +++ b/loader/wine.inf.in
 @@ -4397,6 +4397,8 @@ HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll",,"%16426%\Steam\steamcl
- HKCU,Software\Wine\DllOverrides,"atiadlxx",,"disabled"
- 
- [SteamClient.ntamd64]
+ HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll64",,"%16426%\Steam\steamclient64.dll"
+ HKCU,Software\Valve\Steam\ActiveProcess,"SteamPath",,"%16426%\Steam"
+ HKLM,Software\Wow6432Node\Valve\Steam,"InstallPath",,"%16422%\Steam"
 +HKCU,Software\Wine\AppDefaults\NewColossus_x64vk.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
 +HKCU,Software\Wine\AppDefaults\Youngblood_x64vk.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
  ;;Likely want *80 and *90 too, but those require removing Wine's manifest files.

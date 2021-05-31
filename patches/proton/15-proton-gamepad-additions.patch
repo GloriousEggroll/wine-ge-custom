@@ -8158,187 +8158,6 @@ index ccb4a17f9ad..9f5a1efad3e 100644
          sdldev->n_buttons = SDL_JoystickNumButtons(device);
          sdldev->n_axes = SDL_JoystickNumAxes(device);
          sdldev->n_hats = SDL_JoystickNumHats(device);
-From 209dcc0b039000c5130cd748bc9b0351237bf201 Mon Sep 17 00:00:00 2001
-From: Andrew Eikum <aeikum@codeweavers.com>
-Date: Tue, 21 Jan 2020 10:22:19 -0600
-Subject: [PATCH] user32: Rescan for devices if we can't find it
-
----
- dlls/user32/rawinput.c     | 18 ++++++++++++------
- dlls/user32/user_private.h |  2 --
- 2 files changed, 12 insertions(+), 8 deletions(-)
-
-diff --git a/dlls/user32/rawinput.c b/dlls/user32/rawinput.c
-index 4914c67c98b..2b9ac104b0c 100644
---- a/dlls/user32/rawinput.c
-+++ b/dlls/user32/rawinput.c
-@@ -152,7 +152,8 @@ static struct device *add_device(HDEVINFO set, SP_DEVICE_INTERFACE_DATA *iface)
-     return device;
- }
- 
--HANDLE rawinput_handle_from_device_handle(HANDLE device)
-+static void find_devices(BOOL force);
-+static HANDLE rawinput_handle_from_device_handle(HANDLE device, BOOL rescan)
- {
-     WCHAR buffer[sizeof(OBJECT_NAME_INFORMATION) + MAX_PATH + 1];
-     OBJECT_NAME_INFORMATION *info = (OBJECT_NAME_INFORMATION*)&buffer;
-@@ -181,10 +182,15 @@ HANDLE rawinput_handle_from_device_handle(HANDLE device)
-         }
-     }
- 
--    return NULL;
-+    if (!rescan)
-+        return NULL;
-+
-+    find_devices(TRUE);
-+
-+    return rawinput_handle_from_device_handle(device, FALSE);
- }
- 
--static void find_devices(void)
-+static void find_devices(BOOL force)
- {
-     static ULONGLONG last_check;
- 
-@@ -196,7 +202,7 @@ static void find_devices(void)
-     HDEVINFO set;
-     DWORD idx;
- 
--    if (GetTickCount64() - last_check < 2000)
-+    if (!force && GetTickCount64() - last_check < 2000)
-         return;
-     last_check = GetTickCount64();
- 
-@@ -372,7 +378,7 @@ BOOL rawinput_from_hardware_message(RAWINPUT *rawinput, const struct hardware_ms
-         }
- 
-         rawinput->header.dwSize  = FIELD_OFFSET(RAWINPUT, data.hid.bRawData) + msg_data->rawinput.hid.length;
--        rawinput->header.hDevice = rawinput_handle_from_device_handle(wine_server_ptr_handle(msg_data->rawinput.hid.device));
-+        rawinput->header.hDevice = rawinput_handle_from_device_handle(wine_server_ptr_handle(msg_data->rawinput.hid.device), TRUE);
-         rawinput->header.wParam  = 0;
- 
-         rawinput->data.hid.dwSizeHid = msg_data->rawinput.hid.length;
-@@ -410,7 +416,7 @@ UINT WINAPI GetRawInputDeviceList(RAWINPUTDEVICELIST *devices, UINT *device_coun
-         return ~0U;
-     }
- 
--    find_devices();
-+    find_devices(FALSE);
- 
-     if (!devices)
-     {
-diff --git a/dlls/user32/user_private.h b/dlls/user32/user_private.h
-index 013fa66f833..6bc357476fe 100644
---- a/dlls/user32/user_private.h
-+++ b/dlls/user32/user_private.h
-@@ -387,6 +387,4 @@ static inline WCHAR *heap_strdupW(const WCHAR *src)
-     return dst;
- }
- 
--extern HANDLE rawinput_handle_from_device_handle(HANDLE device);
--
- #endif /* __WINE_USER_PRIVATE_H */
-From 46bfde7d5a36c5cf18773a7181db3ab9d484d0c3 Mon Sep 17 00:00:00 2001
-From: Andrew Eikum <aeikum@codeweavers.com>
-Date: Mon, 2 Dec 2019 13:30:19 -0600
-Subject: [PATCH] user32: Also look up xinput-only HID devices
-
----
- dlls/user32/rawinput.c | 65 ++++++++++++++++++++++++++++--------------
- 1 file changed, 43 insertions(+), 22 deletions(-)
-
-diff --git a/dlls/user32/rawinput.c b/dlls/user32/rawinput.c
-index 2b9ac104b0c..6eaf50cf353 100644
---- a/dlls/user32/rawinput.c
-+++ b/dlls/user32/rawinput.c
-@@ -190,37 +190,18 @@ static HANDLE rawinput_handle_from_device_handle(HANDLE device, BOOL rescan)
-     return rawinput_handle_from_device_handle(device, FALSE);
- }
- 
--static void find_devices(BOOL force)
-+static void find_rawinput_devices_by_guid(const GUID *guid)
- {
--    static ULONGLONG last_check;
--
-     SP_DEVICE_INTERFACE_DATA iface = { sizeof(iface) };
-     struct device *device;
-     HIDD_ATTRIBUTES attr;
-     HIDP_CAPS caps;
--    GUID hid_guid;
-     HDEVINFO set;
-     DWORD idx;
- 
--    if (!force && GetTickCount64() - last_check < 2000)
--        return;
--    last_check = GetTickCount64();
--
--    HidD_GetHidGuid(&hid_guid);
--
--    EnterCriticalSection(&rawinput_devices_cs);
--
--    /* destroy previous list */
--    for (idx = 0; idx < rawinput_devices_count; ++idx)
--    {
--        CloseHandle(rawinput_devices[idx].file);
--        heap_free(rawinput_devices[idx].path);
--    }
--    rawinput_devices_count = 0;
--
--    set = SetupDiGetClassDevsW(&hid_guid, NULL, NULL, DIGCF_DEVICEINTERFACE | DIGCF_PRESENT);
-+    set = SetupDiGetClassDevsW(guid, NULL, NULL, DIGCF_DEVICEINTERFACE | DIGCF_PRESENT);
- 
--    for (idx = 0; SetupDiEnumDeviceInterfaces(set, NULL, &hid_guid, idx, &iface); ++idx)
-+    for (idx = 0; SetupDiEnumDeviceInterfaces(set, NULL, guid, idx, &iface); ++idx)
-     {
-         if (!(device = add_device(set, &iface)))
-             continue;
-@@ -245,6 +226,46 @@ static void find_devices(BOOL force)
-     }
- 
-     SetupDiDestroyDeviceInfoList(set);
-+}
-+
-+static void find_devices(BOOL force)
-+{
-+    static ULONGLONG last_check;
-+
-+    SP_DEVICE_INTERFACE_DATA iface = { sizeof(iface) };
-+    struct device *device;
-+    HDEVINFO set;
-+    DWORD idx;
-+    GUID hid_guid;
-+
-+    if (!force && GetTickCount64() - last_check < 2000)
-+        return;
-+
-+    HidD_GetHidGuid(&hid_guid);
-+
-+    EnterCriticalSection(&rawinput_devices_cs);
-+
-+    if (!force && GetTickCount64() - last_check < 2000)
-+    {
-+        LeaveCriticalSection(&rawinput_devices_cs);
-+        return;
-+    }
-+
-+    last_check = GetTickCount64();
-+
-+    /* destroy previous list */
-+    for (idx = 0; idx < rawinput_devices_count; ++idx)
-+    {
-+        CloseHandle(rawinput_devices[idx].file);
-+        heap_free(rawinput_devices[idx].path);
-+    }
-+    rawinput_devices_count = 0;
-+
-+    find_rawinput_devices_by_guid(&hid_guid);
-+
-+    /* HACK: also look up the xinput-specific devices */
-+    hid_guid.Data4[7]++;
-+    find_rawinput_devices_by_guid(&hid_guid);
- 
-     set = SetupDiGetClassDevsW(&GUID_DEVINTERFACE_MOUSE, NULL, NULL, DIGCF_DEVICEINTERFACE | DIGCF_PRESENT);
- 
 From 394038b94b8d927b135c0e7e7eb16c39c505ac6a Mon Sep 17 00:00:00 2001
 From: Brendan Shanks <bshanks@codeweavers.com>
 Date: Thu, 23 Apr 2020 17:12:48 -0700
@@ -8713,15 +8532,15 @@ index 37448b315d1..18cf3a346fb 100644
  
      RtlInitUnicodeString( &nameW, ext->device_name);
  
-@@ -253,6 +251,8 @@ static void HID_Device_sendRawInput(DEVICE_OBJECT *device, HID_XFER_PACKET *pack
- {
-     BASE_DEVICE_EXTENSION *ext = device->DeviceExtension;
- 
+@@ -273,6 +273,8 @@ static void HID_Device_sendRawInput(DEVICE_OBJECT *device, HID_XFER_PACKET *pack
+     UCHAR *report, id;
+     ULONG data_size;
+     INPUT input;
++    
 +    if (ext->xinput_hack) return;
-+
-     SERVER_START_REQ(send_hardware_message)
-     {
-         req->win                  = 0;
+ 
+     data_size = offsetof(RAWINPUT, data.hid.bRawData) + packet->reportBufferLen;
+     if (!(id = ext->preparseData->reports[0].reportID)) data_size += 1;
 diff --git a/dlls/hidclass.sys/hid.h b/dlls/hidclass.sys/hid.h
 index 459dca3b26f..a8341555746 100644
 --- a/dlls/hidclass.sys/hid.h
@@ -8759,107 +8578,223 @@ index abb517e10d5..6092ead1168 100644
  
      ext->poll_interval = DEFAULT_POLL_INTERVAL;
  
-From d6fe20d6e7d2ee707d3498249cdb955ac9efa8a9 Mon Sep 17 00:00:00 2001
+From cffd2a5de32fc19a9ec7856eb0c7c72fdef3dc23 Mon Sep 17 00:00:00 2001
 From: Arkadiusz Hiler <ahiler@codeweavers.com>
-Date: Tue, 5 Jan 2021 19:34:25 +0200
-Subject: [PATCH] Revert "user32: Also look up xinput-only HID devices"
+Date: Mon, 1 Mar 2021 17:23:34 +0200
+Subject: [PATCH] dinput: Add DualSense controller mapping.
 
-For Subnautica hotplugging.
-
-This reverts commit 46bfde7d5a36c5cf18773a7181db3ab9d484d0c3.
+Also known as the PS5 controller.
 ---
- dlls/user32/rawinput.c | 65 ++++++++++++++----------------------------
- 1 file changed, 22 insertions(+), 43 deletions(-)
+ dlls/dinput/joystick_sdl.c | 146 +++++++++++++++++++++++++------------
+ 1 file changed, 100 insertions(+), 46 deletions(-)
 
-diff --git a/dlls/user32/rawinput.c b/dlls/user32/rawinput.c
-index 9ea5ea393e8..3fb19280101 100644
---- a/dlls/user32/rawinput.c
-+++ b/dlls/user32/rawinput.c
-@@ -191,18 +191,37 @@ static HANDLE rawinput_handle_from_device_handle(HANDLE device, BOOL rescan)
-     return rawinput_handle_from_device_handle(device, FALSE);
+diff --git a/dlls/dinput/joystick_sdl.c b/dlls/dinput/joystick_sdl.c
+index c7d5b7bda9d..56b3f2bf247 100644
+--- a/dlls/dinput/joystick_sdl.c
++++ b/dlls/dinput/joystick_sdl.c
+@@ -63,6 +63,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(dinput);
+ #define PID_SONY_DUALSHOCK_4 0x05c4
+ #define PID_SONY_DUALSHOCK_4_2 0x09cc
+ #define PID_SONY_DUALSHOCK_4_DONGLE 0x0ba0
++#define PID_SONY_DUALSENSE 0x0ce6
+ 
+ #define VID_VALVE 0x28de
+ #define PID_VALVE_VIRTUAL_CONTROLLER 0x11ff
+@@ -396,6 +397,10 @@ static struct device_info_override {
+         DIDEVTYPE_HID | DIDEVTYPE_JOYSTICK | (DIDEVTYPEJOYSTICK_GAMEPAD << 8),
+         DIDEVTYPE_HID | DI8DEVTYPE_1STPERSON | (DI8DEVTYPE1STPERSON_SIXDOF << 8) },
+ 
++    { VID_SONY, PID_SONY_DUALSENSE, "Wireless Controller", "Wireless Controller",
++        DIDEVTYPE_HID | DIDEVTYPE_JOYSTICK | (DIDEVTYPEJOYSTICK_GAMEPAD << 8),
++        DIDEVTYPE_HID | DI8DEVTYPE_1STPERSON | (DI8DEVTYPE1STPERSON_SIXDOF << 8) },
++
+     { VID_MICROSOFT, PID_MICROSOFT_XBOX_360, "Controller (XBOX 360 For Windows)", "Controller (XBOX 360 For Windows)",
+         DIDEVTYPE_HID | DIDEVTYPE_JOYSTICK | (DIDEVTYPEJOYSTICK_GAMEPAD << 8),
+         DIDEVTYPE_HID | DI8DEVTYPE_GAMEPAD | (DI8DEVTYPEGAMEPAD_STANDARD << 8) },
+@@ -588,73 +593,45 @@ static int buttons_to_sdl_hat(int u, int r, int d, int l)
+     return SDL_HAT_RIGHTDOWN;
  }
  
--static void find_rawinput_devices_by_guid(const GUID *guid)
-+static void find_devices(BOOL force)
- {
-+    static ULONGLONG last_check;
-+
-     SP_DEVICE_INTERFACE_DATA iface = { sizeof(iface) };
-     struct device *device;
-     HIDD_ATTRIBUTES attr;
-     HIDP_CAPS caps;
-+    GUID hid_guid;
-     HDEVINFO set;
-     DWORD idx;
+-/* playstation controllers */
+-static BOOL enum_device_state_ds4_16button(SDL_Joystick *js, JoystickImpl *This, struct device_state_item *st, int idx)
+-{
+ #define SPECIALCASE_HAT -1
+ #define SPECIALCASE_L2_BUTTON -2
+ #define SPECIALCASE_R2_BUTTON -3
  
--    set = SetupDiGetClassDevsW(guid, NULL, NULL, DIGCF_DEVICEINTERFACE | DIGCF_PRESENT);
-+    if (!force && GetTickCount64() - last_check < 2000)
-+        return;
-+    last_check = GetTickCount64();
-+
-+    HidD_GetHidGuid(&hid_guid);
-+
-+    EnterCriticalSection(&rawinput_devices_cs);
-+
-+    /* destroy previous list */
-+    for (idx = 0; idx < rawinput_devices_count; ++idx)
-+    {
-+        CloseHandle(rawinput_devices[idx].file);
-+        heap_free(rawinput_devices[idx].path);
-+    }
-+    rawinput_devices_count = 0;
-+
-+    set = SetupDiGetClassDevsW(&hid_guid, NULL, NULL, DIGCF_DEVICEINTERFACE | DIGCF_PRESENT);
+-    static const struct {
+-        int type;
+-        int sdl_idx;
+-        int dnp_id;
+-    } map_ds4_16button[] = {
+-        { ITEM_TYPE_AXIS, 3, 5 }, /* R2 */
+-        { ITEM_TYPE_AXIS, 2, 2 }, /* L2 */
+-        { ITEM_TYPE_AXIS, 1, 1 }, /* left vert */
+-        { ITEM_TYPE_AXIS, 0, 0 }, /* left horiz */
+-
+-        { ITEM_TYPE_HAT, SPECIALCASE_HAT, 0 }, /* d-pad */
+-
+-        { ITEM_TYPE_BUTTON, 2, 0}, /* square */
+-        { ITEM_TYPE_BUTTON, 0, 1}, /* cross */
+-        { ITEM_TYPE_BUTTON, 1, 2}, /* circle */
+-        { ITEM_TYPE_BUTTON, 3, 3}, /* triangle */
+-
+-        { ITEM_TYPE_BUTTON, 9, 4}, /* L1 */
+-        { ITEM_TYPE_BUTTON, 10, 5}, /* R1 */
+-        { ITEM_TYPE_BUTTON, SPECIALCASE_L2_BUTTON, 6}, /* L2 button */
+-        { ITEM_TYPE_BUTTON, SPECIALCASE_R2_BUTTON, 7}, /* R2 button */
+-        { ITEM_TYPE_BUTTON, 4, 8}, /* share */
+-        { ITEM_TYPE_BUTTON, 6, 9}, /* options */
+-
+-        { ITEM_TYPE_BUTTON, 7, 10}, /* guide */
+-        { ITEM_TYPE_BUTTON, 8, 11}, /* L3 */
+-        { ITEM_TYPE_BUTTON, 5, 12}, /* R3 */
+-
+-        { ITEM_TYPE_BUTTON, 15, 13}, /* touchpad button */
+-
+-        { ITEM_TYPE_AXIS, 5, 4 }, /* right vert */
+-        { ITEM_TYPE_AXIS, 4, 3 }, /* right horiz */
+-    };
++struct enum_map
++{
++    int type;
++    int sdl_idx;
++    int dnp_id;
++};
  
--    for (idx = 0; SetupDiEnumDeviceInterfaces(set, NULL, guid, idx, &iface); ++idx)
-+    for (idx = 0; SetupDiEnumDeviceInterfaces(set, NULL, &hid_guid, idx, &iface); ++idx)
+-    if(idx >= ARRAY_SIZE(map_ds4_16button))
++static BOOL enum_device_state_sony(const struct enum_map *enum_map, int map_size, SDL_Joystick *js, JoystickImpl *This, struct device_state_item *st, int idx)
++{
++    if(idx >= map_size)
+         return FALSE;
+ 
+-    st->type = map_ds4_16button[idx].type;
+-    st->id = map_ds4_16button[idx].dnp_id;
++    st->type = enum_map[idx].type;
++    st->id = enum_map[idx].dnp_id;
+ 
+-    if(map_ds4_16button[idx].sdl_idx >= 0)
++    if(enum_map[idx].sdl_idx >= 0)
      {
-         if (!(device = add_device(set, &iface)))
-             continue;
-@@ -227,46 +246,6 @@ static void find_rawinput_devices_by_guid(const GUID *guid)
+         /* simple reads */
+-        switch(map_ds4_16button[idx].type)
++        switch(enum_map[idx].type)
+         {
+         case ITEM_TYPE_BUTTON:
+-            st->val = SDL_JoystickGetButton(js, map_ds4_16button[idx].sdl_idx);
++            st->val = SDL_JoystickGetButton(js, enum_map[idx].sdl_idx);
+             return TRUE;
+ 
+         case ITEM_TYPE_AXIS:
+-            st->val = SDL_JoystickGetAxis(js, map_ds4_16button[idx].sdl_idx);
++            st->val = SDL_JoystickGetAxis(js, enum_map[idx].sdl_idx);
+             return TRUE;
+ 
+         case ITEM_TYPE_HAT:
+-            st->val = SDL_JoystickGetHat(js, map_ds4_16button[idx].sdl_idx);
++            st->val = SDL_JoystickGetHat(js, enum_map[idx].sdl_idx);
+             return TRUE;
+         }
      }
  
-     SetupDiDestroyDeviceInfoList(set);
+-    switch(map_ds4_16button[idx].sdl_idx){
++    switch(enum_map[idx].sdl_idx){
+     case SPECIALCASE_HAT:
+     {
+         /* d-pad */
+@@ -692,10 +669,85 @@ static BOOL enum_device_state_ds4_16button(SDL_Joystick *js, JoystickImpl *This,
+     ERR("???\n"); /* error in static data above */
+     return FALSE;
+ 
++}
++
++/* playstation controllers */
++static BOOL enum_device_state_ds4_16button(SDL_Joystick *js, JoystickImpl *This, struct device_state_item *st, int idx)
++{
++
++    static const struct enum_map map_ds4_16button[] = {
++        { ITEM_TYPE_AXIS, 3, 5 }, /* R2 */
++        { ITEM_TYPE_AXIS, 2, 2 }, /* L2 */
++        { ITEM_TYPE_AXIS, 1, 1 }, /* left vert */
++        { ITEM_TYPE_AXIS, 0, 0 }, /* left horiz */
++
++        { ITEM_TYPE_HAT, SPECIALCASE_HAT, 0 }, /* d-pad */
++
++        { ITEM_TYPE_BUTTON, 2, 0}, /* square */
++        { ITEM_TYPE_BUTTON, 0, 1}, /* cross */
++        { ITEM_TYPE_BUTTON, 1, 2}, /* circle */
++        { ITEM_TYPE_BUTTON, 3, 3}, /* triangle */
++
++        { ITEM_TYPE_BUTTON, 9, 4}, /* L1 */
++        { ITEM_TYPE_BUTTON, 10, 5}, /* R1 */
++        { ITEM_TYPE_BUTTON, SPECIALCASE_L2_BUTTON, 6}, /* L2 button */
++        { ITEM_TYPE_BUTTON, SPECIALCASE_R2_BUTTON, 7}, /* R2 button */
++        { ITEM_TYPE_BUTTON, 4, 8}, /* share */
++        { ITEM_TYPE_BUTTON, 6, 9}, /* options */
++
++        { ITEM_TYPE_BUTTON, 7, 10}, /* guide */
++        { ITEM_TYPE_BUTTON, 8, 11}, /* L3 */
++        { ITEM_TYPE_BUTTON, 5, 12}, /* R3 */
++
++        { ITEM_TYPE_BUTTON, 15, 13}, /* touchpad button */
++
++        { ITEM_TYPE_AXIS, 5, 4 }, /* right vert */
++        { ITEM_TYPE_AXIS, 4, 3 }, /* right horiz */
++    };
++
++    return enum_device_state_sony(map_ds4_16button, ARRAY_SIZE(map_ds4_16button), js, This, st, idx);
++}
++
++static BOOL enum_device_state_dualsense(SDL_Joystick *js, JoystickImpl *This, struct device_state_item *st, int idx)
++{
++
++    static const struct enum_map map_dualsense[] = {
++        { ITEM_TYPE_AXIS, 3, 5 }, /* R2 */
++        { ITEM_TYPE_AXIS, 2, 2 }, /* L2 */
++        { ITEM_TYPE_AXIS, 1, 1 }, /* left vert */
++        { ITEM_TYPE_AXIS, 0, 0 }, /* left horiz */
++
++        { ITEM_TYPE_HAT, SPECIALCASE_HAT, 0 }, /* d-pad */
++
++        { ITEM_TYPE_BUTTON, 2, 0}, /* square */
++        { ITEM_TYPE_BUTTON, 0, 1}, /* cross */
++        { ITEM_TYPE_BUTTON, 1, 2}, /* circle */
++        { ITEM_TYPE_BUTTON, 3, 3}, /* triangle */
++
++        { ITEM_TYPE_BUTTON, 9, 4}, /* L1 */
++        { ITEM_TYPE_BUTTON, 10, 5}, /* R1 */
++        { ITEM_TYPE_BUTTON, SPECIALCASE_L2_BUTTON, 6}, /* L2 button */
++        { ITEM_TYPE_BUTTON, SPECIALCASE_R2_BUTTON, 7}, /* R2 button */
++        { ITEM_TYPE_BUTTON, 4, 8}, /* share */
++        { ITEM_TYPE_BUTTON, 6, 9}, /* options */
++
++        { ITEM_TYPE_BUTTON, 7, 10}, /* guide */
++        { ITEM_TYPE_BUTTON, 8, 11}, /* L3 */
++        { ITEM_TYPE_BUTTON, 5, 12}, /* R3 */
++
++        { ITEM_TYPE_BUTTON, 16, 13}, /* touchpad button */
++        { ITEM_TYPE_BUTTON, 15, 14}, /* mic mute button */
++
++        { ITEM_TYPE_AXIS, 5, 4 }, /* right vert */
++        { ITEM_TYPE_AXIS, 4, 3 }, /* right horiz */
++    };
++
++    return enum_device_state_sony(map_dualsense, ARRAY_SIZE(map_dualsense), js, This, st, idx);
++}
++
+ #undef SPECIALCASE_HAT
+ #undef SPECIALCASE_L2_BUTTON
+ #undef SPECIALCASE_R2_BUTTON
 -}
--
--static void find_devices(BOOL force)
--{
--    static ULONGLONG last_check;
--
--    SP_DEVICE_INTERFACE_DATA iface = { sizeof(iface) };
--    struct device *device;
--    HDEVINFO set;
--    DWORD idx;
--    GUID hid_guid;
--
--    if (!force && GetTickCount64() - last_check < 2000)
--        return;
--
--    HidD_GetHidGuid(&hid_guid);
--
--    EnterCriticalSection(&rawinput_devices_cs);
--
--    if (!force && GetTickCount64() - last_check < 2000)
--    {
--        LeaveCriticalSection(&rawinput_devices_cs);
--        return;
--    }
--
--    last_check = GetTickCount64();
--
--    /* destroy previous list */
--    for (idx = 0; idx < rawinput_devices_count; ++idx)
--    {
--        CloseHandle(rawinput_devices[idx].file);
--        heap_free(rawinput_devices[idx].path);
--    }
--    rawinput_devices_count = 0;
--
--    find_rawinput_devices_by_guid(&hid_guid);
--
--    /* HACK: also look up the xinput-specific devices */
--    hid_guid.Data4[7]++;
--    find_rawinput_devices_by_guid(&hid_guid);
  
-     set = SetupDiGetClassDevsW(&GUID_DEVINTERFACE_MOUSE, NULL, NULL, DIGCF_DEVICEINTERFACE | DIGCF_PRESENT);
+ static BOOL enum_device_state_ds4_13button(SDL_Joystick *js, JoystickImpl *This, struct device_state_item *st, int idx)
+ {
+@@ -1008,6 +1060,8 @@ static enum_device_state_function select_enum_function(struct SDLDev *sdldev)
+                     sdldev->n_buttons);
+             return enum_device_state_ds4_13button;
+         }
++        case PID_SONY_DUALSENSE:
++                return enum_device_state_dualsense;
+         break;
  
+     case VID_MICROSOFT:

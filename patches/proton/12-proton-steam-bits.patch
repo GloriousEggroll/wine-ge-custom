@@ -41,18 +41,428 @@ index 5f9f61e2535..43cae2a2bc2 100644
  
  [Wow64Install.ntarm64]
  WineFakeDlls=FakeDllsWin32
-@@ -4071,6 +4356,10 @@ winebus.inf,"@winebus.sys,-1"
- winehid.inf,"@winehid.sys,-1"
- wineusb.inf,"@wineusb.sys,-1"
- 
+@@ -3867,6 +3870,22 @@ l_intl.nls
+ winebus.inf,"@%12%\winebus.sys,-1"
+ winehid.inf,"@%12%\winehid.sys,-1"
+ wineusb.inf,"@%12%\wineusb.sys,-1"
++
 +[SteamClient]
++HKCU,Software\Valve\Steam,"SteamPath",,"%16422%\Steam"
++HKCU,Software\Valve\Steam,"SteamExe",,"%16422%\Steam\Steam.exe"
++HKCU,Software\Valve\Steam\ActiveProcess,"PID",0x10001,0x0000fffe
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll",,"%16422%\Steam\steamclient.dll"
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamPath",,"%16422%\Steam"
 +
 +[SteamClient.ntamd64]
-+
++HKCU,Software\Valve\Steam,"SteamPath",,"%16422%\Steam"
++HKCU,Software\Valve\Steam,"SteamExe",,"%16422%\Steam\Steam.exe"
++HKCU,Software\Valve\Steam\ActiveProcess,"PID",0x10001,0x0000fffe
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll",,"%16426%\Steam\steamclient.dll"
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll64",,"%16426%\Steam\steamclient64.dll"
++HKCU,Software\Valve\Steam\ActiveProcess,"SteamPath",,"%16426%\Steam"
++HKLM,Software\Wow6432Node\Valve\Steam,"InstallPath",,"%16422%\Steam"
+ 
  [NlsFiles]
  c_037.nls
- c_10000.nls
 
+From bc614834ee153ce33449c06e697b4a30748e9257 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Thu, 27 Apr 2017 13:25:04 -0500
+Subject: [PATCH] HACK kernelbase: Substitute the current pid for the Steam
+ client pid
+
+---
+ dlls/kernelbase/process.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/dlls/kernelbase/process.c b/dlls/kernelbase/process.c
+index 85e0042024c..9c957f02c06 100644
+--- a/dlls/kernelbase/process.c
++++ b/dlls/kernelbase/process.c
+@@ -220,6 +220,22 @@ HANDLE WINAPI DECLSPEC_HOTPATCH OpenProcess( DWORD access, BOOL inherit, DWORD id )
+     attr.SecurityDescriptor = NULL;
+     attr.SecurityQualityOfService = NULL;
+ 
++    if(id == 0xfffe)
++        /* STEAMOS HACK:
++         * On Windows, the Steam client puts its process ID into the registry
++         * at:
++         *
++         *   [HKCU\Software\Valve\Steam\ActiveProcess]
++         *   PID=dword:00000008
++         *
++         * Games get that pid from the registry and then query it with
++         * OpenProcess to ensure Steam is running. Since we aren't running the
++         * Windows Steam in Wine, instead we hack this magic number into the
++         * registry and then substitute the game's process itself in its place
++         * so it can query a valid process.
++         */
++        id = GetCurrentProcessId();
++
+     cid.UniqueProcess = ULongToHandle(id);
+     cid.UniqueThread  = 0;
+ 
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index cc7bf6900b..28bbb26f79 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -75,7 +75,7 @@ const WCHAR syswow64_dir[] = L"C:\\windows\\syswow64\\";
+ BOOL is_wow64 = FALSE;
+ 
+ /* system search path */
+-static const WCHAR system_path[] = L"C:\\windows\\system32;C:\\windows\\system;C:\\windows";
++static const WCHAR system_path[] = L"C:\\windows\\system32;C:\\windows\\system;C:\\windows;C:\\Program Files (x86)\\Steam";
+ 
+ static BOOL imports_fixup_done = FALSE;  /* set once the imports have been fixed up, before attaching them */
+ static BOOL process_detaching = FALSE;  /* set on process detach to avoid deadlocks with thread detach */
+From 207d17259d8aed05d3b69d242c2bc68b02aec378 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Fri, 19 Jan 2018 14:01:07 -0600
+Subject: [PATCH] HACK: advapi32: Use steamuser as Wine username
+
+---
+ dlls/advapi32/advapi.c | 35 ++++++++++++++++++-----------------
+ 1 file changed, 18 insertions(+), 17 deletions(-)
+
+diff --git a/dlls/advapi32/advapi.c b/dlls/advapi32/advapi.c
+index 589405b59e6..a31a05f0250 100644
+--- a/dlls/advapi32/advapi.c
++++ b/dlls/advapi32/advapi.c
+@@ -44,14 +44,15 @@ WINE_DEFAULT_DEBUG_CHANNEL(advapi);
+  */
+ BOOL WINAPI GetUserNameA( LPSTR name, LPDWORD size )
+ {
+-    DWORD len = GetEnvironmentVariableA( "WINEUSERNAME", name, *size );
+-    BOOL ret;
+-
+-    if (!len) return FALSE;
+-    if ((ret = (len < *size))) len++;
+-    else SetLastError( ERROR_INSUFFICIENT_BUFFER );
+-    *size = len;
+-    return ret;
++    static const char steamuserA[] = {'s','t','e','a','m','u','s','e','r',0};
++    if(*size < ARRAY_SIZE(steamuserA)){
++        SetLastError( ERROR_INSUFFICIENT_BUFFER );
++        *size = ARRAY_SIZE(steamuserA);
++        return FALSE;
++    }
++    memcpy(name, steamuserA, sizeof(steamuserA));
++    *size = ARRAY_SIZE(steamuserA);
++    return TRUE;
+ }
+ 
+ /******************************************************************************
+@@ -59,14 +60,15 @@ BOOL WINAPI GetUserNameA( LPSTR name, LPDWORD size )
+  */
+ BOOL WINAPI GetUserNameW( LPWSTR name, LPDWORD size )
+ {
+-    DWORD len = GetEnvironmentVariableW( L"WINEUSERNAME", name, *size );
+-    BOOL ret;
+-
+-    if (!len) return FALSE;
+-    if ((ret = (len < *size))) len++;
+-    else SetLastError( ERROR_INSUFFICIENT_BUFFER );
+-    *size = len;
+-    return ret;
++    static const WCHAR steamuserW[] = {'s','t','e','a','m','u','s','e','r',0};
++    if(*size < ARRAY_SIZE(steamuserW)){
++        SetLastError( ERROR_INSUFFICIENT_BUFFER );
++        *size = ARRAY_SIZE(steamuserW);
++        return FALSE;
++    }
++    memcpy(name, steamuserW, sizeof(steamuserW));
++    *size = ARRAY_SIZE(steamuserW);
++    return TRUE;
+ }
+ 
+ /******************************************************************************
+From ec9e7190ea7045012b6e33e5ee64cd678bec68c9 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 22 Jan 2018 14:32:40 -0600
+Subject: [PATCH] HACK: shell32: Never create links to the user's home dirs
+
+---
+ dlls/shell32/shellpath.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/dlls/shell32/shellpath.c b/dlls/shell32/shellpath.c
+index f08474b3635..2f637f25537 100644
+--- a/dlls/shell32/shellpath.c
++++ b/dlls/shell32/shellpath.c
+@@ -4118,10 +4118,11 @@ static void _SHCreateMyDocumentsSymbolicLink(const UINT * aidsMyStuff, const UIN
+ 
+     /* Get the unix path of 'My Documents'. */
+     pszPersonal = _SHGetFolderUnixPath(CSIDL_PERSONAL|CSIDL_FLAG_DONT_VERIFY);
+     if (!pszPersonal) return;
+ 
++#if 0
+     _SHGetXDGUserDirs(xdg_dirs, num, &xdg_results);
+ 
+     pszHome = getenv("HOME");
+     if (pszHome && !stat(pszHome, &statFolder) && S_ISDIR(statFolder.st_mode))
+     {
+@@ -4165,17 +4166,20 @@ static void _SHCreateMyDocumentsSymbolicLink(const UINT * aidsMyStuff, const UIN
+          * or symlink exists. */
+         symlink(szPersonalTarget, pszPersonal);
+     }
+     else
+     {
++#endif
+         /* '$HOME' doesn't exist. Create subdirs for 'My Pictures', 'My Videos',
+          * 'My Music' etc. in '%USERPROFILE%\My Documents' or fail silently if
+          * they already exist. */
+         pszHome = NULL;
+         strcpy(szPersonalTarget, pszPersonal);
+         _SHCreateMyDocumentsSubDirs(aidsMyStuff, aids_num, szPersonalTarget);
++#if 0
+     }
++#endif
+ 
+     heap_free(pszPersonal);
+ 
+     _SHFreeXDGUserDirs(num, xdg_results);
+ }
+@@ -4225,10 +4229,11 @@ static void _SHCreateMyStuffSymbolicLink(int nFolder)
+         int cLen = readlink(pszPersonal, szPersonalTarget, FILENAME_MAX-1);
+         if (cLen >= 0) szPersonalTarget[cLen] = '\0';
+     }
+     heap_free(pszPersonal);
+ 
++#if 0
+     _SHGetXDGUserDirs(xdg_dirs, num, &xdg_results);
+ 
+     pszHome = getenv("HOME");
+ 
+     while (1)
+@@ -4268,10 +4273,11 @@ static void _SHCreateMyStuffSymbolicLink(int nFolder)
+         }
+         symlink(szMyStuffTarget, pszMyStuff);
+         heap_free(pszMyStuff);
+         break;
+     }
++#endif
+ 
+     _SHFreeXDGUserDirs(num, xdg_results);
+ }
+ 
+ /******************************************************************************
+@@ -4293,10 +4299,11 @@ static void _SHCreateDesktopSymbolicLink(void)
+ 
+     /* Create all necessary profile sub-dirs up to 'My Documents' and get the unix path. */
+     pszPersonal = _SHGetFolderUnixPath(CSIDL_PERSONAL|CSIDL_FLAG_CREATE);
+     if (!pszPersonal) return;
+ 
++#if 0
+     _SHGetXDGUserDirs(xdg_dirs, num, &xdg_results);
+ 
+     pszHome = getenv("HOME");
+ 
+     if (pszHome)
+@@ -4318,10 +4325,11 @@ static void _SHCreateDesktopSymbolicLink(void)
+             else
+                 symlink(szDesktopTarget, pszDesktop);
+             heap_free(pszDesktop);
+         }
+     }
++#endif
+ 
+     _SHFreeXDGUserDirs(num, xdg_results);
+ }
+ 
+ /******************************************************************************
+From 63f934962cb97d69ed71604985716e7479f822b1 Mon Sep 17 00:00:00 2001
+From: Nikolay Sivov <nsivov@codeweavers.com>
+Date: Tue, 23 Oct 2018 16:18:20 +0300
+Subject: [PATCH] wine.inf: Add font registry entries.
+
+---
+ loader/wine.inf.in | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 1f94c38d0c6..df2b43d9106 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -181,6 +181,7 @@ CurrentVersion="Software\Microsoft\Windows\CurrentVersion"
+ FontSubStr="Software\Microsoft\Windows NT\CurrentVersion\FontSubstitutes"
+ Control="System\CurrentControlSet\Control"
+ Packages="Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\PackageRepository\Packages"
++FontsNT="Software\Microsoft\Windows NT\CurrentVersion\Fonts"
+ 
+ [Classes]
+ HKCR,.chm,,2,"chm.file"
+@@ -614,6 +615,10 @@ HKLM,%FontSubStr%,"Times New Roman CYR,204",,"Times New Roman,204"
+ HKLM,%FontSubStr%,"Times New Roman Greek,161",,"Times New Roman,161"
+ HKLM,%FontSubStr%,"Times New Roman TUR,162",,"Times New Roman,162"
+ HKLM,System\CurrentControlSet\Hardware Profiles\Current\Software\Fonts,"LogPixels",0x10003,0x00000060
++HKLM,%FontsNT%,"Arial (TrueType)",,"arial.ttf"
++HKLM,%FontsNT%,"Arial Bold (TrueType)",,"arialbd.ttf"
++HKLM,%FontsNT%,"Times New Roman (TrueType)",,"times.ttf"
++HKLM,%FontsNT%,"Courier New (TrueType)",,"cour.ttf"
+ 
+ [MCI]
+ HKLM,%Mci32Str%,"AVIVideo",,"mciavi32.dll"
+     
+From 174d487bf8ef5bec22c3663f50a276ae59d0a931 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Tue, 30 Oct 2018 13:04:06 -0500
+Subject: [PATCH] wine.inf: Substitute Times New Roman for Palatino Linotype
+
+For AOE2HD launcher.
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index df2b43d9106..44ce3cd6639 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -619,6 +619,7 @@ HKLM,%FontsNT%,"Arial (TrueType)",,"arial.ttf"
+ HKLM,%FontsNT%,"Arial Bold (TrueType)",,"arialbd.ttf"
+ HKLM,%FontsNT%,"Times New Roman (TrueType)",,"times.ttf"
+ HKLM,%FontsNT%,"Courier New (TrueType)",,"cour.ttf"
++HKCU,Software\Wine\Fonts\Replacements,"Palatino Linotype",,"Times New Roman"
+ 
+ [MCI]
+ HKLM,%Mci32Str%,"AVIVideo",,"mciavi32.dll"
+
+From 12b7edaf69d1f9c94c18bd4cd8ae0e1d5ae97972 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Tue, 15 Jan 2019 10:10:47 -0600
+Subject: [PATCH] ntdll: Don't pass SDL_AUDIODRIVER from Linux environment
+
+---
+ dlls/ntdll/unix/env.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/ntdll/unix/env.c b/dlls/ntdll/unix/env.c
+index 74cea11be5f..50bc2321eaa 100644
+--- a/dlls/ntdll/unix/env.c
++++ b/dlls/ntdll/unix/env.c
+@@ -527,6 +527,7 @@ static BOOL is_special_env_var( const char *var )
+             STARTS_WITH( var, "TEMP=" ) ||
+             STARTS_WITH( var, "TMP=" ) ||
+             STARTS_WITH( var, "QT_" ) ||
++            STARTS_WITH( var, "SDL_AUDIODRIVER=" ) ||
+             STARTS_WITH( var, "VK_" ));
+ }
+ 
+From 17d19e1b23bce6fc6ff5b4e61131c9c58fd57ae5 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Wed, 28 Mar 2018 09:21:41 -0500
+Subject: [PATCH] HACK: Don't build winemenubuilder
+
+---
+ configure          | 2 --
+ configure.ac       | 1 -
+ loader/wine.inf.in | 1 -
+ 3 files changed, 4 deletions(-)
+
+diff --git a/configure b/configure
+index 649a8917f54..4581015d576 100755
+--- a/configure
++++ b/configure
+@@ -1746,7 +1746,6 @@ enable_wineconsole
+ enable_winedbg
+ enable_winedevice
+ enable_winefile
+-enable_winemenubuilder
+ enable_winemine
+ enable_winemsibuilder
+ enable_winepath
+@@ -20315,7 +20314,6 @@ wine_fn_config_makefile programs/wineconsole enable_wineconsole
+ wine_fn_config_makefile programs/winedbg enable_winedbg
+ wine_fn_config_makefile programs/winedevice enable_winedevice
+ wine_fn_config_makefile programs/winefile enable_winefile
+-wine_fn_config_makefile programs/winemenubuilder enable_winemenubuilder
+ wine_fn_config_makefile programs/winemine enable_winemine
+ wine_fn_config_makefile programs/winemsibuilder enable_winemsibuilder
+ wine_fn_config_makefile programs/winepath enable_winepath
+diff --git a/configure.ac b/configure.ac
+index 704da15f404..d4168e410bc 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3998,7 +3998,6 @@ WINE_CONFIG_MAKEFILE(programs/wineconsole)
+ WINE_CONFIG_MAKEFILE(programs/winedbg)
+ WINE_CONFIG_MAKEFILE(programs/winedevice)
+ WINE_CONFIG_MAKEFILE(programs/winefile)
+-WINE_CONFIG_MAKEFILE(programs/winemenubuilder)
+ WINE_CONFIG_MAKEFILE(programs/winemine)
+ WINE_CONFIG_MAKEFILE(programs/winemsibuilder)
+ WINE_CONFIG_MAKEFILE(programs/winepath)
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 2b049eb91f8..e6948a73427 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -3598,7 +3598,6 @@ HKR,Parameters,"ServiceDll",,"%11%\schedsvc.dll"
+ HKLM,%CurrentVersionNT%\SvcHost,"netsvcs",0x00010008,"Schedule"
+ 
+ [Services]
+-HKLM,%CurrentVersion%\RunServices,"winemenubuilder",2,"%11%\winemenubuilder.exe -a -r"
+ HKLM,"System\CurrentControlSet\Services\Eventlog\Application",,16
+ HKLM,"System\CurrentControlSet\Services\Eventlog\System","Sources",0x10000,""
+ HKLM,"System\CurrentControlSet\Services\Tcpip\Parameters","DataBasePath",2,"%11%\drivers"
+
+From 80b9333ff296062b4b0c34f7e3509530dd331993 Mon Sep 17 00:00:00 2001
+From: Patryk Obara <dreamer.tan@gmail.com>
+Date: Fri, 26 Apr 2019 20:40:31 +0200
+Subject: [PATCH] winex11: Fill WM_CLASS based on Steam appid
+
+Some desktop environments (Gnome 3, Cinnamon) decide on an application
+icon in the following order:
+
+- If the first string in WM_CLASS property can be correlated to
+  a name or StartupWMClass key in a .desktop entry file, then
+  the associated icon will be used.
+- If the second string in WM_CLASS property can be correlated to
+  a name or StartupWMClass key in a .desktop entry file, then
+  the associated icon will be used.
+- If the application has indicated an icon resource through WM_HINTS
+  property, then the associated X window or pixmaps will be used.
+
+Upstream Wine usually deals with this by placing a .desktop file with
+StartupWMClass filled to match first string in WM_CLASS property
+(which is the name of exe file being run).
+
+Wine in Proton does not do it, but still puts "Wine" as second string,
+therefore desktop environment can't differentiate between Wine in
+Proton and Wine installed in OS.
+
+By replacing "Wine" with "steam_app_<appid>" we force DE to fallback
+to icon indicated by WM_HINTS (ico file embedded in exe file).
+Steam can override this behaviour by installing properly crafted
+.desktop entry file.  If SteamAppId environment variable is missing,
+then generic "steam_proton" name is used instead.
+---
+ dlls/winex11.drv/window.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winex11.drv/window.c b/dlls/winex11.drv/window.c
+index cee4230e1bb..46d46052796 100644
+--- a/dlls/winex11.drv/window.c
++++ b/dlls/winex11.drv/window.c
+@@ -941,8 +941,19 @@ static void set_initial_wm_hints( Display *display, Window window )
+     /* class hints */
+     if ((class_hints = XAllocClassHint()))
+     {
+-        class_hints->res_name = process_name;
+-        class_hints->res_class = process_name;
++        static char steam_proton[] = "steam_proton";
++        const char *app_id = getenv("SteamAppId");
++        char proton_app_class[128];
++
++        if(app_id && *app_id){
++            snprintf(proton_app_class, sizeof(proton_app_class), "steam_app_%s", app_id);
++            class_hints->res_name = proton_app_class;
++            class_hints->res_class = proton_app_class;
++        }else{
++            class_hints->res_name = steam_proton;
++            class_hints->res_class = steam_proton;
++        }
++
+         XSetClassHint( display, window, class_hints );
+         XFree( class_hints );
+     }
 From d012d137e4099d1b12079a49a8a5632d205e0a9f Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Mon, 24 Sep 2018 12:37:49 -0500
@@ -130,3 +540,98 @@ index 7fe2f49dcd9..e72d0dcaba1 100644
  [DirectX]
  HKLM,Software\Microsoft\DirectX,"Version",,"4.09.00.0904"
 
+From ec87f47caa8a9461c2a983cb4cf7d0b7816b1ded Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <z.figura12@gmail.com>
+Date: Mon, 18 May 2020 14:20:30 -0500
+Subject: [PATCH] wine.inf: Associate the "steam" protocol with winebrowser.
+
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 247eb906422..0b014dce63c 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -317,6 +317,7 @@ HKCR,https\shell\open\ddeexec,"NoActivateHandler",2,""
+ HKCR,https\shell\open\ddeexec\Application,,2,"IExplore"
+ HKCR,https\shell\open\ddeexec\Topic,,2,"WWW_OpenURL"
+ HKCR,mailto\shell\open\command,,2,"%11%\winebrowser %1"
++HKCR,steam\shell\open\command,,2,"""%11%\winebrowser"" ""%1"""
+ 
+ HKCR,MIME\Database\Charset\_iso-2022-jp$ESC,"Codepage",0x10003,932
+ HKCR,MIME\Database\Charset\_iso-2022-jp$ESC,"InternetEncoding",0x10003,50221
+
+From 4208548dbb789b3f3bd112a4dc1a19ebf0d1f307 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 22 Jan 2018 14:35:51 -0600
+Subject: [PATCH] HACK: wineboot: Don't show "updating prefix" window
+
+---
+ programs/wineboot/wineboot.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/programs/wineboot/wineboot.c b/programs/wineboot/wineboot.c
+index b85a3b6b6ea..6dfc797313e 100644
+--- a/programs/wineboot/wineboot.c
++++ b/programs/wineboot/wineboot.c
+@@ -1035,6 +1035,7 @@ static INT_PTR CALLBACK wait_dlgproc( HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
+     return 0;
+ }
+ 
++/*
+ static HWND show_wait_window(void)
+ {
+     const char *config_dir = wine_get_config_dir();
+@@ -1051,6 +1052,7 @@ static HWND show_wait_window(void)
+     HeapFree( GetProcessHeap(), 0, name );
+     return hwnd;
+ }
++*/
+ 
+ static HANDLE start_rundll32( const char *inf_path, BOOL wow64 )
+ {
+@@ -1127,7 +1129,7 @@ static void update_wineprefix( BOOL force )
+ 
+         if ((process = start_rundll32( inf_path, FALSE )))
+         {
+-            HWND hwnd = show_wait_window();
++/*            HWND hwnd = show_wait_window();*/
+             for (;;)
+             {
+                 MSG msg;
+@@ -1139,7 +1141,7 @@ static void update_wineprefix( BOOL force )
+                 }
+                 else while (PeekMessageW( &msg, 0, 0, 0, PM_REMOVE )) DispatchMessageW( &msg );
+             }
+-            DestroyWindow( hwnd );
++/*            DestroyWindow( hwnd );*/
+         }
+         WINE_MESSAGE( "wine: configuration in '%s' has been updated.\n", config_dir );
+     }
+ 
+From 1d06745fc4cc9353b5e8bdb48d4cb716b2a7ec85 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 7 May 2021 16:50:29 +0300
+Subject: [PATCH] wine.inf: Associate the steam protocol with steam.exe.
+
+For 2K Launcher.
+
+CW-Bug-Id: 18912
+---
+ loader/wine.inf.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index a2b45b3c28f..851a31b7d05 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -330,7 +330,7 @@ HKCR,https\shell\open\ddeexec,"NoActivateHandler",2,""
+ HKCR,https\shell\open\ddeexec\Application,,2,"IExplore"
+ HKCR,https\shell\open\ddeexec\Topic,,2,"WWW_OpenURL"
+ HKCR,mailto\shell\open\command,,2,"%11%\winebrowser %1"
+-HKCR,steam\shell\open\command,,2,"""%11%\winebrowser"" ""%1"""
++HKCR,steam\shell\open\command,,,"""%16426%\Steam\Steam.exe"" -- ""%1"""
+ 
+ HKCR,MIME\Database\Charset\_iso-2022-jp$ESC,"Codepage",0x10003,932
+ HKCR,MIME\Database\Charset\_iso-2022-jp$ESC,"InternetEncoding",0x10003,50221

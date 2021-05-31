@@ -27,9 +27,9 @@ index b7bd6f5f91d..fef060e9c22 100644
  /***********************************************************************
   *           HEAP_CreateSystemHeap
 @@ -544,6 +546,10 @@ VOID WINAPI GlobalMemoryStatus( LPMEMORYSTATUS lpBuffer )
-     MEMORYSTATUSEX memstatus;
-     OSVERSIONINFOW osver;
+ #ifndef _WIN64
      IMAGE_NT_HEADERS *nt = RtlImageNtHeader( GetModuleHandleW(0) );
+ #endif
 +    static int force_large_address_aware = -1;
 +
 +    if (force_large_address_aware == -1)
@@ -48,27 +48,30 @@ index b7bd6f5f91d..fef060e9c22 100644
          if (lpBuffer->dwTotalPhys > MAXLONG) lpBuffer->dwTotalPhys = MAXLONG;
          if (lpBuffer->dwAvailPhys > MAXLONG) lpBuffer->dwAvailPhys = MAXLONG;
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index ca427c46c04..10327373959 100644
+index 966e8a88be2..609b85bf4ce 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1617,6 +1617,7 @@
+@@ -1627,6 +1627,9 @@
+ @ cdecl -norelay __wine_dbg_output(str)
+ @ cdecl -norelay __wine_dbg_strdup(str)
  
- # Virtual memory
- @ cdecl -syscall __wine_locked_recvmsg(long ptr long)
++# Virtual memory
 +@ cdecl -syscall __wine_needs_override_large_address_aware()
- 
++
  # Version
- @ cdecl -syscall wine_get_version()
+ @ cdecl wine_get_version()
+ @ cdecl wine_get_build_id()
 diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
 index 7236f0acb83..e34abd88093 100644
 --- a/dlls/ntdll/unix/server.c
 +++ b/dlls/ntdll/unix/server.c
-@@ -1471,7 +1471,8 @@ void server_init_process_done(void)
+@@ -1471,8 +1471,8 @@ void server_init_process_done(void)
  #ifdef __APPLE__
      send_server_task_port();
  #endif
--    if (nt->FileHeader.Characteristics & IMAGE_FILE_LARGE_ADDRESS_AWARE) virtual_set_large_address_space();
-+    if (nt->FileHeader.Characteristics & IMAGE_FILE_LARGE_ADDRESS_AWARE
+-    if (main_image_info.ImageCharacteristics & IMAGE_FILE_LARGE_ADDRESS_AWARE)
+-        virtual_set_large_address_space();
++    if (main_image_info.ImageCharacteristics & IMAGE_FILE_LARGE_ADDRESS_AWARE
 +            || __wine_needs_override_large_address_aware()) virtual_set_large_address_space();
  
      /* Install signal handlers; this cannot be done earlier, since we cannot
@@ -110,4 +113,3 @@ index 1337e2de861..200a777eb5c 100644
   *           virtual_set_large_address_space
 -- 
 2.26.2
-
