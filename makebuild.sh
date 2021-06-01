@@ -8,7 +8,9 @@ vagrant up
 
 # cleanup any old builds first
 vagrant ssh -c 'ssh ubuntu@buildbot-bionic-amd64 "cd buildbot && git reset --hard HEAD && git clean -xdf"'
+vagrant ssh -c 'ssh ubuntu@buildbot-bionic-amd64 "rm -Rf buildbot/runners/wine/wine-src/"'
 vagrant ssh -c 'ssh ubuntu@buildbot-bionic-i386 "cd buildbot && git reset --hard HEAD && git clean -xdf"'
+vagrant ssh -c 'ssh ubuntu@buildbot-bionic-i386 "rm -Rf buildbot/runners/wine/wine-src/"'
 
 # start build
 vagrant ssh -c "ssh ubuntu@buildbot-bionic-amd64 \"cd buildbot/runners/wine && ./build.sh --as $1 --version $3 --with $2 --branch $3 --noupload --keep --dependencies\""
