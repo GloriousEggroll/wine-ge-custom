@@ -167,7 +167,7 @@
 #    echo "atiadlxx needed for cod games"
 #    patch -Np1 < ../patches/proton/20-proton-atiadlxx.patch
 
-    echo "valve registry entries"
+#    echo "valve registry entries"
 #    patch -Np1 < ../patches/proton/21-proton-01_wolfenstein2_registry.patch
 #    patch -Np1 < ../patches/proton/22-proton-02_rdr2_registry.patch
 #    patch -Np1 < ../patches/proton/23-proton-03_nier_sekiro_ds3_registry.patch
@@ -254,6 +254,9 @@
     patch -Np1 < ../patches/wine-hotfixes/204113
 
     patch -Np1 < ../patches/wine-hotfixes/me_psapi.patch
+    
+    # unix_sockaddr compile error hotfix
+    patch -Np1 < ../patches/wine-hotfixes/c2351cd9b44910a9be03f0c84e7fbb992a783adf.patch
 
     ### END WINEPATCH SECTION ###
 
@@ -261,3 +264,8 @@
     #add your own custom patch lines below
 
     #end
+
+    # need to run these after applying patches
+    ./dlls/winevulkan/make_vulkan
+    ./tools/make_requests
+    autoreconf -f
