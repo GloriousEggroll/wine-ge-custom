@@ -230,8 +230,8 @@
     echo "fullscreen hack wined3d additions"
     patch -Np1 < ../patches/proton/43-valve_proton_fullscreen_hack-staging-wined3d.patch
 
-    echo "wine mono update"
-    patch -Np1 < ../patches/proton/46-proton_update_winemono_6.1.2.patch
+#    echo "wine mono update"
+#    patch -Np1 < ../patches/proton/46-proton_update_winemono_6.1.2.patch
 
     ### END PROTON PATCH SECTION ###
 
@@ -257,6 +257,12 @@
     
     # unix_sockaddr compile error hotfix
     patch -Np1 < ../patches/wine-hotfixes/c2351cd9b44910a9be03f0c84e7fbb992a783adf.patch
+
+    echo "proton QPC performance patch"
+    patch -Np1 < ../patches/wine-hotfixes/proton_QPC.patch
+    
+    echo "proton LFH performance patch"
+    patch -Np1 < ../patches/wine-hotfixes/proton_LFH.patch
 
     ### END WINEPATCH SECTION ###
 
