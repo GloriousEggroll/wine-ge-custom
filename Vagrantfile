@@ -76,9 +76,9 @@ Vagrant.configure(2) do |config|
       
       # (0) setup ubuntu user on both containers
       lxc file push lutris-buildbot/0-buildbot-usersetup.sh buildbot-bionic-i386/home/ubuntu/
-      lxc exec buildbot-bionic-i386 -- bash -c /home/ubuntu/0-buildbot-usersetup.sh
+      lxc exec buildbot-bionic-i386 -- sudo bash -c /home/ubuntu/0-buildbot-usersetup.sh
       lxc file push lutris-buildbot/0-buildbot-usersetup.sh buildbot-bionic-amd64/home/ubuntu/
-      lxc exec buildbot-bionic-amd64 -- bash -c /home/ubuntu/0-buildbot-usersetup.sh
+      lxc exec buildbot-bionic-amd64 -- sudo bash -c /home/ubuntu/0-buildbot-usersetup.sh
 
       # (1) setup host file on VM
       # this must be done otherwise one of the machines wont have an IP available for the setup.sh script.
@@ -89,7 +89,7 @@ Vagrant.configure(2) do |config|
       cat ~/.ssh/config
       
       # (2) setup /etc/hosts file and buildbot files on containers
-      cd lutris-buildbot/buildbot
+      cd ~/lutris-buildbot/buildbot
       ./setup-container.sh buildbot-bionic-i386
       ./setup-container.sh buildbot-bionic-amd64
       cd ~
