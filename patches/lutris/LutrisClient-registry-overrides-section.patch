@@ -1,0 +1,42 @@
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 05f8705e63e..66a098fa31d 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -76,7 +76,8 @@ AddReg=\
+     Tapi,\
+     Timezones,\
+     VersionInfo,\
+-    LicenseInformation
++    LicenseInformation,\
++    LutrisClient
+ 
+ [DefaultInstall.ntamd64]
+ RegisterDlls=RegisterDllsSection
+@@ -105,7 +106,8 @@ AddReg=\
+     Tapi,\
+     Timezones,\
+     VersionInfo.ntamd64,\
+-    LicenseInformation
++    LicenseInformation,\
++    LutrisClient.ntamd64
+ 
+ [DefaultInstall.ntarm64]
+ RegisterDlls=RegisterDllsSection
+@@ -150,7 +152,8 @@ AddReg=\
+     Packages.wow64,\
+     Tapi,\
+     VersionInfo.ntamd64,\
+-    LicenseInformation
++    LicenseInformation,\
++    LutrisClient.ntamd64
+ 
+ [Wow64Install.ntarm64]
+ WineFakeDlls=FakeDllsWin32
+@@ -4418,3 +4421,7 @@ EtcFiles  = 12,etc
+ InfFiles  = 17
+ NlsFiles  = 11
+ SortFiles = 10,globalization\sorting
++
++[LutrisClient]
++
++[LutrisClient.ntamd64]

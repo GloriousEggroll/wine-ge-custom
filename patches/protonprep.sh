@@ -4,7 +4,7 @@
     cd wine-staging
     git reset --hard HEAD
     git clean -xdf
-    
+
     # reenable pulseaudio patches
     patch -Np1 < ../patches/wine-hotfixes/staging-reenable-pulse.patch
     patch -RNp1 < ../patches/wine-hotfixes/staging-pulseaudio-reverts.patch
@@ -18,6 +18,8 @@
     git reset --hard HEAD
     git clean -xdf
 
+    #echo "revert d171d1116764260f4ae272c69b54e5dfd13c6835 which breaks the wayland driver"
+    #git revert --no-commit d171d1116764260f4ae272c69b54e5dfd13c6835
 
     # https://bugs.winehq.org/show_bug.cgi?id=49990
     echo "revert bd27af974a21085cd0dc78b37b715bbcc3cfab69 which breaks some game launchers"
@@ -28,10 +30,9 @@
     echo "revert e4fbae832c868e9fcf5a91c58255fe3f4ea1cb30 which breaks controller detection on some distros"
     git revert --no-commit e4fbae832c868e9fcf5a91c58255fe3f4ea1cb30
 
-    # ubisoft controller regression hotfix
-    git revert --no-commit 0ac619ae7ab7dd90622371a5f58a1ff12d46eb8f
-
-    # temporary pulseaudio reverts
+    echo "temporary pulseaudio reverts"
+    git revert --no-commit 2e64d91428757eaa88475b49bf50922cda603b59
+    git revert --no-commit f77af3dd6324fadaf153062d77b51f755f71faea
     git revert --no-commit ce151dd681fe5ee80daba96dce12e37d6846e152
     git revert --no-commit 77813eb7586779df0fb3b700000a17e339fd5ce3
     git revert --no-commit d8e9621cfad50596378283704dfb1e6926d77ed8
@@ -72,12 +73,6 @@
     git revert --no-commit 8df72bade54d1ef7a6d9e79f20ee0a2697019c13
     git revert --no-commit e264ec9c718eb66038221f8b533fc099927ed966
     git revert --no-commit d3673fcb034348b708a5d8b8c65a746faaeec19d
-    
-    # mfplat reverts
-    git revert --no-commit abd3e8f3ec755eb3f09ab5333781b0daebe8f123
-    git revert --no-commit 20a1eb3b252b404bd2ed9a11dc03312ea11fff0d
-    git revert --no-commit e4e319d032d74ce5be55a31ef3add629b257ea48
-    git revert --no-commit 626438a6be2df298c527870c8df9e6deb2f1c0fc
 
     # disable these when using proton's gamepad patches
     # -W dinput-SetActionMap-genre \
@@ -96,9 +91,6 @@
     # instead, we apply it manually:
     # patch -Np1 < ../patches/wine-hotfixes/imm32-com-initialization_no_net_active_window.patch
 
-    # disable these for vulkan experimental childwindow support
-    #-W Pipelight
-
     echo "applying staging patches"
     ../wine-staging/patches/patchinstall.sh DESTDIR="." --all \
     -W winex11-_NET_ACTIVE_WINDOW \
@@ -116,10 +108,6 @@
 
     echo "assetto corsa"
     patch -Np1 < ../patches/game-patches/assettocorsa-hud.patch
-
-#    echo "origin downloads fix"
-#    not needed for proton, also breaks gta V online sessions
-#    patch -Np1 < ../patches/game-patches/origin-downloads_fix.patch
 
     # TODO: Add game-specific check
     echo "mk11 patch"
@@ -159,37 +147,15 @@
     echo "amd ags"
     patch -Np1 < ../patches/proton/18-proton-amd_ags.patch
 
-# Disable these for now, they need to be rebased for wine.inf.in without steam
-#--------------------------------------
-#    echo "msvcrt overrides"
-#    patch -Np1 < ../patches/proton/19-proton-msvcrt_nativebuiltin.patch
-
-#    echo "atiadlxx needed for cod games"
-#    patch -Np1 < ../patches/proton/20-proton-atiadlxx.patch
-
-#    echo "valve registry entries"
-#    patch -Np1 < ../patches/proton/21-proton-01_wolfenstein2_registry.patch
-#    patch -Np1 < ../patches/proton/22-proton-02_rdr2_registry.patch
-#    patch -Np1 < ../patches/proton/23-proton-03_nier_sekiro_ds3_registry.patch
-#    patch -Np1 < ../patches/proton/24-proton-04_cod_registry.patch
-#    patch -Np1 < ../patches/proton/32-proton-05_spellforce_registry.patch
-#    patch -Np1 < ../patches/proton/33-proton-06_shadow_of_war_registry.patch
-#    patch -Np1 < ../patches/proton/41-proton-07_nfs_registry.patch
-#    patch -Np1 < ../patches/proton/45-proton-08_FH4_registry.patch
-#--------------------------------------
-
     echo "valve rdr2 fixes"
     patch -Np1 < ../patches/proton/25-proton-rdr2-fixes.patch
+    
+    echo "apply staging bcrypt patches on top of rdr2 fixes"
+    patch -Np1 < ../patches/wine-hotfixes/0001-bcrypt-Allow-multiple-backends-to-coexist.patch
+    patch -Np1 < ../patches/wine-hotfixes/0002-bcrypt-Implement-BCryptSecretAgreement-with-libgcryp.patch
 
     echo "set prefix win10"
     patch -Np1 < ../patches/proton/28-proton-win10_default.patch
-
-    echo "dxvk_config"
-    patch -Np1 < ../patches/proton/29-proton-dxvk_config.patch
-
-    #this is needed specifically for proton, not needed for normal wine
-    echo "proton-specific manual mfplat dll register patch"
-    patch -Np1 < ../patches/proton/30-proton-mediafoundation_dllreg.patch
 
 #    only needed with proton's gamepad patches
 #    echo "proton udev container patches"
@@ -211,15 +177,7 @@
     ## VULKAN-CENTRIC PATCHES
 
     echo "fullscreen hack"
-    patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging-childwindow-experimental.patch
-#    patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging.patch
-
-    # old childwindow hack
-#    echo "vulkan childwindow fix"
-#    patch -Np1 < ../patches/wine-hotfixes/winevulkan-childwindow.patch
-
-    echo "proton nvidia hacks"
-    patch -Np1 < ../patches/proton/26-proton-nvidia-hacks.patch
+    patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging-tkg.patch
 
 #    disabled for now, needs rebase. only used for vr anyway
 #    echo "proton openxr patches"
@@ -227,42 +185,83 @@
 
     ## END VULKAN-CENTRIC PATCHES
 
-    echo "fullscreen hack wined3d additions"
-    patch -Np1 < ../patches/proton/43-valve_proton_fullscreen_hack-staging-wined3d.patch
-
-#    echo "wine mono update"
-#    patch -Np1 < ../patches/proton/46-proton_update_winemono_6.1.2.patch
-
     ### END PROTON PATCH SECTION ###
+
+    ### LUTRIS PATCH SECTION ###
+    echo "create Lutris custom registry overrides sections"
+    patch -Np1 < ../patches/lutris/LutrisClient-registry-overrides-section.patch
+
+    echo "msvcrt overrides"
+    patch -Np1 < ../patches/lutris/19-lutris-msvcrt_nativebuiltin.patch
+
+    echo "atiadlxx needed for cod games"
+    patch -Np1 < ../patches/lutris/20-lutris-atiadlxx.patch
+
+    echo "lutris registry entries"
+    patch -Np1 < ../patches/lutris/21-lutris-01_wolfenstein2_registry.patch
+    patch -Np1 < ../patches/lutris/22-lutris-02_rdr2_registry.patch
+    patch -Np1 < ../patches/lutris/23-lutris-03_nier_sekiro_ds3_registry.patch
+    patch -Np1 < ../patches/lutris/24-lutris-04_cod_registry.patch
+    patch -Np1 < ../patches/lutris/32-lutris-05_spellforce_registry.patch
+    patch -Np1 < ../patches/lutris/33-lutris-06_shadow_of_war_registry.patch
+    patch -Np1 < ../patches/lutris/41-lutris-07_nfs_registry.patch
+    patch -Np1 < ../patches/lutris/45-lutris-08_FH4_registry.patch
+    #patch -Np1 < ../patches/lutris/46-lutris-09_nvapi_registry.patch
+
+    ### END LUTRIS PATCH SECTION ###
 
     ### WINE PATCH SECTION ###
 
+     # only use when staging version is disabled
     echo "mfplat additions"
-    patch -Np1 < ../patches/wine-hotfixes/mfplat-rebase.patch
+    patch -Np1 < ../patches/wine-hotfixes/mfplat-godfall-hotfix.patch
 
     # these are applied out of order since guy's mfplat patches are based on vanilla wine
     echo "proton-specific mfplat video conversion patches"
     patch -Np1 < ../patches/proton/34-proton-winegstreamer_updates.patch
 
-    # witcher 3 + borderlands 3 breaker
+    # borderlands 3 fixer
     patch -Np1 < ../patches/wine-hotfixes/205333
 
     # pending upstream wine fixes
     
     # more mfplat fixes
-    patch -Np1 < ../patches/wine-hotfixes/205277
-    patch -Np1 < ../patches/wine-hotfixes/204113
 
-    patch -Np1 < ../patches/wine-hotfixes/me_psapi.patch
-    
-    # unix_sockaddr compile error hotfix
-    patch -Np1 < ../patches/wine-hotfixes/c2351cd9b44910a9be03f0c84e7fbb992a783adf.patch
+    # additional pending mfplat fonv audio loop fix
+    patch -Np1 < ../patches/wine-hotfixes/205277
+
+    # FH4 performance frequency patch
+    patch -Np1 < ../patches/wine-hotfixes/204113
 
     echo "proton QPC performance patch"
     patch -Np1 < ../patches/wine-hotfixes/proton_QPC.patch
-    
+
     echo "proton LFH performance patch"
     patch -Np1 < ../patches/wine-hotfixes/proton_LFH.patch
+
+    echo "Horizon Zero Dawn animations fix"
+    patch -Np1 < ../patches/wine-hotfixes/HZD_animations_pr112.patch
+
+    echo "pending roblox fix"
+    patch -Np1 < ../patches/wine-hotfixes/pending_roblox_hotfix.patch
+
+
+    # BF4 ping fix
+    patch -Np1 < ../patches/wine-hotfixes/207990
+
+    # RPGMaker VX fix
+    patch -Np1 < ../patches/wine-hotfixes/rpgmaker.patch
+    
+    # this is needed for battle.net
+    patch -RNp1 < ../patches/wine-hotfixes/revert-ws2_32-Reimplement-select-on-top-of-IOCTL_AFD_POL.patch
+
+    #disabled, still horribly broken
+#    patch -Np1 < ../patches/wine-hotfixes/wine_wayland_driver.patch
+
+    # need to run these after applying patches
+    ./dlls/winevulkan/make_vulkan
+    ./tools/make_requests
+    autoreconf -f
 
     ### END WINEPATCH SECTION ###
 
@@ -270,8 +269,3 @@
     #add your own custom patch lines below
 
     #end
-
-    # need to run these after applying patches
-    ./dlls/winevulkan/make_vulkan
-    ./tools/make_requests
-    autoreconf -f

@@ -1,0 +1,22 @@
+From c71b813d33ec2ca21ae91467e3da976b8ea1b2ac Mon Sep 17 00:00:00 2001
+From: Brendan Shanks <bshanks@codeweavers.com>
+Date: Fri, 31 Jul 2020 15:33:57 -0700
+Subject: [PATCH] wine.inf: Set amd_ags_x64 to built-in for Red Dead Redemption
+ 2
+
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index b560a0ce8ea..d977ba7d870 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -4456,6 +4456,7 @@ HKCU,Software\Wine\DllOverrides,"atiadlxx",,"disabled"
+ HKCU,Software\Wine\AppDefaults\NewColossus_x64vk.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
+ HKCU,Software\Wine\AppDefaults\Youngblood_x64vk.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
++HKCU,Software\Wine\AppDefaults\RDR2.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
+ ;;Likely want *80 and *90 too, but those require removing Wine's manifest files.
+ HKCU,Software\Wine\DllOverrides,"atl100",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"msvcp100",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"msvcr100",0x2,"native,builtin"
