@@ -13,7 +13,7 @@ vagrant ssh -c 'ssh ubuntu@buildbot-bionic-i386 "cd buildbot && git reset --hard
 vagrant ssh -c 'ssh ubuntu@buildbot-bionic-i386 "rm -Rf buildbot/runners/wine/wine-src/"'
 
 # start build
-vagrant ssh -c "ssh ubuntu@buildbot-bionic-amd64 \"cd buildbot/runners/wine && ./build.sh --as $1 --version $3 --with $2 --branch $3 --noupload --keep --dependencies\""
+vagrant ssh -c "ssh ubuntu@buildbot-bionic-amd64 \"cd buildbot/runners/wine && ./build.sh --as $1 --version $3 --with $2 --branch $3 --nostrip --useccache --usemingw --noupload --keep --dependencies\""
 
 vagrant ssh -c 'ssh ubuntu@buildbot-bionic-amd64 "mv buildbot/runners/wine/wine-*.tar.xz ~/"'
 vagrant ssh -c 'scp ubuntu@buildbot-bionic-amd64:/home/ubuntu/wine-*.tar.xz /vagrant/'
