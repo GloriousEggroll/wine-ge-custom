@@ -251,9 +251,15 @@
 
     # RPGMaker VX fix
     patch -Np1 < ../patches/wine-hotfixes/rpgmaker.patch
-    
+
+    # bnet unfucker
+    patch -Np1 < ../patches/wine-hotfixes/pending_upstream_battlenet_unfucker.patch
+
+    # server cpu usage unfucker
+    patch -Np1 < ../patches/wine-hotfixes/pending_upstream_server_cpu_unfucker.patch
+
     # this is needed for battle.net
-    patch -RNp1 < ../patches/wine-hotfixes/revert-ws2_32-Reimplement-select-on-top-of-IOCTL_AFD_POL.patch
+#    patch -RNp1 < ../patches/wine-hotfixes/revert-ws2_32-Reimplement-select-on-top-of-IOCTL_AFD_POL.patch
 
     #disabled, still horribly broken
 #    patch -Np1 < ../patches/wine-hotfixes/wine_wayland_driver.patch
