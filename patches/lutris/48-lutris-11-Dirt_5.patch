@@ -1,0 +1,12 @@
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index af613638023..6897abf8103 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -4494,6 +4494,7 @@ HKCU,Software\Wine\AppDefaults\BlackOps3.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\NFS16.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"amd_ags_x64",,""
++HKCU,Software\Wine\AppDefaults\DIRT5.exe\DllOverrides,"atiadlxx",,"builtin"
+ ;;Likely want *80 and *90 too, but those require removing Wine's manifest files.
+ HKCU,Software\Wine\DllOverrides,"atl100",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"msvcp100",0x2,"native,builtin"

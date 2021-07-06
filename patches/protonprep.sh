@@ -206,6 +206,8 @@
     patch -Np1 < ../patches/lutris/33-lutris-06_shadow_of_war_registry.patch
     patch -Np1 < ../patches/lutris/41-lutris-07_nfs_registry.patch
     patch -Np1 < ../patches/lutris/45-lutris-08_FH4_registry.patch
+    patch -Np1 < ../patches/lutris/47-lutris-10-Civ6Launcher_Workaround.patch
+    patch -Np1 < ../patches/lutris/48-lutris-11-Dirt_5.patch
     #patch -Np1 < ../patches/lutris/46-lutris-09_nvapi_registry.patch
 
     ### END LUTRIS PATCH SECTION ###

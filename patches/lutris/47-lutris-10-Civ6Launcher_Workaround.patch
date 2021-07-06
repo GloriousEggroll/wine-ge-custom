@@ -1,0 +1,12 @@
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index af613638023..5cea54a66f2 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -4477,6 +4477,7 @@ HKCU,Software\Wine\DllOverrides,"vcruntime140",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"atiadlxx",,"disabled"
+ 
+ [LutrisClient.ntamd64]
++HKCU,Software\Wine\AppDefaults\LauncherPatcher.exe,"Version",,"win7"
+ HKCU,Software\Wine\AppDefaults\ForzaHorizon4.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
+ HKCU,Software\Wine\AppDefaults\NewColossus_x64vk.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
+ HKCU,Software\Wine\AppDefaults\Youngblood_x64vk.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
