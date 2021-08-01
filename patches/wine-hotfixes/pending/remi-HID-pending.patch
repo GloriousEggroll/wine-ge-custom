@@ -1,0 +1,418 @@
+From: "Rémi Bernon" <rbernon@codeweavers.com>
+Subject: [PATCH 1/6] ntoskrnl.exe/tests: Return success from IOCTL_HID_GET_STRING.
+Message-Id: <20210707071359.84151-1-rbernon@codeweavers.com>
+Date: Wed,  7 Jul 2021 09:13:54 +0200
+
+Signed-off-by: Rémi Bernon <rbernon@codeweavers.com>
+---
+ dlls/ntoskrnl.exe/tests/driver_hid.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntoskrnl.exe/tests/driver_hid.c b/dlls/ntoskrnl.exe/tests/driver_hid.c
+index 1d5f7563e3f..aa9ff3e5e20 100644
+--- a/dlls/ntoskrnl.exe/tests/driver_hid.c
++++ b/dlls/ntoskrnl.exe/tests/driver_hid.c
+@@ -614,7 +614,9 @@ static NTSTATUS WINAPI driver_internal_ioctl(DEVICE_OBJECT *device, IRP *irp)
+             ok(!in_size, "got input size %u\n", in_size);
+             ok(out_size == 128, "got output size %u\n", out_size);
+ 
+-            ret = STATUS_NOT_IMPLEMENTED;
++            memcpy(irp->UserBuffer, L"Wine Test", sizeof(L"Wine Test"));
++            irp->IoStatus.Information = sizeof(L"Wine Test");
++            ret = STATUS_SUCCESS;
+             break;
+ 
+         default:
+
+-- 
+2.32.0
+
+From: "Rémi Bernon" <rbernon@codeweavers.com>
+Subject: [PATCH 2/6] ntoskrnl.exe/tests: Don't close HID device file twice.
+Message-Id: <20210707071359.84151-2-rbernon@codeweavers.com>
+Date: Wed,  7 Jul 2021 09:13:55 +0200
+In-Reply-To: <20210707071359.84151-1-rbernon@codeweavers.com>
+References: <20210707071359.84151-1-rbernon@codeweavers.com>
+
+Signed-off-by: Rémi Bernon <rbernon@codeweavers.com>
+---
+ dlls/ntoskrnl.exe/tests/ntoskrnl.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+index 1eab88311ab..0ac385e9976 100644
+--- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+@@ -2696,7 +2696,6 @@ static void test_hidp(HANDLE file, int report_id, BOOL polled)
+ 
+ 
+     HidD_FreePreparsedData(preparsed_data);
+-    CloseHandle(file);
+ }
+ 
+ static void test_hid_device(DWORD report_id, DWORD polled)
+
+-- 
+2.32.0
+
+From: "Rémi Bernon" <rbernon@codeweavers.com>
+Subject: [PATCH 3/6] ntoskrnl.exe/tests: Add some HidD_(Get|Set)NumInputBuffers tests.
+Message-Id: <20210707071359.84151-3-rbernon@codeweavers.com>
+Date: Wed,  7 Jul 2021 09:13:56 +0200
+In-Reply-To: <20210707071359.84151-1-rbernon@codeweavers.com>
+References: <20210707071359.84151-1-rbernon@codeweavers.com>
+
+Signed-off-by: Rémi Bernon <rbernon@codeweavers.com>
+---
+ dlls/ntoskrnl.exe/tests/ntoskrnl.c | 55 +++++++++++++++++++++++++++++-
+ 1 file changed, 54 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+index 0ac385e9976..bd524a057b3 100644
+--- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+@@ -2704,6 +2704,7 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+     SP_DEVICE_INTERFACE_DETAIL_DATA_A *iface_detail = (void *)buffer;
+     SP_DEVICE_INTERFACE_DATA iface = {sizeof(iface)};
+     SP_DEVINFO_DATA device = {sizeof(device)};
++    HANDLE file, async_file;
+     BOOL ret, found = FALSE;
+     OBJECT_ATTRIBUTES attr;
+     UNICODE_STRING string;
+@@ -2711,7 +2712,7 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+     NTSTATUS status;
+     unsigned int i;
+     HDEVINFO set;
+-    HANDLE file;
++    ULONG count;
+ 
+     winetest_push_context("report %d, polled %d", report_id, polled);
+ 
+@@ -2745,8 +2746,60 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+             FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+     ok(file != INVALID_HANDLE_VALUE, "got error %u\n", GetLastError());
+ 
++    count = 0xdeadbeef;
++    SetLastError(0xdeadbeef);
++    ret = HidD_GetNumInputBuffers(file, &count);
++    ok(ret, "HidD_GetNumInputBuffers failed last error %u\n", GetLastError());
++    todo_wine ok(count == 32, "HidD_GetNumInputBuffers returned %u\n", count);
++
++    SetLastError(0xdeadbeef);
++    ret = HidD_SetNumInputBuffers(file, 1);
++    ok(!ret, "HidD_SetNumInputBuffers succeeded\n");
++    ok(GetLastError() == ERROR_INVALID_PARAMETER, "HidD_SetNumInputBuffers returned error %u\n", GetLastError());
++    SetLastError(0xdeadbeef);
++    ret = HidD_SetNumInputBuffers(file, 513);
++    ok(!ret, "HidD_SetNumInputBuffers succeeded\n");
++    ok(GetLastError() == ERROR_INVALID_PARAMETER, "HidD_SetNumInputBuffers returned error %u\n", GetLastError());
++
++    SetLastError(0xdeadbeef);
++    ret = HidD_SetNumInputBuffers(file, 16);
++    ok(ret, "HidD_SetNumInputBuffers failed last error %u\n", GetLastError());
++
++    count = 0xdeadbeef;
++    SetLastError(0xdeadbeef);
++    ret = HidD_GetNumInputBuffers(file, &count);
++    ok(ret, "HidD_GetNumInputBuffers failed last error %u\n", GetLastError());
++    todo_wine ok(count == 16, "HidD_GetNumInputBuffers returned %u\n", count);
++
++    async_file = CreateFileA(iface_detail->DevicePath, FILE_READ_ACCESS | FILE_WRITE_ACCESS,
++            FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
++            FILE_FLAG_OVERLAPPED | FILE_FLAG_NO_BUFFERING, NULL);
++    ok(async_file != INVALID_HANDLE_VALUE, "got error %u\n", GetLastError());
++
++    count = 0xdeadbeef;
++    SetLastError(0xdeadbeef);
++    ret = HidD_GetNumInputBuffers(async_file, &count);
++    ok(ret, "HidD_GetNumInputBuffers failed last error %u\n", GetLastError());
++    todo_wine ok(count == 32, "HidD_GetNumInputBuffers returned %u\n", count);
++
++    SetLastError(0xdeadbeef);
++    ret = HidD_SetNumInputBuffers(async_file, 2);
++    ok(ret, "HidD_SetNumInputBuffers failed last error %u\n", GetLastError());
++
++    count = 0xdeadbeef;
++    SetLastError(0xdeadbeef);
++    ret = HidD_GetNumInputBuffers(async_file, &count);
++    ok(ret, "HidD_GetNumInputBuffers failed last error %u\n", GetLastError());
++    todo_wine ok(count == 2, "HidD_GetNumInputBuffers returned %u\n", count);
++    count = 0xdeadbeef;
++    SetLastError(0xdeadbeef);
++    ret = HidD_GetNumInputBuffers(file, &count);
++    ok(ret, "HidD_GetNumInputBuffers failed last error %u\n", GetLastError());
++    todo_wine ok(count == 16, "HidD_GetNumInputBuffers returned %u\n", count);
++
+     test_hidp(file, report_id, polled);
+ 
++    CloseHandle(async_file);
+     CloseHandle(file);
+ 
+     RtlInitUnicodeString(&string, L"\\??\\root#winetest#0#{deadbeef-29ef-4538-a5fd-b69573a362c0}");
+
+-- 
+2.32.0
+
+From: "Rémi Bernon" <rbernon@codeweavers.com>
+Subject: [PATCH 4/6] hidclass.sys: Set IoStatus.Information in IOCTL_GET_NUM_DEVICE_INPUT_BUFFERS.
+Message-Id: <20210707071359.84151-4-rbernon@codeweavers.com>
+Date: Wed,  7 Jul 2021 09:13:57 +0200
+In-Reply-To: <20210707071359.84151-1-rbernon@codeweavers.com>
+References: <20210707071359.84151-1-rbernon@codeweavers.com>
+
+Signed-off-by: Rémi Bernon <rbernon@codeweavers.com>
+---
+ dlls/hidclass.sys/device.c         | 2 ++
+ dlls/ntoskrnl.exe/tests/ntoskrnl.c | 6 +++---
+ 2 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/hidclass.sys/device.c b/dlls/hidclass.sys/device.c
+index da1814587c7..73a8428ad22 100644
+--- a/dlls/hidclass.sys/device.c
++++ b/dlls/hidclass.sys/device.c
+@@ -560,11 +560,13 @@ NTSTATUS WINAPI pdo_ioctl(DEVICE_OBJECT *device, IRP *irp)
+         {
+             if (irpsp->Parameters.DeviceIoControl.OutputBufferLength < sizeof(ULONG))
+             {
++                irp->IoStatus.Information = 0;
+                 irp->IoStatus.Status = rc = STATUS_BUFFER_TOO_SMALL;
+             }
+             else
+             {
+                 *(ULONG *)irp->AssociatedIrp.SystemBuffer = RingBuffer_GetSize(ext->u.pdo.ring_buffer);
++                irp->IoStatus.Information = sizeof(ULONG);
+                 rc = irp->IoStatus.Status = STATUS_SUCCESS;
+             }
+             break;
+diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+index bd524a057b3..4752602d873 100644
+--- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+@@ -2750,7 +2750,7 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+     SetLastError(0xdeadbeef);
+     ret = HidD_GetNumInputBuffers(file, &count);
+     ok(ret, "HidD_GetNumInputBuffers failed last error %u\n", GetLastError());
+-    todo_wine ok(count == 32, "HidD_GetNumInputBuffers returned %u\n", count);
++    ok(count == 32, "HidD_GetNumInputBuffers returned %u\n", count);
+ 
+     SetLastError(0xdeadbeef);
+     ret = HidD_SetNumInputBuffers(file, 1);
+@@ -2769,7 +2769,7 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+     SetLastError(0xdeadbeef);
+     ret = HidD_GetNumInputBuffers(file, &count);
+     ok(ret, "HidD_GetNumInputBuffers failed last error %u\n", GetLastError());
+-    todo_wine ok(count == 16, "HidD_GetNumInputBuffers returned %u\n", count);
++    ok(count == 16, "HidD_GetNumInputBuffers returned %u\n", count);
+ 
+     async_file = CreateFileA(iface_detail->DevicePath, FILE_READ_ACCESS | FILE_WRITE_ACCESS,
+             FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+@@ -2790,7 +2790,7 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+     SetLastError(0xdeadbeef);
+     ret = HidD_GetNumInputBuffers(async_file, &count);
+     ok(ret, "HidD_GetNumInputBuffers failed last error %u\n", GetLastError());
+-    todo_wine ok(count == 2, "HidD_GetNumInputBuffers returned %u\n", count);
++    ok(count == 2, "HidD_GetNumInputBuffers returned %u\n", count);
+     count = 0xdeadbeef;
+     SetLastError(0xdeadbeef);
+     ret = HidD_GetNumInputBuffers(file, &count);
+
+-- 
+2.32.0
+From: "Rémi Bernon" <rbernon@codeweavers.com>
+Subject: [PATCH 5/6] ntoskrnl.exe/tests: Add some IOCTL_HID_(GET|SET)_POLL_FREQUENCY_MSEC tests.
+Message-Id: <20210707071359.84151-5-rbernon@codeweavers.com>
+Date: Wed,  7 Jul 2021 09:13:58 +0200
+In-Reply-To: <20210707071359.84151-1-rbernon@codeweavers.com>
+References: <20210707071359.84151-1-rbernon@codeweavers.com>
+
+Signed-off-by: Rémi Bernon <rbernon@codeweavers.com>
+---
+ dlls/ntoskrnl.exe/tests/ntoskrnl.c | 33 +++++++++++++++++++++++++++++-
+ 1 file changed, 32 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+index 4752602d873..02bcf3a6186 100644
+--- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+@@ -2704,6 +2704,7 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+     SP_DEVICE_INTERFACE_DETAIL_DATA_A *iface_detail = (void *)buffer;
+     SP_DEVICE_INTERFACE_DATA iface = {sizeof(iface)};
+     SP_DEVINFO_DATA device = {sizeof(device)};
++    ULONG count, poll_freq, out_len;
+     HANDLE file, async_file;
+     BOOL ret, found = FALSE;
+     OBJECT_ATTRIBUTES attr;
+@@ -2712,7 +2713,6 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+     NTSTATUS status;
+     unsigned int i;
+     HDEVINFO set;
+-    ULONG count;
+ 
+     winetest_push_context("report %d, polled %d", report_id, polled);
+ 
+@@ -2797,6 +2797,37 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+     ok(ret, "HidD_GetNumInputBuffers failed last error %u\n", GetLastError());
+     todo_wine ok(count == 16, "HidD_GetNumInputBuffers returned %u\n", count);
+ 
++    if (polled)
++    {
++        out_len = sizeof(ULONG);
++        SetLastError(0xdeadbeef);
++        ret = sync_ioctl(file, IOCTL_HID_GET_POLL_FREQUENCY_MSEC, NULL, 0, &poll_freq, &out_len);
++        ok(ret, "IOCTL_HID_GET_POLL_FREQUENCY_MSEC failed last error %u\n", GetLastError());
++        ok(out_len == sizeof(ULONG), "got out_len %u, expected sizeof(ULONG)\n", out_len);
++        todo_wine ok(poll_freq == 5, "got poll_freq %u, expected 5\n", poll_freq);
++
++        out_len = 0;
++        poll_freq = 50;
++        SetLastError(0xdeadbeef);
++        ret = sync_ioctl(file, IOCTL_HID_SET_POLL_FREQUENCY_MSEC, &poll_freq, sizeof(ULONG), NULL, &out_len);
++        ok(ret, "IOCTL_HID_GET_POLL_FREQUENCY_MSEC failed last error %u\n", GetLastError());
++        ok(out_len == 0, "got out_len %u, expected 0\n", out_len);
++
++        out_len = sizeof(ULONG);
++        SetLastError(0xdeadbeef);
++        ret = sync_ioctl(file, IOCTL_HID_GET_POLL_FREQUENCY_MSEC, NULL, 0, &poll_freq, &out_len);
++        ok(ret, "IOCTL_HID_GET_POLL_FREQUENCY_MSEC failed last error %u\n", GetLastError());
++        ok(out_len == sizeof(ULONG), "got out_len %u, expected sizeof(ULONG)\n", out_len);
++        ok(poll_freq == 50, "got poll_freq %u, expected 100\n", poll_freq);
++
++        out_len = sizeof(ULONG);
++        SetLastError(0xdeadbeef);
++        ret = sync_ioctl(async_file, IOCTL_HID_GET_POLL_FREQUENCY_MSEC, NULL, 0, &poll_freq, &out_len);
++        ok(ret, "IOCTL_HID_GET_POLL_FREQUENCY_MSEC failed last error %u\n", GetLastError());
++        ok(out_len == sizeof(ULONG), "got out_len %u, expected sizeof(ULONG)\n", out_len);
++        ok(poll_freq == 50, "got poll_freq %u, expected 100\n", poll_freq);
++    }
++
+     test_hidp(file, report_id, polled);
+ 
+     CloseHandle(async_file);
+
+-- 
+2.32.0
+
+From: "Rémi Bernon" <rbernon@codeweavers.com>
+Subject: [PATCH 6/6] ntoskrnl.exe/tests: Add some tests with concurrent reads in polled mode.
+Message-Id: <20210707071359.84151-6-rbernon@codeweavers.com>
+Date: Wed,  7 Jul 2021 09:13:59 +0200
+In-Reply-To: <20210707071359.84151-1-rbernon@codeweavers.com>
+References: <20210707071359.84151-1-rbernon@codeweavers.com>
+
+Signed-off-by: Rémi Bernon <rbernon@codeweavers.com>
+---
+ dlls/ntoskrnl.exe/tests/driver_hid.c |  3 ++
+ dlls/ntoskrnl.exe/tests/ntoskrnl.c   | 45 ++++++++++++++++++++++++++--
+ 2 files changed, 46 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntoskrnl.exe/tests/driver_hid.c b/dlls/ntoskrnl.exe/tests/driver_hid.c
+index aa9ff3e5e20..b954f074b8f 100644
+--- a/dlls/ntoskrnl.exe/tests/driver_hid.c
++++ b/dlls/ntoskrnl.exe/tests/driver_hid.c
+@@ -395,6 +395,7 @@ static NTSTATUS WINAPI driver_internal_ioctl(DEVICE_OBJECT *device, IRP *irp)
+     const ULONG in_size = stack->Parameters.DeviceIoControl.InputBufferLength;
+     const ULONG out_size = stack->Parameters.DeviceIoControl.OutputBufferLength;
+     const ULONG code = stack->Parameters.DeviceIoControl.IoControlCode;
++    static BYTE seq = 0;
+     NTSTATUS ret;
+     BOOL removed;
+     KIRQL irql;
+@@ -490,6 +491,7 @@ static NTSTATUS WINAPI driver_internal_ioctl(DEVICE_OBJECT *device, IRP *irp)
+             {
+                 memset(irp->UserBuffer, 0xa5, expected_size);
+                 if (report_id) ((char *)irp->UserBuffer)[0] = report_id;
++                ((char *)irp->UserBuffer)[1] = seq++;
+                 irp->IoStatus.Information = 3;
+                 ret = STATUS_SUCCESS;
+             }
+@@ -546,6 +548,7 @@ static NTSTATUS WINAPI driver_internal_ioctl(DEVICE_OBJECT *device, IRP *irp)
+ 
+             memset(packet->reportBuffer, 0xa5, 3);
+             if (report_id) ((char *)packet->reportBuffer)[0] = report_id;
++            ((char *)packet->reportBuffer)[1] = seq++;
+             irp->IoStatus.Information = 3;
+             ret = STATUS_SUCCESS;
+             break;
+diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+index 02bcf3a6186..2d54bc67879 100644
+--- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
++++ b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
+@@ -1676,7 +1676,7 @@ static BOOL sync_ioctl(HANDLE file, DWORD code, void *in_buf, DWORD in_len, void
+     return ret;
+ }
+ 
+-static void test_hidp(HANDLE file, int report_id, BOOL polled)
++static void test_hidp(HANDLE file, HANDLE async_file, int report_id, BOOL polled)
+ {
+     const HIDP_CAPS expect_hidp_caps[] =
+     {
+@@ -1868,6 +1868,7 @@ static void test_hidp(HANDLE file, int report_id, BOOL polled)
+         { .DataIndex = 39, .RawValue = 1, },
+     };
+ 
++    OVERLAPPED overlapped = {0}, overlapped2 = {0};
+     HIDP_LINK_COLLECTION_NODE collections[16];
+     PHIDP_PREPARSED_DATA preparsed_data;
+     USAGE_AND_PAGE usage_and_pages[16];
+@@ -2692,6 +2693,46 @@ static void test_hidp(HANDLE file, int report_id, BOOL polled)
+         todo_wine ok(ret, "ReadFile failed, last error %u\n", GetLastError());
+         todo_wine ok(value == (report_id ? 3 : 4), "ReadFile returned %x\n", value);
+         todo_wine ok(report[0] == report_id, "unexpected report data\n");
++
++        overlapped.hEvent = CreateEventA(NULL, FALSE, FALSE, NULL);
++        overlapped2.hEvent = CreateEventA(NULL, FALSE, FALSE, NULL);
++
++        /* drain available input reports */
++        SetLastError(0xdeadbeef);
++        while (ReadFile(async_file, report, caps.InputReportByteLength, NULL, &overlapped))
++            ResetEvent(overlapped.hEvent);
++        todo_wine ok(GetLastError() == ERROR_IO_PENDING, "ReadFile returned error %u\n", GetLastError());
++        ret = GetOverlappedResult(async_file, &overlapped, &value, TRUE);
++        todo_wine ok(ret, "GetOverlappedResult failed, last error %u\n", GetLastError());
++        todo_wine ok(value == (report_id ? 3 : 4), "GetOverlappedResult returned length %u, expected 3\n", value);
++        ResetEvent(overlapped.hEvent);
++
++        memcpy(buffer, report, caps.InputReportByteLength);
++        memcpy(buffer + caps.InputReportByteLength, report, caps.InputReportByteLength);
++
++        SetLastError(0xdeadbeef);
++        ret = ReadFile(async_file, report, caps.InputReportByteLength, NULL, &overlapped);
++        ok(!ret, "ReadFile succeded\n");
++        ok(GetLastError() == ERROR_IO_PENDING, "ReadFile returned error %u\n", GetLastError());
++
++        SetLastError(0xdeadbeef);
++        ret = ReadFile(async_file, buffer, caps.InputReportByteLength, NULL, &overlapped2);
++        ok(!ret, "ReadFile succeded\n");
++        ok(GetLastError() == ERROR_IO_PENDING, "ReadFile returned error %u\n", GetLastError());
++
++        /* wait for first report to be ready */
++        ret = GetOverlappedResult(async_file, &overlapped, &value, TRUE);
++        todo_wine ok(ret, "GetOverlappedResult failed, last error %u\n", GetLastError());
++        todo_wine ok(value == (report_id ? 3 : 4), "GetOverlappedResult returned length %u, expected 3\n", value);
++        /* second report should be ready and the same */
++        ret = GetOverlappedResult(async_file, &overlapped2, &value, FALSE);
++        todo_wine ok(ret, "GetOverlappedResult failed, last error %u\n", GetLastError());
++        todo_wine ok(value == (report_id ? 3 : 4), "GetOverlappedResult returned length %u, expected 3\n", value);
++        todo_wine ok(memcmp(report, buffer + caps.InputReportByteLength, caps.InputReportByteLength), "expected different report\n");
++        ok(!memcmp(report, buffer, caps.InputReportByteLength), "expected identical reports\n");
++
++        CloseHandle(overlapped.hEvent);
++        CloseHandle(overlapped2.hEvent);
+     }
+ 
+ 
+@@ -2828,7 +2869,7 @@ static void test_hid_device(DWORD report_id, DWORD polled)
+         ok(poll_freq == 50, "got poll_freq %u, expected 100\n", poll_freq);
+     }
+ 
+-    test_hidp(file, report_id, polled);
++    test_hidp(file, async_file, report_id, polled);
+ 
+     CloseHandle(async_file);
+     CloseHandle(file);
+
+-- 
+2.32.0
+
+
+

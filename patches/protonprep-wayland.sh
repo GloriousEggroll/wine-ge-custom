@@ -25,12 +25,8 @@
     # apply this manually since imm32-com-initialization is disabled in staging.
     patch -Np1 < ../patches/wine-hotfixes/imm32-com-initialization_no_net_active_window.patch
 
-patch -Np1 < ../patches/proton/38-proton-mouse-focus-fixes.patch
-#patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging-tkg.patch
-#    patch -Np1 < ../patches/wine-hotfixes/scratch.diff
-
-    # this is needed for battle.net
-    patch -RNp1 < ../patches/wine-hotfixes/revert-ws2_32-Reimplement-select-on-top-of-IOCTL_AFD_POL.patch
+    patch -Np1 < ../patches/game-patches/league-of-legends-alternative.patch
+    patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging-tkg.patch
 
 #    patch -Np1 < ../patches/wine-hotfixes/wine_wayland_driver.patch
 
