@@ -1,0 +1,56 @@
+Adds a stub for StorageDeviceSeekPenaltyProperty, needed for Star Citizen 3.13
+https://bugs.winehq.org/attachment.cgi?id=69859
+https://bugs.winehq.org/show_bug.cgi?id=50992
+
+diff --git a/dlls/mountmgr.sys/device.c b/dlls/mountmgr.sys/device.c
+index 04e8fe3c0f5..c4a87a51cf4 100644
+--- a/dlls/mountmgr.sys/device.c
++++ b/dlls/mountmgr.sys/device.c
+@@ -1894,6 +1894,19 @@ static NTSTATUS query_property( struct disk_device *device, IRP *irp )
+ 
+         break;
+     }
++    case StorageDeviceSeekPenaltyProperty:
++    {
++        DEVICE_SEEK_PENALTY_DESCRIPTOR *descriptor;
++        FIXME( "Faking StorageDeviceSeekPenaltyProperty data\n" );
++        memset( irp->AssociatedIrp.SystemBuffer, 0, irpsp->Parameters.DeviceIoControl.OutputBufferLength );
++        descriptor = irp->AssociatedIrp.SystemBuffer;
++        descriptor->Version = sizeof(DEVICE_SEEK_PENALTY_DESCRIPTOR);
++        descriptor->Size = sizeof(DEVICE_SEEK_PENALTY_DESCRIPTOR);
++        /* Assume no penalty, SSDs are common enough */
++        descriptor->IncursSeekPenalty = FALSE;
++        status = STATUS_SUCCESS;
++        break;
++    }
+     default:
+         FIXME( "Unsupported property %#x\n", query->PropertyId );
+         status = STATUS_NOT_SUPPORTED;
+diff --git a/include/ntddstor.h b/include/ntddstor.h
+index b8c4bb73b0d..836def413fe 100644
+--- a/include/ntddstor.h
++++ b/include/ntddstor.h
+@@ -214,7 +214,8 @@ typedef enum _STORAGE_QUERY_TYPE {
+ 
+ typedef enum _STORAGE_PROPERTY_ID {
+     StorageDeviceProperty = 0,
+-    StorageAdapterProperty
++    StorageAdapterProperty = 1,
++    StorageDeviceSeekPenaltyProperty = 7,
+ } STORAGE_PROPERTY_ID, *PSTORAGE_PROPERTY_ID;
+ 
+ typedef struct _STORAGE_PROPERTY_QUERY {
+@@ -272,6 +273,12 @@ typedef struct _STORAGE_ADAPTER_DESCRIPTOR {
+     USHORT                      BusMinorVersion;
+ } STORAGE_ADAPTER_DESCRIPTOR, *PSTORAGE_ADAPTER_DESCRIPTOR;
+ 
++typedef struct _DEVICE_SEEK_PENALTY_DESCRIPTOR {
++    ULONG                       Version;
++    ULONG                       Size;
++    BOOLEAN                     IncursSeekPenalty;
++} DEVICE_SEEK_PENALTY_DESCRIPTOR, *PDEVICE_SEEK_PENALTY_DESCRIPTOR;
++
+ #ifdef __cplusplus
+ }
+ #endif
+

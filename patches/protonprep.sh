@@ -234,6 +234,9 @@
     echo "msfs2020 hotfix"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-msfs2020.patch
 
+    echo "star citizen hotfix"
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-starcitizen-StorageDeviceSeekPenaltyProperty.patch
+
 #    disabled, still horribly broken
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
 
