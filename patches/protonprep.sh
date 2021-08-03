@@ -124,6 +124,9 @@
     echo "assetto corsa"
     patch -Np1 < ../patches/game-patches/assettocorsa-hud.patch
 
+    echo "ffxiv launcher"
+    patch -Np1 < ../patches/game-patches/ffxiv-launcher-workaround.patch
+
     # TODO: Add game-specific check
     echo "mk11 patch"
     patch -Np1 < ../patches/game-patches/mk11.patch
