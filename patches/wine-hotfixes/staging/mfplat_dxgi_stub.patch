@@ -1,0 +1,23 @@
+From c33febf478fea78650065773464ee8a4c7223cf7 Mon Sep 17 00:00:00 2001
+From: Derek Lesho <dlesho@codeweavers.com>
+Date: Thu, 18 Mar 2021 16:54:44 -0400
+Subject: [PATCH] mfplat: Stub out MFCreateDXGIDeviceManager, to avoid the d3d
+ path.
+
+---
+ dlls/mfplat/main.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/mfplat/main.c b/dlls/mfplat/main.c
+index ba7a71845cb..f9b5d626844 100644
+--- a/dlls/mfplat/main.c
++++ b/dlls/mfplat/main.c
+@@ -8899,6 +8899,8 @@ HRESULT WINAPI MFCreateDXGIDeviceManager(UINT *token, IMFDXGIDeviceManager **man
+ 
+     TRACE("%p, %p.\n", token, manager);
+ 
++    return E_NOTIMPL;
++
+     if (!token || !manager)
+         return E_POINTER;
+ 

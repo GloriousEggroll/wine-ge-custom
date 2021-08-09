@@ -9,7 +9,7 @@
 
     # revert pending pulseaudio changes
     git revert --no-commit 183fd3e089b170d5b7405a80a23e81dc7c4dd682
-    
+
     # reenable pulseaudio patches
     patch -Np1 < ../patches/wine-hotfixes/staging/staging-reenable-pulse.patch
     patch -RNp1 < ../patches/wine-hotfixes/staging/staging-pulseaudio-reverts.patch
@@ -27,10 +27,6 @@
     git clean -xdf
 
 ### (2-1) PROBLEMATIC COMMIT REVERT SECTION ###
-
-    # this breaks controllers in some unity games
-    # https://bugs.winehq.org/show_bug.cgi?id=51277
-    git revert --no-commit 97afac469fbe012e22acc1f1045c88b1004a241f
 
     # https://bugs.winehq.org/show_bug.cgi?id=49990
     echo "revert bd27af974a21085cd0dc78b37b715bbcc3cfab69 which breaks some game launchers and 3D Mark"
@@ -113,6 +109,8 @@
 
     # apply this manually since imm32-com-initialization is disabled in staging.
     patch -Np1 < ../patches/wine-hotfixes/staging/imm32-com-initialization_no_net_active_window.patch
+
+    patch -Np1 < ../patches/wine-hotfixes/staging/mfplat_dxgi_stub.patch
 
 ### END WINE STAGING APPLY SECTION ###
 
@@ -250,15 +248,10 @@
     echo "BF4 ping fix"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-bf4_ping.patch
 
-    echo "remi HID pending"
-    patch -Np1 < ../patches/wine-hotfixes/pending/remi-HID-pending.patch
 ### END WINE PENDING UPSTREAM SECTION ###
 
 
 ### (2-7) WINE CUSTOM PATCHES ###
-
-     echo "remi's HID joystick testing patches (automatically enabled)"
-     patch -Np1 < ../patches/wine-hotfixes/testing/remi-joystick_HID.patch
 
 ### END WINE CUSTOM PATCHES ###
 ### END WINE PATCHING ###
