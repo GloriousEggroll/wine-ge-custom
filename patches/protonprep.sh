@@ -32,7 +32,13 @@
     echo "revert bd27af974a21085cd0dc78b37b715bbcc3cfab69 which breaks some game launchers and 3D Mark"
     git revert --no-commit bd27af974a21085cd0dc78b37b715bbcc3cfab69
 
+    echo "this breaks hitman 2"
+    git revert --no-commit 8f37560faf130eecd137c14db39555952edf9aaa
+
     echo "temporary pulseaudio reverts"
+    git revert --no-commit e309bad98c736d3409b5ceaffa77486a73c1f80b
+    git revert --no-commit 7d60d0d7bbc0138133d1968dc3802e2e79ab5b32
+    git revert --no-commit 4303e753137d0b44cff4f9261d10ef86d57016f2
     git revert --no-commit 2e64d91428757eaa88475b49bf50922cda603b59
     git revert --no-commit f77af3dd6324fadaf153062d77b51f755f71faea
     git revert --no-commit ce151dd681fe5ee80daba96dce12e37d6846e152
@@ -76,6 +82,11 @@
     git revert --no-commit e264ec9c718eb66038221f8b533fc099927ed966
     git revert --no-commit d3673fcb034348b708a5d8b8c65a746faaeec19d
 
+    # restore e309bad98c736d3409b5ceaffa77486a73c1f80b and
+    # 7d60d0d7bbc0138133d1968dc3802e2e79ab5b32 without winepulse
+    # bits to prevent breakage elsewhere.
+    patch -Np1 < ../patches/wine-hotfixes/staging/wine-pulseaudio-fixup.patch
+
 
 ### END PROBLEMATIC COMMIT REVERT SECTION ###
 
@@ -109,8 +120,6 @@
 
     # apply this manually since imm32-com-initialization is disabled in staging.
     patch -Np1 < ../patches/wine-hotfixes/staging/imm32-com-initialization_no_net_active_window.patch
-
-    patch -Np1 < ../patches/wine-hotfixes/staging/mfplat_dxgi_stub.patch
 
 ### END WINE STAGING APPLY SECTION ###
 
@@ -247,6 +256,18 @@
     
     echo "BF4 ping fix"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-bf4_ping.patch
+
+    echo "riftbreaker fix"
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-riftbreaker.patch
+
+    # https://bugs.winehq.org/show_bug.cgi?id=51596
+    echo "winelib fix"
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-winelib.patch
+
+#    disabled, currently breaks more than one controller being able to be used.
+#    echo "winebus fix"
+#    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-winebus.patch
+
 
 ### END WINE PENDING UPSTREAM SECTION ###
 
