@@ -6560,7 +6560,7 @@ Subject: [PATCH] winebus.sys: Don't report the guide button
 This breaks our xinput.
 ---
  dlls/winebus.sys/bus_sdl.c | 5 ++++-
- dlls/xinput1_3/hid.c       | 5 ++---
+ dlls/xinput1_3/main.c       | 5 ++---
  2 files changed, 6 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/winebus.sys/bus_sdl.c b/dlls/winebus.sys/bus_sdl.c
@@ -6573,9 +6573,9 @@ index 8b32c5ee860..7fcb19a6e88 100644
  
 -#define CONTROLLER_NUM_BUTTONS 11
 +#define CONTROLLER_NUM_BUTTONS 10
- 
- static const BYTE CONTROLLER_BUTTONS[] = {
-     USAGE_PAGE(1, HID_USAGE_PAGE_BUTTON),
+ #define CONTROLLER_NUM_AXES 6
+ #define CONTROLLER_NUM_HATSWITCHES 1
+
 @@ -834,7 +834,10 @@ static BOOL set_mapped_report_from_event(SDL_Event *event)
                  case SDL_CONTROLLER_BUTTON_START: usage = 7; break;
                  case SDL_CONTROLLER_BUTTON_LEFTSTICK: usage = 8; break;
@@ -6587,36 +6587,36 @@ index 8b32c5ee860..7fcb19a6e88 100644
  
                  case SDL_CONTROLLER_BUTTON_DPAD_UP:
                  case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-diff --git a/dlls/xinput1_3/hid.c b/dlls/xinput1_3/hid.c
+diff --git a/dlls/xinput1_3/main.c b/dlls/xinput1_3/main.c
 index 8aea638a8d7..7cdca280295 100644
---- a/dlls/xinput1_3/hid.c
-+++ b/dlls/xinput1_3/hid.c
-@@ -110,7 +110,7 @@ static BOOL VerifyGamepad(PHIDP_PREPARSED_DATA ppd, XINPUT_CAPABILITIES *xinput_
+--- a/dlls/xinput1_3/main.c
++++ b/dlls/xinput1_3/main.c
+@@ -182,7 +182,7 @@ static BOOL VerifyGamepad(PHIDP_PREPARSED_DATA ppd, XINPUT_CAPABILITIES *xinput_
              button_count = max(button_count, button_caps[i].NotRange.Usage);
      }
      free(button_caps);
 -    if (button_count < 11)
 +    if (button_count < 10)
          WARN("Too few buttons, continuing anyway\n");
-     xinput_caps->Gamepad.wButtons = 0xffff;
+     caps->Gamepad.wButtons = 0xffff;
  
-@@ -341,7 +341,7 @@ void HID_update_state(xinput_controller *device, XINPUT_STATE *state)
-     CHAR *report = private->reports[(private->current_report)%2];
-     CHAR *target_report = private->reports[(private->current_report+1)%2];
- 
+@@ -387,7 +387,7 @@ void HID_update_state(xinput_controller *device, XINPUT_STATE *state)
+     char *report_buf = controller->hid.input_report_buf;
+     XINPUT_STATE state;
+     NTSTATUS status;
 -    USAGE buttons[11];
 +    USAGE buttons[10];
-     ULONG button_length, hat_value;
-     LONG value;
- 
-@@ -383,7 +383,6 @@ void HID_update_state(xinput_controller *device, XINPUT_STATE *state)
-                 case 8: device->state.Gamepad.wButtons |= XINPUT_GAMEPAD_START; break;
-                 case 9: device->state.Gamepad.wButtons |= XINPUT_GAMEPAD_LEFT_THUMB; break;
-                 case 10: device->state.Gamepad.wButtons |= XINPUT_GAMEPAD_RIGHT_THUMB; break;
--                case 11: device->state.Gamepad.wButtons |= XINPUT_GAMEPAD_GUIDE; break;
-             }
+     ULONG i, button_length, value;
+
+     if (!GetOverlappedResult(controller->device, &controller->hid.read_ovl, &read_len, TRUE))
+@@ -431,7 +431,6 @@ void HID_update_state(xinput_controller *device, XINPUT_STATE *state)
+         case 8: state.Gamepad.wButtons |= XINPUT_GAMEPAD_START; break;
+         case 9: state.Gamepad.wButtons |= XINPUT_GAMEPAD_LEFT_THUMB; break;
+         case 10: state.Gamepad.wButtons |= XINPUT_GAMEPAD_RIGHT_THUMB; break;
+-        case 11: state.Gamepad.wButtons |= XINPUT_GAMEPAD_GUIDE; break;
          }
- 
+     }
+
 From c5d52c73b754568df148013907f26e5da3525166 Mon Sep 17 00:00:00 2001
 From: Andrew Eikum <aeikum@codeweavers.com>
 Date: Tue, 6 Aug 2019 13:27:25 -0500
@@ -6787,7 +6787,7 @@ index 55d444b5fe7..22f7f8df225 100644
          }
 -        udev_driver_init();
 -        iohid_driver_init();
-         irp->IoStatus.u.Status = STATUS_SUCCESS;
+         irp->IoStatus.Status = STATUS_SUCCESS;
          break;
      case IRP_MN_SURPRISE_REMOVAL:
 From b8ca845546043d26d96619460c96c9ec7025c4a5 Mon Sep 17 00:00:00 2001
@@ -10136,324 +10136,3 @@ index 178ef15d522..68a39d3e5c2 100644
          return TRUE;
 
      return FALSE;
-From 7d4ae8c3071d02c536c0d9343cf989ec77bda698 Mon Sep 17 00:00:00 2001
-From: Andrew Eikum <aeikum@codeweavers.com>
-Date: Tue, 1 Oct 2019 12:26:39 -0500
-Subject: [PATCH] xinput: Recheck when a device notification is sent
-
-Dark Souls Remasters checks for xinput devices when it receives a
-WM_DEVICECHANGE message. We would only poll for new devices if it had
-been at least 2 seconds since the last check. So often, DS would receive
-the message, but we would refuse to poll for devices, so the game would
-think no controller was present.
-
-This commit fixes that by also subscribing to event notifications and
-triggering a poll. This isn't quite what Windows does. If the game
-subscribes to event notifications _before_ our xinput does, then it
-could still fail as Dark Souls does (but Dark Souls does not register in
-that order). For this reason we also keep the timeout mechanism, which
-will hopefully work for any games that are unlucky enough to fall into
-this corner case.
----
- dlls/xinput1_1/Makefile.in   |   2 +-
- dlls/xinput1_2/Makefile.in   |   2 +-
- dlls/xinput1_3/Makefile.in   |   2 +-
- dlls/xinput1_3/hid.c         |  16 -----
- dlls/xinput1_3/xinput_main.c | 127 +++++++++++++++++++++++++++++++++--
- dlls/xinput1_4/Makefile.in   |   2 +-
- dlls/xinput9_1_0/Makefile.in |   2 +-
- 7 files changed, 128 insertions(+), 25 deletions(-)
-
-diff --git a/dlls/xinput1_1/Makefile.in b/dlls/xinput1_1/Makefile.in
-index a2b17a248cd..c0e489a4e93 100644
---- a/dlls/xinput1_1/Makefile.in
-+++ b/dlls/xinput1_1/Makefile.in
-@@ -1,6 +1,6 @@
- MODULE    = xinput1_1.dll
- PARENTSRC = ../xinput1_3
--DELAYIMPORTS = hid setupapi
-+DELAYIMPORTS = hid setupapi user32
-
- EXTRADLLFLAGS = -mno-cygwin
-
-diff --git a/dlls/xinput1_2/Makefile.in b/dlls/xinput1_2/Makefile.in
-index fd38c6f6cc5..2cec1a573e3 100644
---- a/dlls/xinput1_2/Makefile.in
-+++ b/dlls/xinput1_2/Makefile.in
-@@ -1,6 +1,6 @@
- MODULE    = xinput1_2.dll
- PARENTSRC = ../xinput1_3
--DELAYIMPORTS = hid setupapi
-+DELAYIMPORTS = hid setupapi user32
-
- EXTRADLLFLAGS = -mno-cygwin
-
-diff --git a/dlls/xinput1_3/Makefile.in b/dlls/xinput1_3/Makefile.in
-index 3b4968fb6d8..0b067bc0a74 100644
---- a/dlls/xinput1_3/Makefile.in
-+++ b/dlls/xinput1_3/Makefile.in
-@@ -1,6 +1,6 @@
- MODULE    = xinput1_3.dll
- IMPORTLIB = xinput
--DELAYIMPORTS = hid setupapi
-+DELAYIMPORTS = hid setupapi user32
-
- EXTRADLLFLAGS = -mno-cygwin
-
-diff --git a/dlls/xinput1_3/hid.c b/dlls/xinput1_3/hid.c
-index 978399e1c52..44166a3eac2 100644
---- a/dlls/xinput1_3/hid.c
-+++ b/dlls/xinput1_3/hid.c
-@@ -67,8 +67,6 @@ struct hid_platform_private {
-     struct axis_info lx, ly, triggers, rx, ry;
- };
-
--static DWORD last_check = 0;
--
- static void MarkUsage(struct hid_platform_private *private, WORD usage, LONG min, LONG max, USHORT bits)
- {
-     struct axis_info info = {min, max-min, bits};
-@@ -214,19 +212,6 @@ void HID_find_gamepads(xinput_controller *devices)
-     DWORD idx;
-     int i, open_device_idx;
-
--    idx = GetTickCount();
--    if ((idx - last_check) < 2000)
--        return;
--
--    EnterCriticalSection(&xinput_crit);
--
--    if ((idx - last_check) < 2000)
--    {
--        LeaveCriticalSection(&xinput_crit);
--        return;
--    }
--    last_check = idx;
--
-     HidD_GetHidGuid(&hid_guid);
-     hid_guid.Data4[7]++; /* HACK: look up the xinput-specific devices */
-
-@@ -292,7 +277,6 @@ void HID_find_gamepads(xinput_controller *devices)
-     }
-     HeapFree(GetProcessHeap(), 0, data);
-     SetupDiDestroyDeviceInfoList(device_info_set);
--    LeaveCriticalSection(&xinput_crit);
- }
-
- static void remove_gamepad(xinput_controller *device)
-diff --git a/dlls/xinput1_3/xinput_main.c b/dlls/xinput1_3/xinput_main.c
-index 63b7dd7f0b5..173a3fdb508 100644
---- a/dlls/xinput1_3/xinput_main.c
-+++ b/dlls/xinput1_3/xinput_main.c
-@@ -25,6 +25,7 @@
- #include "windef.h"
- #include "winbase.h"
- #include "winerror.h"
-+#include "winuser.h"
-
- #include "xinput.h"
- #include "xinput_private.h"
-@@ -34,6 +35,8 @@
-
- WINE_DEFAULT_DEBUG_CHANNEL(xinput);
-
-+static HINSTANCE xinput_instance;
-+
- /* xinput_crit guards controllers array */
- static CRITICAL_SECTION_DEBUG xinput_critsect_debug =
- {
-@@ -95,11 +98,79 @@ static void unlock_device(xinput_controller *device)
-     LeaveCriticalSection(&device->crit);
- }
-
-+static BOOL should_check = TRUE;
-+static BOOL msg_wnd_quit;
-+static HWND msg_wnd;
-+static HANDLE msg_wnd_thread;
-+static HINSTANCE msg_wnd_module;
-+
-+static LRESULT CALLBACK device_notification_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
-+{
-+    switch(msg)
-+    {
-+    case WM_DEVICECHANGE:
-+        should_check = TRUE;
-+        break;
-+    case WM_USER:
-+        DestroyWindow(msg_wnd);
-+        break;
-+    case WM_DESTROY:
-+        msg_wnd_quit = TRUE;
-+        break;
-+    }
-+    return DefWindowProcW(hwnd, msg, wparam, lparam);
-+}
-+
-+static DWORD WINAPI msg_wnd_threadproc(void *user)
-+{
-+    MSG msg;
-+    WNDCLASSEXW cls = {0};
-+    HANDLE inst;
-+    HANDLE evt = user;
-+
-+    static const WCHAR xinput_class[] = {'_','_','w','i','n','e','_','x','i','n','p','u','t','_','d','e','v','n','o','t','i','f','y',0};
-+
-+    cls.cbSize = sizeof(cls);
-+    cls.hInstance = xinput_instance;
-+    cls.lpszClassName = xinput_class;
-+    cls.lpfnWndProc = device_notification_wndproc;
-+    RegisterClassExW(&cls);
-+
-+    msg_wnd = CreateWindowExW(0, xinput_class, NULL, 0, 0, 0, 0, 0,
-+            HWND_MESSAGE, NULL, NULL, NULL);
-+
-+    RegisterDeviceNotificationW(msg_wnd, NULL, 0);
-+
-+    msg_wnd_quit = FALSE;
-+
-+    SetEvent(evt);
-+    evt = NULL;
-+
-+    while(!msg_wnd_quit && ((int)GetMessageW(&msg, msg_wnd, 0, 0)) > 0)
-+    {
-+        TranslateMessage(&msg);
-+        DispatchMessageW(&msg);
-+    }
-+
-+    EnterCriticalSection(&xinput_crit);
-+    inst = msg_wnd_module;
-+    msg_wnd_module = NULL;
-+    CloseHandle(msg_wnd_thread);
-+    msg_wnd_thread = NULL;
-+    msg_wnd = NULL;
-+    LeaveCriticalSection(&xinput_crit);
-+
-+    FreeLibraryAndExitThread(inst, 0);
-+
-+    return 0;
-+}
-+
- BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved)
- {
-     switch(reason)
-     {
-         case DLL_PROCESS_ATTACH:
-+            xinput_instance = inst;
-             DisableThreadLibraryCalls(inst);
-             break;
-         case DLL_PROCESS_DETACH:
-@@ -110,6 +181,43 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved)
-     return TRUE;
- }
-
-+static void find_gamepads(void)
-+{
-+    static ULONGLONG last_check = 0;
-+    ULONGLONG now;
-+
-+#define DELAY_BETWEEN_CHECKS_MS 2000
-+
-+    now = GetTickCount64();
-+    if (!should_check && (now - last_check) < DELAY_BETWEEN_CHECKS_MS)
-+        return;
-+
-+    EnterCriticalSection(&xinput_crit);
-+
-+    if (!msg_wnd_thread)
-+    {
-+        HANDLE evt = CreateEventW(NULL, 0, 0, NULL);
-+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-+                (const WCHAR *)&msg_wnd_threadproc, &msg_wnd_module);
-+        msg_wnd_thread = CreateThread(NULL, 0, &msg_wnd_threadproc, evt, 0, NULL);
-+        WaitForSingleObject(evt, INFINITE);
-+        CloseHandle(evt);
-+    }
-+
-+    if (!should_check && (now - last_check) < DELAY_BETWEEN_CHECKS_MS)
-+    {
-+        LeaveCriticalSection(&xinput_crit);
-+        return;
-+    }
-+
-+    last_check = now;
-+    should_check = FALSE;
-+
-+    HID_find_gamepads(controllers);
-+
-+    LeaveCriticalSection(&xinput_crit);
-+}
-+
- void WINAPI DECLSPEC_HOTPATCH XInputEnable(BOOL enable)
- {
-     int index;
-@@ -120,7 +228,18 @@ void WINAPI DECLSPEC_HOTPATCH XInputEnable(BOOL enable)
-     to the controllers. Setting to true will send the last vibration
-     value (sent to XInputSetState) to the controller and allow messages to
-     be sent */
--    HID_find_gamepads(controllers);
-+
-+    if (enable)
-+    {
-+        find_gamepads();
-+    }
-+    else
-+    {
-+        EnterCriticalSection(&xinput_crit);
-+        if(msg_wnd)
-+            PostMessageW(msg_wnd, WM_USER, 0, 0);
-+        LeaveCriticalSection(&xinput_crit);
-+    }
-
-     for (index = 0; index < XUSER_MAX_COUNT; index ++)
-     {
-@@ -136,7 +255,7 @@ DWORD WINAPI DECLSPEC_HOTPATCH XInputSetState(DWORD index, XINPUT_VIBRATION* vib
-
-     TRACE("(index %u, vibration %p)\n", index, vibration);
-
--    HID_find_gamepads(controllers);
-+    find_gamepads();
-
-     if (index >= XUSER_MAX_COUNT)
-         return ERROR_BAD_ARGUMENTS;
-@@ -157,7 +276,7 @@ static DWORD xinput_get_state(DWORD index, XINPUT_STATE *state)
-     if (!state)
-         return ERROR_BAD_ARGUMENTS;
-
--    HID_find_gamepads(controllers);
-+    find_gamepads();
-
-     if (index >= XUSER_MAX_COUNT)
-         return ERROR_BAD_ARGUMENTS;
-@@ -421,7 +540,7 @@ DWORD WINAPI DECLSPEC_HOTPATCH XInputGetCapabilities(DWORD index, DWORD flags, X
- {
-     TRACE("(index %u, flags 0x%x, capabilities %p)\n", index, flags, capabilities);
-
--    HID_find_gamepads(controllers);
-+    find_gamepads();
-
-     if (index >= XUSER_MAX_COUNT)
-         return ERROR_BAD_ARGUMENTS;
-diff --git a/dlls/xinput1_4/Makefile.in b/dlls/xinput1_4/Makefile.in
-index cdf4b4fed05..8f5aef39594 100644
---- a/dlls/xinput1_4/Makefile.in
-+++ b/dlls/xinput1_4/Makefile.in
-@@ -1,6 +1,6 @@
- MODULE    = xinput1_4.dll
- PARENTSRC = ../xinput1_3
--DELAYIMPORTS = hid setupapi
-+DELAYIMPORTS = hid setupapi user32
-
- EXTRADLLFLAGS = -mno-cygwin
-
-diff --git a/dlls/xinput9_1_0/Makefile.in b/dlls/xinput9_1_0/Makefile.in
-index dc8739c4640..12285c42673 100644
---- a/dlls/xinput9_1_0/Makefile.in
-+++ b/dlls/xinput9_1_0/Makefile.in
-@@ -1,6 +1,6 @@
- MODULE    = xinput9_1_0.dll
- PARENTSRC = ../xinput1_3
--DELAYIMPORTS = hid setupapi
-+DELAYIMPORTS = hid setupapi user32
-
- EXTRADLLFLAGS = -mno-cygwin
-
