@@ -22,8 +22,10 @@
     # apply this manually since imm32-com-initialization is disabled in staging.
     patch -Np1 < ../patches/wine-hotfixes/imm32-com-initialization_no_net_active_window.patch
 
+    # fshack
     patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging-tkg.patch
 
+    # apply any custom patches here for testing
 
     # need to run these after applying patches
     ./dlls/winevulkan/make_vulkan
