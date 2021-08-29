@@ -1,0 +1,31 @@
+From: Fabian Maurer <dark.shadow4@web.de>
+Subject: [PATCH] iphlpapi: In dns_info_alloc prevent usage of uninitialized variable
+Message-Id: <20210824182612.59507-1-dark.shadow4@web.de>
+Date: Tue, 24 Aug 2021 20:26:12 +0200
+
+This can happen when the GAA_FLAG_SKIP_DNS_SERVER flag is set.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=51655
+Signed-off-by: Fabian Maurer <dark.shadow4@web.de>
+---
+ dlls/iphlpapi/iphlpapi_main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/iphlpapi/iphlpapi_main.c b/dlls/iphlpapi/iphlpapi_main.c
+index 408ac14bd1b..fea6860fc66 100644
+--- a/dlls/iphlpapi/iphlpapi_main.c
++++ b/dlls/iphlpapi/iphlpapi_main.c
+@@ -1159,7 +1159,7 @@ static DWORD dns_info_alloc( IP_ADAPTER_ADDRESSES *aa, ULONG family, ULONG flags
+     char buf[FIELD_OFFSET(DNS_ADDR_ARRAY, AddrArray[3])];
+     IP_ADAPTER_DNS_SERVER_ADDRESS *dns, **next;
+     DWORD query = dns_servers_query_code( family );
+-    DWORD err, i, size, attempt, sockaddr_len;
++    DWORD err = 0, i, size, attempt, sockaddr_len;
+     WCHAR name[MAX_ADAPTER_NAME_LENGTH + 1];
+     DNS_ADDR_ARRAY *servers;
+     DNS_TXT_DATAW *search;
+--
+2.33.0
+
+
+

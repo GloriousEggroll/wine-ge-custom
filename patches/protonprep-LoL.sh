@@ -25,8 +25,8 @@
     echo "fullscreen hack"
     patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging-tkg.patch
 
-    echo "fullscreen hack fsr patch"
-    patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
+    echo "mouse focus fixes"
+    patch -Np1 < ../patches/proton/38-proton-mouse-focus-fixes.patch
 
     echo "clock monotonic"
     patch -Np1 < ../patches/proton/01-proton-use_clock_monotonic.patch
@@ -50,6 +50,12 @@
     # https://bugs.winehq.org/show_bug.cgi?id=51596
     echo "winelib fix"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-winelib.patch
+
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-iphlpapi-212361.patch
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-ntdll-socket-212770.patch
+
+    echo "BF4 ping fix (helps other games)"
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-bf4_ping.patch
 
     echo "LoL fix"
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-6.15-fix.patch
