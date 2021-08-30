@@ -22,12 +22,6 @@
     # apply this manually since imm32-com-initialization is disabled in staging.
     patch -Np1 < ../patches/wine-hotfixes/staging/imm32-com-initialization_no_net_active_window.patch
 
-    echo "fullscreen hack"
-    patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging-tkg.patch
-
-    echo "mouse focus fixes"
-    patch -Np1 < ../patches/proton/38-proton-mouse-focus-fixes.patch
-
     echo "clock monotonic"
     patch -Np1 < ../patches/proton/01-proton-use_clock_monotonic.patch
 
