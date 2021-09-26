@@ -1,0 +1,22 @@
+From 239879d9f92bedb35e1999a6884c5cb7a76ffa4b Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 15 Sep 2021 00:21:19 +0300
+Subject: [PATCH] wine.inf: Set amd_ags_x64 to built-in for DeathLoop.
+
+CW-Bug-ID: #19427
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 39ab92f1204..154a9df8557 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -6086,6 +6086,7 @@ HKCU,Software\Wine\DllOverrides,"atiadlxx",,"disabled"
+
+ [LutrisClient.ntamd64]
+ HKCU,Software\Wine\AppDefaults\LauncherPatcher.exe,"Version",,"win7"
++HKCU,Software\Wine\AppDefaults\Deathloop.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
+ HKCU,Software\Wine\AppDefaults\ForzaHorizon4.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
+ HKCU,Software\Wine\AppDefaults\NewColossus_x64vk.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
+ HKCU,Software\Wine\AppDefaults\Youngblood_x64vk.exe\DllOverrides,"amd_ags_x64",0x2,"builtin,native"
