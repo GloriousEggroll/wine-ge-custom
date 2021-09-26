@@ -25,10 +25,6 @@
 
 ### (2-1) PROBLEMATIC COMMIT REVERT SECTION ###
 
-    # https://bugs.winehq.org/show_bug.cgi?id=49990
-    echo "revert bd27af974a21085cd0dc78b37b715bbcc3cfab69 which breaks some game launchers and 3D Mark"
-    git revert --no-commit bd27af974a21085cd0dc78b37b715bbcc3cfab69
-
     # https://github.com/ValveSoftware/Proton/issues/1295#issuecomment-859185208
     echo "these break Tokyo Xanadu Xe+"
     git revert --no-commit 2ad44002da683634de768dbe49a0ba09c5f26f08
@@ -37,9 +33,6 @@
     echo "pulseaudio fixup to re-enable staging patches"
     patch -Np1 < ../patches/wine-hotfixes/staging/wine-pulseaudio-fixup.patch
 
-    echo "these break the re village gdi32 patch"
-    git revert --no-commit 1c1ff37390c94101f474ce8ee57a3bd830ca965f
-    git revert --no-commit fbd39cd8b5de10c53fbb6c5e298c8863beec13fd
 
 ### END PROBLEMATIC COMMIT REVERT SECTION ###
 
@@ -81,13 +74,12 @@
     echo "mech warrior online"
     patch -Np1 < ../patches/game-patches/mwo.patch
 
-    echo "assetto corsa"
-    patch -Np1 < ../patches/game-patches/assettocorsa-hud.patch
-
     echo "ffxiv launcher"
     patch -Np1 < ../patches/game-patches/ffxiv-launcher-workaround.patch
 
-    # TODO: Add game-specific check
+    echo "assetto corsa"
+    patch -Np1 < ../patches/game-patches/assettocorsa-hud.patch
+
     echo "mk11 patch"
     patch -Np1 < ../patches/game-patches/mk11.patch
 
@@ -114,6 +106,7 @@
 
     echo "LAA"
     patch -Np1 < ../patches/proton/04-proton-LAA_staging.patch
+
     echo "protonify"
     patch -Np1 < ../patches/proton/10-proton-protonify_staging.patch
 
@@ -180,7 +173,7 @@
     patch -Np1 < ../patches/lutris/45-lutris-08_FH4_registry.patch
     patch -Np1 < ../patches/lutris/47-lutris-10-Civ6Launcher_Workaround.patch
     patch -Np1 < ../patches/lutris/48-lutris-11-Dirt_5.patch
-
+    patch -Np1 < ../patches/lutris/54-lutris-12_death_loop_registry.patch
 
 ### END PROTON PATCH SECTION ###
 
@@ -193,28 +186,22 @@
     echo "heap allocation hotfix"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-remi_heap_alloc.patch
 
-    echo "uplay broken rendering hotfix"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-uplay_render_fix.patch
-
-    echo "msfs2020 hotfix"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-msfs2020.patch
-
     echo "star citizen hotfix"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-starcitizen-StorageDeviceSeekPenaltyProperty.patch
 
 #    disabled, still horribly broken
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
 
+
 ### END WINE HOTFIX SECTION ###
 
 ### (2-6) WINE PENDING UPSTREAM SECTION ###
 
+    echo "gamepad hotfix"
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-remi_gamepad.patch
+
     echo "BF4 ping fix"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-bf4_ping.patch
-
-    # https://bugs.winehq.org/show_bug.cgi?id=51596
-    echo "winelib fix"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-winelib.patch
 
 
 ### END WINE PENDING UPSTREAM SECTION ###
