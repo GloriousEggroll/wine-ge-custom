@@ -240,28 +240,6 @@ index bd878cb324d..febb78d94e9 100644
          {0x8e0f7a12,0xbfb3,0x4fe8,{0xb9,0xa5,0x48,0xfd,0x50,0xa1,0x5a,0x9a}}
      }
  };
-diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
-index a177ee862c4..df6f747b159 100644
---- a/dlls/ntdll/unix/signal_x86_64.c
-+++ b/dlls/ntdll/unix/signal_x86_64.c
-@@ -2411,7 +2411,7 @@ static void sigsys_handler_rdr2( int signal, siginfo_t *siginfo, void *sigcontex
-
-     ctx->uc_mcontext.gregs[REG_RIP] = *dispatcher_address;
-
--    /* syscall numbers are for Windows 10 1809 (build 17763) */
-+    /* syscall numbers are for Windows 10 1909 (build 18363) */
-     switch (ctx->uc_mcontext.gregs[REG_RAX])
-     {
-         case 0x19:
-@@ -2420,7 +2420,7 @@ static void sigsys_handler_rdr2( int signal, siginfo_t *siginfo, void *sigcontex
-         case 0x36:
-             ctx->uc_mcontext.gregs[REG_RAX] = __wine_syscall_nr_NtQuerySystemInformation;
-             break;
--        case 0xec:
-+        case 0xed:
-             ctx->uc_mcontext.gregs[REG_RAX] = __wine_syscall_nr_NtGetContextThread;
-             break;
-         case 0x55:
 diff --git a/loader/wine.inf.in b/loader/wine.inf.in
 index 4853db16e77..faba4be0b91 100644
 --- a/loader/wine.inf.in
@@ -301,3 +279,33 @@ index f78d4bdae25..eb69a5941a9 100644
 
      HKEY cv_h;
      DWORD type, sz;
+From 7381437f853f4a1706ff80aa74860fc5366f2fd0 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 29 Sep 2021 14:39:06 +0300
+Subject: [PATCH] wine.inf: Add ReleaseId value to %CurrentVersionNT%.
+
+CW-Bug-Id: #19484
+---
+ loader/wine.inf.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 2db2abab2d8..1cfe19dace6 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -3976,6 +3976,7 @@ HKLM,%CurrentVersionNT%,"DigitalProductId",1,00,00,00,00,00,00,00,00,00,00,00,\
+ 00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,\
+ 00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00
+ HKLM,%CurrentVersionNT%,"ProductName",2,"Microsoft Windows 10"
++HKLM,%CurrentVersionNT%,"ReleaseId",,"1909"
+ HKLM,%Control%\ProductOptions,"ProductType",2,"WinNT"
+ HKLM,%Control%\Windows,"CSDVersion",0x10003,0x0
+ HKLM,%Control%\Session Manager\Environment,"OS",2,"Windows_NT"
+@@ -3994,6 +3995,7 @@ HKLM,%CurrentVersionNT%,"DigitalProductId",1,00,00,00,00,00,00,00,00,00,00,00,\
+ 00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,\
+ 00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00
+ HKLM,%CurrentVersionNT%,"ProductName",2,"Microsoft Windows 10"
++HKLM,%CurrentVersionNT%,"ReleaseId",,"1909"
+ HKLM,%Control%\ProductOptions,"ProductType",2,"WinNT"
+ HKLM,%Control%\Windows,"CSDVersion",0x10003,0x0
+ HKLM,%Control%\Session Manager\Environment,"OS",2,"Windows_NT"
