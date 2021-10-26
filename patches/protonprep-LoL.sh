@@ -41,19 +41,10 @@
     patch -Np1 < ../patches/wine-hotfixes/LoL/lfh-non-proton-pre-needed.patch
     patch -Np1 < ../patches/proton/50-proton_LFH.patch
 
-    # https://bugs.winehq.org/show_bug.cgi?id=51596
-    echo "winelib fix"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-winelib.patch
-
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-iphlpapi-212361.patch
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-ntdll-socket-212770.patch
-
-    echo "BF4 ping fix (helps other games)"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-bf4_ping.patch
-
     echo "LoL fix"
-    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-6.15-fix.patch
+    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-6.19-fix.patch
     patch -Np1 < ../patches/wine-hotfixes/LoL/alternative_patch_by_using_a_fake_cs_segment.patch
+    patch -Np1 < ../patches/wine-hotfixes/LoL/lol-update-fix.patch
 
     # need to run these after applying patches
     ./dlls/winevulkan/make_vulkan
