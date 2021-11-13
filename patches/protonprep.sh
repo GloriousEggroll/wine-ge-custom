@@ -15,9 +15,6 @@
     patch -Np1 < ../patches/wine-hotfixes/staging/staging-reenable-pulse.patch
     patch -RNp1 < ../patches/wine-hotfixes/staging/staging-pulseaudio-reverts.patch
 
-    # restore pre-164b361be646a1e23fad1892893821de3805c5c6 patches:
-    patch -Np1 < ../patches/wine-hotfixes/staging/staging-6dcaff42-revert.patch
-
     # add proton-specific syscall emulation patches
     patch -Np1 < ../patches/wine-hotfixes/staging/proton-staging-syscall-emu.patch
 
@@ -45,16 +42,70 @@
     git revert --no-commit bd27af974a21085cd0dc78b37b715bbcc3cfab69
 
     echo "revert faudio updates -- we can't use PE version yet because the staging patches need a rebase in order to fix audio crackling in some games -- notably cyberpunk"
-    git revert --no-commit d8be85863fedf6982944d06ebd1ce5904cb3d4e1
-
-    echo "revert due to fshack breakage"
-    git revert --no-commit 2adf4376d86119b8a6f7cde51c9a972564575bac
-    git revert --no-commit 6dcaff421f87a93efe18b2efe0ec64d94ed1d483
-
-    echo "pulseaudio fixup to re-enable staging patches"
-    patch -Np1 < ../patches/wine-hotfixes/staging/wine-pulseaudio-fixup.patch
+    git revert --no-commit 22c26a2dde318b5b370fc269cab871e5a8bc4231
 
     echo "mfplat early reverts to re-enable staging mfplat patches"
+    git revert --no-commit 747905c674d521b61923a6cff1d630c85a74d065
+    git revert --no-commit f3624e2d642c4f5c1042d24a70273db4437fcef9
+    git revert --no-commit 769057b9b281eaaba7ee438dedb7f922b0903472
+    git revert --no-commit 639c04a5b4e1ffd1d8328f60af998185a04d0c50
+    git revert --no-commit 54f825d237c1dcb0774fd3e3f4cfafb7c243aab5
+    git revert --no-commit cad38401bf091917396b24ad9c92091760cc696f
+    git revert --no-commit 894e0712459ec2d48b1298724776134d2a966f66
+    git revert --no-commit 42da77bbcfeae16b5f138ad3f2a3e3030ae0844b
+    git revert --no-commit 2f7e7d284bddd27d98a17beca4da0b6525d72913
+    git revert --no-commit f4b3eb7efbe1d433d7dcf850430f99f0f0066347
+    git revert --no-commit 72b3cb68a702284122a16cbcdd87a621c29bb7a8
+    git revert --no-commit a1a51f54dcb3863f9accfbf8c261407794d2bd13
+    git revert --no-commit 3e0a9877eafef1f484987126cd453cc36cfdeb42
+    git revert --no-commit 5d0858ee9887ef5b99e09912d4379880979ab974
+    git revert --no-commit d1662e4beb4c1b757423c71107f7ec115ade19f5
+    git revert --no-commit dab54bd849cd9f109d1a9d16cb171eddec39f2a1
+    git revert --no-commit 3864d2355493cbadedf59f0c2ee7ad7a306fad5a
+    git revert --no-commit fca2f6c12b187763eaae23ed4932d6d049a469c3
+    git revert --no-commit 63fb4d8270d1db7a0034100db550f54e8d9859f1
+    git revert --no-commit 25adac6ede88d835110be20de0164d28c2187977
+    git revert --no-commit dc1a1ae450f1119b1f5714ed99b6049343676293
+    git revert --no-commit aafbbdb8bcc9b668008038dc6fcfba028c4cc6f6
+    git revert --no-commit 682093d0bdc24a55fcde37ca4f9cc9ed46c3c7df
+    git revert --no-commit 21dc092b910f80616242761a00d8cdab2f8aa7bd
+    git revert --no-commit d7175e265537ffd24dbf8fd3bcaaa1764db03e13
+    git revert --no-commit 5306d0ff3c95e7b9b1c77fa2bb30b420d07879f7
+    git revert --no-commit 00bc5eb73b95cbfe404fe18e1d0aadacc8ab4662
+    git revert --no-commit a855591fd29f1f47947459f8710b580a4f90ce3a
+    git revert --no-commit 34d85311f33335d2babff3983bb96fb0ce9bae5b
+    git revert --no-commit 42c82012c7ac992a98930011647482fc94c63a87
+    git revert --no-commit 4398e8aba2d2c96ee209f59658c2aa6caf26687a
+    git revert --no-commit c9f5903e5a315989d03d48e4a53291be48fd8d89
+    git revert --no-commit 56dde41b6d91c589d861dca5d50ffa9f607da1db
+    git revert --no-commit c3811e84617e409875957b3d0b43fc5be91f01f6
+    git revert --no-commit 799c7704e8877fe2ee73391f9f2b8d39e222b8d5
+    git revert --no-commit 399ccc032750e2658526fc70fa0bfee7995597df
+    git revert --no-commit f7b45d419f94a6168e3d9a97fb2df21f448446f1
+    git revert --no-commit 6cb1d1ec4ffa77bbc2223703b93033bd86730a60
+    git revert --no-commit 7c02cd8cf8e1b97df8f8bfddfeba68d7c7b4f820
+    git revert --no-commit 6f8d366b57e662981c68ba0bd29465f391167de9
+    git revert --no-commit 74c2e9020f04b26e7ccf217d956ead740566e991
+    git revert --no-commit 04d94e3c092bbbaee5ec1331930b11af58ced629
+    git revert --no-commit 538b86bfc640ddcfd4d28b1e2660acdef0ce9b08
+    git revert --no-commit 3b8579d8a570eeeaf0d4e0667e748d484df138aa
+    git revert --no-commit 970c1bc49b804d0b7fa515292f27ac2fb4ef29e8
+    git revert --no-commit f26e0ba212e6164eb7535f472415334d1a9c9044
+    git revert --no-commit bc52edc19d8a45b9062d9568652403251872026e
+    git revert --no-commit b3655b5be5f137281e8757db4e6985018b21c296
+    git revert --no-commit 95ffc879882fdedaf9fdf40eb1c556a025ae5bfd
+    git revert --no-commit 0dc309ef6ac54484d92f6558d6ca2f8e50eb28e2
+    git revert --no-commit 25948222129fe48ac4c65a4cf093477d19d25f18
+    git revert --no-commit 7f481ea05faf02914ecbc1932703e528511cce1a
+    git revert --no-commit c45be242e5b6bc0a80796d65716ced8e0bc5fd41
+    git revert --no-commit d5154e7eea70a19fe528f0de6ebac0186651e0f3
+    git revert --no-commit d39747f450ad4356868f46cfda9a870347cce9dd
+    git revert --no-commit 250f86b02389b2148471ad67bcc0775ff3b2c6ba
+    git revert --no-commit 40ced5e054d1f16ce47161079c960ac839910cb7
+    git revert --no-commit 8bd3c8bf5a9ea4765f791f1f78f60bcf7060eba6
+    git revert --no-commit 87e4c289e46701c6f582e95c330eefb6fc5ec68a
+    git revert --no-commit 51b6d45503e5849f28cce1a9aa9b7d3dba9de0fe
+    git revert --no-commit c76418fbfd72e496c800aec28c5a1d713389287f
     git revert --no-commit 37e9f0eadae9f62ccae8919a92686695927e9274
     git revert --no-commit dd182a924f89b948010ecc0d79f43aec83adfe65
     git revert --no-commit 4f10b95c8355c94e4c6f506322b80be7ae7aa174
@@ -62,6 +113,12 @@
     git revert --no-commit 3dd8eeeebdeec619570c764285bdcae82dee5868
     git revert --no-commit 831c6a88aab78db054beb42ca9562146b53963e7
     git revert --no-commit 2d0dc2d47ca6b2d4090dfe32efdba4f695b197ce
+
+    echo "pulseaudio fixup to re-enable staging patches"
+    patch -Np1 < ../patches/wine-hotfixes/staging/wine-pulseaudio-fixup.patch
+
+    echo "manual revert of d8be85863fedf6982944d06ebd1ce5904cb3d4e1 for more audio fixing"
+    patch -RNp1 < ../patches/wine-hotfixes/pending/revert-d8be858-faudio.patch
 
 ### END PROBLEMATIC COMMIT REVERT SECTION ###
 
@@ -98,10 +155,6 @@
     echo "mk11 patch"
     patch -Np1 < ../patches/game-patches/mk11.patch
 
-#    BLOPS2 uses CEG which does not work in proton. Disabled for now
-#    echo "blackops 2 fix"
-#    patch -Np1 < ../patches/game-patches/blackops_2_fix.patch
-
     echo "killer instinct vulkan fix"
     patch -Np1 < ../patches/game-patches/killer-instinct-winevulkan_fix.patch
 
@@ -126,8 +179,14 @@
     echo "applying fsync patches"
     patch -Np1 < ../patches/proton/03-proton-fsync_staging.patch
 
+    echo "proton futex waitv patches"
+    patch -Np1 < ../patches/proton/57-fsync_futex_waitv.patch
+
     echo "LAA"
     patch -Np1 < ../patches/proton/04-proton-LAA_staging.patch
+
+    echo "steamclient swap"
+    patch -Np1 < ../patches/proton/08-proton-steamclient_swap.patch
 
     echo "protonify"
     patch -Np1 < ../patches/proton/10-proton-protonify_staging.patch
@@ -138,6 +197,35 @@
     echo "amd ags"
     patch -Np1 < ../patches/proton/18-proton-amd_ags.patch
 
+    echo "create Lutris custom registry overrides sections"
+    patch -Np1 < ../patches/lutris/LutrisClient-registry-overrides-section.patch
+
+    echo "msvcrt overrides"
+    patch -Np1 < ../patches/lutris/19-lutris-msvcrt_nativebuiltin.patch
+
+    echo "atiadlxx needed for cod games"
+    patch -Np1 < ../patches/lutris/20-lutris-atiadlxx.patch
+
+    echo "valve registry entries"
+    patch -Np1 < ../patches/lutris/21-lutris-01_wolfenstein2_registry.patch
+    patch -Np1 < ../patches/lutris/22-lutris-02_rdr2_registry.patch
+    patch -Np1 < ../patches/lutris/23-lutris-03_nier_sekiro_ds3_registry.patch
+    patch -Np1 < ../patches/lutris/24-lutris-04_cod_registry.patch
+    patch -Np1 < ../patches/lutris/32-lutris-05_spellforce_registry.patch
+    patch -Np1 < ../patches/lutris/33-lutris-06_shadow_of_war_registry.patch
+    patch -Np1 < ../patches/lutris/41-lutris-07_nfs_registry.patch
+    patch -Np1 < ../patches/lutris/45-lutris-08_FH4_registry.patch
+    patch -Np1 < ../patches/lutris/46-lutris-09_nvapi_registry.patch
+    patch -Np1 < ../patches/lutris/47-lutris-10-Civ6Launcher_Workaround.patch
+    patch -Np1 < ../patches/lutris/48-lutris-11-Dirt_5.patch
+    patch -Np1 < ../patches/lutris/54-lutris-12_death_loop_registry.patch
+    patch -Np1 < ../patches/lutris/56-lutris-12_disable_libglesv2_for_nw.js.patch
+    patch -Np1 < ../patches/lutris/58-lutris-13_atiadlxx_builtin_for_gotg.patch
+    patch -Np1 < ../patches/lutris/60-lutris-14-msedgewebview-registry.patch
+    patch -Np1 < ../patches/lutris/61-lutris-15-FH5-amd_ags_registry.patch
+    patch -Np1 < ../patches/lutris/62-lutris-16-Age-of-Empires-IV-registry.patch
+
+
     echo "valve rdr2 fixes"
     patch -Np1 < ../patches/proton/25-proton-rdr2-fixes.patch
 
@@ -145,8 +233,8 @@
     patch -Np1 < ../patches/proton/55-proton-bcrypt_rdr2_fixes.patch
 
     echo "apply staging bcrypt patches on top of rdr2 fixes"
-    patch -Np1 < ../patches/wine-hotfixes/staging/0001-bcrypt-Add-support-for-calculating-secret-ecc-keys.patch
-
+    patch -Np1 < ../patches/wine-hotfixes/staging/0002-bcrypt-Add-support-for-calculating-secret-ecc-keys.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/0003-bcrypt-Add-support-for-OAEP-padded-asymmetric-key-de.patch
 
     echo "set prefix win10"
     patch -Np1 < ../patches/proton/28-proton-win10_default.patch
@@ -157,9 +245,6 @@
     echo "CPU topology overrides"
     patch -Np1 < ../patches/proton/39-proton-cpu-topology-overrides.patch
 
-    echo "proton futex2 patches"
-    patch -Np1 < ../patches/proton/40-proton-futex2.patch
-
     echo "fullscreen hack"
     patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging-tkg.patch
 
@@ -167,7 +252,8 @@
     patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
 
     echo "proton QPC performance patch"
-    patch -Np1 < ../patches/proton/49-proton_QPC.patch
+#    patch -Np1 < ../patches/proton/49-proton_QPC.patch
+    patch -Np1 < ../patches/proton/49-proton_QPC-update-replace.patch
 
     echo "proton LFH performance patch"
     patch -Np1 < ../patches/proton/50-proton_LFH.patch
@@ -175,29 +261,12 @@
     echo "proton quake champions patches"
     patch -Np1 < ../patches/proton/52-proton_quake_champions_syscall.patch
 
-    echo "create Lutris custom registry overrides sections"
-    patch -Np1 < ../patches/lutris/LutrisClient-registry-overrides-section.patch
+    echo "proton battleye patches"
+    patch -Np1 < ../patches/proton/59-proton-battleye_patches.patch
 
-    echo "msvcrt overrides"
-    patch -Np1 < ../patches/lutris/19-lutris-msvcrt_nativebuiltin.patch
-
-    echo "atiadlxx needed for cod games"
-    patch -Np1 < ../patches/lutris/20-lutris-atiadlxx.patch
-
-    echo "lutris registry entries"
-    patch -Np1 < ../patches/lutris/21-lutris-01_wolfenstein2_registry.patch
-    patch -Np1 < ../patches/lutris/22-lutris-02_rdr2_registry.patch
-    patch -Np1 < ../patches/lutris/23-lutris-03_nier_sekiro_ds3_registry.patch
-    patch -Np1 < ../patches/lutris/24-lutris-04_cod_registry.patch
-    patch -Np1 < ../patches/lutris/32-lutris-05_spellforce_registry.patch
-    patch -Np1 < ../patches/lutris/33-lutris-06_shadow_of_war_registry.patch
-    patch -Np1 < ../patches/lutris/41-lutris-07_nfs_registry.patch
-    patch -Np1 < ../patches/lutris/45-lutris-08_FH4_registry.patch
-    patch -Np1 < ../patches/lutris/47-lutris-10-Civ6Launcher_Workaround.patch
-    patch -Np1 < ../patches/lutris/48-lutris-11-Dirt_5.patch
-    patch -Np1 < ../patches/lutris/54-lutris-12_death_loop_registry.patch
-    patch -Np1 < ../patches/lutris/56-lutris-12_disable_libglesv2_for_nw.js.patch
-
+#    disabled for now, needs rebase. only used for vr anyway
+#    echo "proton openxr patches"
+#    patch -Np1 < ../patches/proton/37-proton-OpenXR-patches.patch
 
 ### END PROTON PATCH SECTION ###
 
@@ -284,12 +353,22 @@
 
 ### (2-5) WINE HOTFIX SECTION ###
 
-    # fixes witcher 3, borderlands 3, rockstar social club, and a few others
-    echo "heap allocation hotfix"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-remi_heap_alloc.patch
-
     echo "hotfix for beam ng right click camera being broken with fshack"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-beam_ng_fshack_fix.patch
+
+    echo "add missing stub for fh5"
+    patch -Np1 < ../patches/wine-hotfixes/testing/fh5-uiauto.patch
+
+    # https://github.com/Frogging-Family/wine-tkg-git/commit/ca0daac62037be72ae5dd7bf87c705c989eba2cb
+    echo "unity crash hotfix"
+    patch -Np1 < ../patches/wine-hotfixes/pending/unity_crash_hotfix.patch
+
+    # https://bugs.winehq.org/show_bug.cgi?id=52017
+    echo "fix for broken file browser"
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-file_browser_fix.patch
+
+    echo "fix for prefix creation breakage caused by e5d3783"
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-e5d3783-refression-fix.patch
 
 #    disabled, not compatible with fshack, not compatible with fsr, missing dependencies inside proton.
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
@@ -299,14 +378,15 @@
 
 ### (2-6) WINE PENDING UPSTREAM SECTION ###
 
-    echo "7b17d70 regression fix"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-memset_regression_fix_7b17d70.patch
-
 
 ### END WINE PENDING UPSTREAM SECTION ###
 
 
 ### (2-7) WINE CUSTOM PATCHES ###
+#    patch -Np1 < ../patches/wine-hotfixes/testing/lowlatency_audio.patch
+#    patch -Np1 < ../patches/wine-hotfixes/testing/lowlatency_audio_pulse.patch
+
+    patch -Np1 < ../patches/wine-hotfixes/pending/21750.patch
 
 ### END WINE CUSTOM PATCHES ###
 ### END WINE PATCHING ###
