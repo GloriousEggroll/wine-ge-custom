@@ -16,14 +16,11 @@
     ../wine-staging/patches/patchinstall.sh DESTDIR="." --all \
     -W winex11-_NET_ACTIVE_WINDOW \
     -W winex11-WM_WINDOWPOSCHANGING \
-    -W imm32-com-initialization \
-    -W ntdll-NtAlertThreadByThreadId
-
-    # apply this manually since imm32-com-initialization is disabled in staging.
-    patch -Np1 < ../patches/wine-hotfixes/imm32-com-initialization_no_net_active_window.patch
-
-    # fshack
-    patch -Np1 < ../patches/proton/41-valve_proton_fullscreen_hack-staging-tkg.patch
+    -W ntdll-Junction_Points \
+    -W server-File_Permissions \
+    -W server-Stored_ACLs \
+    -W dbghelp-Debug_Symbols \
+    -W dwrite-FontFallback
 
     # apply any custom patches here for testing
 

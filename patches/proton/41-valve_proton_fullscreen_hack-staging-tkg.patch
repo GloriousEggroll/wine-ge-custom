@@ -2960,9 +2960,9 @@ index 00000000000..98b26a933e7
 +
 +/* Display device handler functions */
 +
-+static BOOL fs_get_monitors(ULONG_PTR adapter_id, struct x11drv_monitor **new_monitors, int *count)
++static BOOL fs_get_monitors(ULONG_PTR adapter_id, struct gdi_monitor **new_monitors, int *count)
 +{
-+    struct x11drv_monitor *monitor;
++    struct gdi_monitor *monitor;
 +    struct fs_monitor *fs_monitor;
 +    RECT rect;
 +    INT i;
@@ -4713,10 +4713,10 @@ index 211d78f830d..8025d23889a 100644
  extern int xrender_error_base DECLSPEC_HIDDEN;
  extern HMODULE x11drv_module DECLSPEC_HIDDEN;
  extern char *process_name DECLSPEC_HIDDEN;
-@@ -578,6 +579,7 @@ struct x11drv_win_data
-     BOOL        shaped : 1;     /* is window using a custom region shape? */
-     BOOL        layered : 1;    /* is window layered and with valid attributes? */
+@@ -579,6 +580,7 @@ struct x11drv_win_data
      BOOL        use_alpha : 1;  /* does window use an alpha channel? */
+     BOOL        skip_taskbar : 1; /* does window should be deleted from taskbar */
+     BOOL        add_taskbar : 1; /* does window should be added to taskbar regardless of style */
 +    BOOL        fs_hack : 1;
      int         wm_state;       /* current value of the WM_STATE property */
      DWORD       net_wm_state;   /* bit mask of active x11drv_net_wm_state values */
@@ -4780,7 +4780,7 @@ index 211d78f830d..8025d23889a 100644
  extern void X11DRV_init_desktop( Window win, unsigned int width, unsigned int height ) DECLSPEC_HIDDEN;
  extern void X11DRV_resize_desktop(BOOL) DECLSPEC_HIDDEN;
 @@ -806,6 +842,7 @@ extern HANDLE get_display_device_init_mutex(void) DECLSPEC_HIDDEN;
- extern BOOL get_host_primary_gpu(struct x11drv_gpu *gpu) DECLSPEC_HIDDEN;
+ extern BOOL get_host_primary_gpu(struct gdi_gpu *gpu) DECLSPEC_HIDDEN;
  extern void release_display_device_init_mutex(HANDLE) DECLSPEC_HIDDEN;
  extern void X11DRV_DisplayDevices_SetHandler(const struct x11drv_display_device_handler *handler) DECLSPEC_HIDDEN;
 +extern struct x11drv_display_device_handler X11DRV_DisplayDevices_GetHandler(void) DECLSPEC_HIDDEN;
@@ -4818,15 +4818,15 @@ index a5984fbf121..853ccbe3133 100644
      get_config_key( hkey, appkey, "InputStyle", input_style, sizeof(input_style) );
 
      if (appkey) RegCloseKey( appkey );
-@@ -633,6 +637,8 @@ static BOOL process_attach(void)
+@@ -773,6 +773,8 @@ static BOOL process_attach(void)
      X11DRV_InitMouse( gdi_display );
      if (use_xim) use_xim = X11DRV_InitXIM( input_style );
 
 +    fs_hack_init();
 +
+     init_user_driver();
      X11DRV_DisplayDevices_Init(FALSE);
      return TRUE;
- }
 diff --git a/dlls/winex11.drv/xrandr.c b/dlls/winex11.drv/xrandr.c
 index fa748c2af04..c0318781efd 100644
 --- a/dlls/winex11.drv/xrandr.c
@@ -5410,8 +5410,8 @@ index 338cdca4853..0812d1b5f63 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
 @@ -581,6 +581,7 @@ struct x11drv_win_data
-     BOOL        layered : 1;    /* is window layered and with valid attributes? */
-     BOOL        use_alpha : 1;  /* does window use an alpha channel? */
+     BOOL        skip_taskbar : 1; /* does window should be deleted from taskbar */
+     BOOL        add_taskbar : 1; /* does window should be added to taskbar regardless of style */
      BOOL        fs_hack : 1;
 +    BOOL        pending_fullscreen : 1;
      int         wm_state;       /* current value of the WM_STATE property */
@@ -5847,9 +5847,9 @@ index 46d46052796..123e89a4f81 100644
 --- a/dlls/winex11.drv/window.c
 +++ b/dlls/winex11.drv/window.c
 @@ -3033,6 +3033,9 @@ LRESULT CDECL X11DRV_WindowMessage( HWND hwnd, UINT msg, WPARAM wp, LPARAM lp )
-         return clip_cursor_notify( hwnd, (HWND)wp, (HWND)lp );
-     case WM_X11DRV_CLIP_CURSOR_REQUEST:
-         return clip_cursor_request( hwnd, (BOOL)wp, (BOOL)lp );
+     case WM_X11DRV_ADD_TAB:
+         taskbar_add_tab( hwnd );
+         return 0;
 +    case WM_X11DRV_RELEASE_CURSOR:
 +        ungrab_clipping_window();
 +        return 0;
@@ -5864,12 +5864,12 @@ index 762323222da..9e7fd77e265 100644
      WM_X11DRV_RESIZE_DESKTOP,
      WM_X11DRV_SET_CURSOR,
      WM_X11DRV_CLIP_CURSOR_NOTIFY,
--    WM_X11DRV_CLIP_CURSOR_REQUEST
+-    WM_X11DRV_CLIP_CURSOR_REQUEST,
 +    WM_X11DRV_CLIP_CURSOR_REQUEST,
-+    WM_X11DRV_RELEASE_CURSOR
++    WM_X11DRV_RELEASE_CURSOR,
+     WM_X11DRV_DELETE_TAB,
+     WM_X11DRV_ADD_TAB
  };
-
- /* _NET_WM_STATE properties that we keep track of */
 From 133f4d22976513e9483722e1a1edd35709adea83 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
 Date: Mon, 7 Oct 2019 13:03:43 +0200
@@ -6552,7 +6552,7 @@ index f583e578d36..e18fcaf39d6 100644
 --- a/dlls/winex11.drv/x11drv.h
 +++ b/dlls/winex11.drv/x11drv.h
 @@ -585,6 +585,7 @@ struct x11drv_win_data
-     BOOL        use_alpha : 1;  /* does window use an alpha channel? */
+     BOOL        add_taskbar : 1; /* does window should be added to taskbar regardless of style */
      BOOL        fs_hack : 1;
      BOOL        pending_fullscreen : 1;
 +    ULONGLONG   take_focus_back;
@@ -6885,7 +6885,7 @@ index 2e5395fda80..c4562e9db06 100644
 
  #include "windef.h"
  #include "winbase.h"
-@@ -884,6 +885,18 @@ void X11DRV_DisplayDevices_Init(BOOL force)
+@@ -475,6 +475,17 @@ void CDECL X11DRV_UpdateDisplayDevices( const struct gdi_device_manager *device_
 
      for (gpu = 0; gpu < gpu_count; gpu++)
      {
@@ -6900,9 +6900,9 @@ index 2e5395fda80..c4562e9db06 100644
 +                }
 +            }
 +        }
-+
-         if (!X11DRV_InitGpu(gpu_devinfo, &gpus[gpu], gpu, guidW, driverW, &gpu_luid))
-             goto done;
+         device_manager->add_gpu( &gpus[gpu], param );
+
+         /* Initialize adapters */
 
 From 10df80804000aa66c7ef92f1361759e309f0e321 Mon Sep 17 00:00:00 2001
 From: Giovanni Mascellani <gmascellani@codeweavers.com>

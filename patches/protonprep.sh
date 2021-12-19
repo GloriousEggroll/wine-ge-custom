@@ -15,9 +15,6 @@
     patch -Np1 < ../patches/wine-hotfixes/staging/staging-reenable-pulse.patch
     patch -RNp1 < ../patches/wine-hotfixes/staging/staging-pulseaudio-reverts.patch
 
-    # add proton-specific syscall emulation patches
-    patch -Np1 < ../patches/wine-hotfixes/staging/proton-staging-syscall-emu.patch
-
     cd ..
 
 ### END PREP SECTION ###
@@ -36,15 +33,26 @@
     git revert --no-commit dfa4c07941322dbcad54507cd0acf271a6c719ab
 
     # https://bugs.winehq.org/show_bug.cgi?id=49990
-    echo "revert bd27af974a21085cd0dc78b37b715bbcc3cfab69 which breaks some game launchers and 3D Mark"
-    git revert --no-commit b54199101fd307199c481709d4b1358ba4bcce58
-    git revert --no-commit dedda40e5d7b5a3bcf67eea95145810da283d7d9
-    git revert --no-commit bd27af974a21085cd0dc78b37b715bbcc3cfab69
+#    echo "revert bd27af974a21085cd0dc78b37b715bbcc3cfab69 which breaks some game launchers and 3D Mark"
+#    git revert --no-commit 548bc54bf396d74b5b928bf9be835272ddda1886
+#    git revert --no-commit b502a3e3c6b43ac3947d85ccc263e729ace917fa
+#    git revert --no-commit b54199101fd307199c481709d4b1358ba4bcce58
+#    git revert --no-commit dedda40e5d7b5a3bcf67eea95145810da283d7d9
+#    git revert --no-commit bd27af974a21085cd0dc78b37b715bbcc3cfab69
+
+    echo "temporary fshack reverts"
+    git revert --no-commit c2384cf23378953b6960e7044a0e467944e8814a
+    git revert --no-commit c3862f2a6121796814ae31913bfb0efeba565087
+    git revert --no-commit 37be0989540cf84dd9336576577ae535f2b6bbb8
+    git revert --no-commit 3661194f8e8146a594673ad3682290f10fa2c096
+    git revert --no-commit 9aef654392756aacdce6109ccbe21ba446ee4387
 
     echo "revert faudio updates -- we can't use PE version yet because the staging patches need a rebase in order to fix audio crackling in some games -- notably cyberpunk"
     git revert --no-commit 22c26a2dde318b5b370fc269cab871e5a8bc4231
 
     echo "mfplat early reverts to re-enable staging mfplat patches"
+    git revert --no-commit 78f916f598b4e0acadbda2c095058bf8a268eb72
+    git revert --no-commit 4f58d8144c5c1d3b86e988f925de7eb02c848e6f
     git revert --no-commit 747905c674d521b61923a6cff1d630c85a74d065
     git revert --no-commit f3624e2d642c4f5c1042d24a70273db4437fcef9
     git revert --no-commit 769057b9b281eaaba7ee438dedb7f922b0903472
@@ -133,11 +141,29 @@
     # Notably DOOM Eternal and Resident Evil Village
     # -W ntdll-NtAlertThreadByThreadId
 
+    # ntdll-Junction_Points breaks Valve's CEG drm
+    # the other two rely on it.
+    # note: we also have to manually remove the ntdll-Junction_Points patchset from esync in staging.
+    # we also disable esync and apply it manually instead
+    # -W ntdll-Junction_Points \
+    # -W server-File_Permissions \
+    # -W server-Stored_ACLs \
+    # -W eventfd_synchronization \
+
+    # Sancreed — 11/21/2021
+    # Heads up, it appears that a bunch of Ubisoft Connect games (3/3 I had installed and could test) will crash
+    # almost immediately on newer Wine Staging/TKG inside pe_load_debug_info function unless the dbghelp-Debug_Symbols staging # patchset is disabled.
+    # -W dbghelp-Debug_Symbols
+
     echo "applying staging patches"
     ../wine-staging/patches/patchinstall.sh DESTDIR="." --all \
     -W winex11-_NET_ACTIVE_WINDOW \
     -W winex11-WM_WINDOWPOSCHANGING \
-    -W ntdll-NtAlertThreadByThreadId
+    -W ntdll-Syscall_Emulation \
+    -W dbghelp-Debug_Symbols
+
+    echo "Manually apply modified ntdll-Syscall_Emulation patch for proton, rebasing keeps complaining"
+    patch -Np1 < ../patches/proton/63-ntdll-Support-x86_64-syscall-emulation.patch
 
 ### END WINE STAGING APPLY SECTION ###
 
@@ -153,20 +179,14 @@
     patch -Np1 < ../patches/game-patches/assettocorsa-hud.patch
 
     echo "mk11 patch"
+    # this is needed so that online multi-player does not crash
     patch -Np1 < ../patches/game-patches/mk11.patch
 
     echo "killer instinct vulkan fix"
     patch -Np1 < ../patches/game-patches/killer-instinct-winevulkan_fix.patch
 
-    # https://bugs.winehq.org/show_bug.cgi?id=51821
-    echo "EVE Online - Fixe launcher 19.09"
-    patch -Np1 < ../patches/game-patches/eve-online-launcher.patch
-
     echo "Castlevania Advance fix"
     patch -Np1 < ../patches/game-patches/castlevania-advance-collection.patch
-
-    echo "Star Citizen fix"
-    patch -Np1 < ../patches/game-patches/hotfix-starcitizen-StorageDeviceSeekPenaltyProperty.patch
 
 ### END GAME PATCH SECTION ###
 
@@ -264,10 +284,6 @@
     echo "proton battleye patches"
     patch -Np1 < ../patches/proton/59-proton-battleye_patches.patch
 
-#    disabled for now, needs rebase. only used for vr anyway
-#    echo "proton openxr patches"
-#    patch -Np1 < ../patches/proton/37-proton-OpenXR-patches.patch
-
 ### END PROTON PATCH SECTION ###
 
 ### START MFPLAT PATCH SECTION ###
@@ -334,6 +350,10 @@
     patch -Np1 < ../patches/wine-hotfixes/mfplat/mfplat-streaming-support/0037-winegstreamer-Default-Frame-size-if-one-isn-t-availa.patch
     patch -Np1 < ../patches/wine-hotfixes/mfplat/mfplat-streaming-support/0038-mfplat-Stub-out-MFCreateDXGIDeviceManager-to-avoid-t.patch
 
+    echo "proton mfplat dll register patch"
+    patch -Np1 < ../patches/proton/30-proton-mediafoundation_dllreg.patch
+    patch -Np1 < ../patches/proton/31-proton-mfplat-hacks.patch
+
     # Needed for mfplat video format conversion, notably resident evil 8
     echo "proton mfplat video conversion patches"
     patch -Np1 < ../patches/proton/34-proton-winegstreamer_updates.patch
@@ -346,6 +366,8 @@
     echo "The Good Life (1452500) workaround"
     patch -Np1 < ../patches/game-patches/thegoodlife-mfplat-http-scheme-workaround.patch
 
+    echo "FFXIV Video playback mfplat includes"
+    patch -Np1 < ../patches/game-patches/ffxiv-mfplat-additions.patch
 
 ### END MFPLAT PATCH SECTION ###
 
@@ -356,23 +378,30 @@
     echo "hotfix for beam ng right click camera being broken with fshack"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-beam_ng_fshack_fix.patch
 
-    echo "add missing stub for fh5"
-    patch -Np1 < ../patches/wine-hotfixes/testing/fh5-uiauto.patch
+    # keep this in place, proton and wine tend to bounce back and forth and proton uses a different URL.
+    # We can always update the patch to match the version and sha256sum even if they are the same version
+    echo "hotfix to update mono version"
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-update_mono_version.patch
+
+    echo "add halo infinite patches"
+    patch -Np1 < ../patches/wine-hotfixes/pending/halo-infinite-twinapi.appcore.dll.patch
 
     # https://github.com/Frogging-Family/wine-tkg-git/commit/ca0daac62037be72ae5dd7bf87c705c989eba2cb
     echo "unity crash hotfix"
     patch -Np1 < ../patches/wine-hotfixes/pending/unity_crash_hotfix.patch
 
-    # https://bugs.winehq.org/show_bug.cgi?id=52017
-    echo "fix for broken file browser"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-file_browser_fix.patch
-
-    echo "fix for prefix creation breakage caused by e5d3783"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-e5d3783-refression-fix.patch
 
 #    disabled, not compatible with fshack, not compatible with fsr, missing dependencies inside proton.
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
 
+    # https://bugs.winehq.org/show_bug.cgi?id=51687
+    patch -Np1 < ../patches/wine-hotfixes/pending/Return_nt_filename_and_resolve_DOS_drive_path.patch
+
+    patch -Np1 < ../patches/wine-hotfixes/pending/222237
+    patch -Np1 < ../patches/wine-hotfixes/pending/222273
+
+    #https://bugs.winehq.org/show_bug.cgi?id=52222
+    patch -Np1 < ../patches/wine-hotfixes/pending/bug_52222_fix.patch
 
 ### END WINE HOTFIX SECTION ###
 
@@ -385,8 +414,6 @@
 ### (2-7) WINE CUSTOM PATCHES ###
 #    patch -Np1 < ../patches/wine-hotfixes/testing/lowlatency_audio.patch
 #    patch -Np1 < ../patches/wine-hotfixes/testing/lowlatency_audio_pulse.patch
-
-    patch -Np1 < ../patches/wine-hotfixes/pending/21750.patch
 
 ### END WINE CUSTOM PATCHES ###
 ### END WINE PATCHING ###
