@@ -32,14 +32,6 @@
     git revert --no-commit 2ad44002da683634de768dbe49a0ba09c5f26f08
     git revert --no-commit dfa4c07941322dbcad54507cd0acf271a6c719ab
 
-    # https://bugs.winehq.org/show_bug.cgi?id=49990
-#    echo "revert bd27af974a21085cd0dc78b37b715bbcc3cfab69 which breaks some game launchers and 3D Mark"
-#    git revert --no-commit 548bc54bf396d74b5b928bf9be835272ddda1886
-#    git revert --no-commit b502a3e3c6b43ac3947d85ccc263e729ace917fa
-#    git revert --no-commit b54199101fd307199c481709d4b1358ba4bcce58
-#    git revert --no-commit dedda40e5d7b5a3bcf67eea95145810da283d7d9
-#    git revert --no-commit bd27af974a21085cd0dc78b37b715bbcc3cfab69
-
     echo "temporary fshack reverts"
     git revert --no-commit c2384cf23378953b6960e7044a0e467944e8814a
     git revert --no-commit c3862f2a6121796814ae31913bfb0efeba565087
@@ -159,11 +151,7 @@
     ../wine-staging/patches/patchinstall.sh DESTDIR="." --all \
     -W winex11-_NET_ACTIVE_WINDOW \
     -W winex11-WM_WINDOWPOSCHANGING \
-    -W ntdll-Syscall_Emulation \
     -W dbghelp-Debug_Symbols
-
-    echo "Manually apply modified ntdll-Syscall_Emulation patch for proton, rebasing keeps complaining"
-    patch -Np1 < ../patches/proton/63-ntdll-Support-x86_64-syscall-emulation.patch
 
 ### END WINE STAGING APPLY SECTION ###
 
@@ -349,6 +337,7 @@
     patch -Np1 < ../patches/wine-hotfixes/mfplat/mfplat-streaming-support/0036-winegstreamer-Implement-MFT_MESSAGE_COMMAND_FLUSH-fo.patch
     patch -Np1 < ../patches/wine-hotfixes/mfplat/mfplat-streaming-support/0037-winegstreamer-Default-Frame-size-if-one-isn-t-availa.patch
     patch -Np1 < ../patches/wine-hotfixes/mfplat/mfplat-streaming-support/0038-mfplat-Stub-out-MFCreateDXGIDeviceManager-to-avoid-t.patch
+    patch -Np1 < ../patches/wine-hotfixes/mfplat/mfplat-streaming-support/0039-aperture-hotfix.patch
 
     echo "proton mfplat dll register patch"
     patch -Np1 < ../patches/proton/30-proton-mediafoundation_dllreg.patch
@@ -394,14 +383,9 @@
 #    disabled, not compatible with fshack, not compatible with fsr, missing dependencies inside proton.
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
 
-    # https://bugs.winehq.org/show_bug.cgi?id=51687
-    patch -Np1 < ../patches/wine-hotfixes/pending/Return_nt_filename_and_resolve_DOS_drive_path.patch
-
-    patch -Np1 < ../patches/wine-hotfixes/pending/222237
-    patch -Np1 < ../patches/wine-hotfixes/pending/222273
-
-    #https://bugs.winehq.org/show_bug.cgi?id=52222
-    patch -Np1 < ../patches/wine-hotfixes/pending/bug_52222_fix.patch
+#    disabled, breaks Elder Scrolls Online. Only use for League of Legends
+#    https://bugs.winehq.org/show_bug.cgi?id=51687
+#    patch -Np1 < ../patches/wine-hotfixes/pending/Return_nt_filename_and_resolve_DOS_drive_path.patch
 
 ### END WINE HOTFIX SECTION ###
 
