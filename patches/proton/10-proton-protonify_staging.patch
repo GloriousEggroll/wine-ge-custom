@@ -4675,3 +4675,275 @@ index 74409a6fb76..63a11c27e03 100644
          "ja 1b\n\t"
          "2:\n\t"
          MEMSET_RET )
+From 40f9cbafbf1d7d5cfecf6d765e440ff03ce2376d Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 6 Jan 2022 14:00:35 +0300
+Subject: [PATCH] winhttp: HACK: Reuse threadpool for Monster Hunter Rise.
+
+CW-Bug-Id: #19484
+---
+ dlls/winhttp/main.c            |  6 ++++
+ dlls/winhttp/request.c         | 64 +++++++++++++++++++++++++++++++---
+ dlls/winhttp/winhttp_private.h |  1 +
+ 3 files changed, 67 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/winhttp/main.c b/dlls/winhttp/main.c
+index 3b570fee6d5..c8de51fa85b 100644
+--- a/dlls/winhttp/main.c
++++ b/dlls/winhttp/main.c
+@@ -42,9 +42,15 @@ BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpv)
+     switch(fdwReason)
+     {
+     case DLL_PROCESS_ATTACH:
++    {
++        char str[64];
++
+         winhttp_instance = hInstDLL;
+         DisableThreadLibraryCalls(hInstDLL);
++        if ((reuse_threadpool = GetEnvironmentVariableA( "SteamGameId", str, sizeof(str)) && !strcmp(str, "1446780" )))
++            ERR( "HACK: setting reuse_threadpool.\n" );
+         break;
++    }
+     case DLL_PROCESS_DETACH:
+         if (lpv) break;
+         netconn_unload();
+diff --git a/dlls/winhttp/request.c b/dlls/winhttp/request.c
+index a2a5774d74d..ee6e2eca847 100644
+--- a/dlls/winhttp/request.c
++++ b/dlls/winhttp/request.c
+@@ -43,6 +43,24 @@ WINE_DEFAULT_DEBUG_CHANNEL(winhttp);
+
+ #define DEFAULT_KEEP_ALIVE_TIMEOUT 30000
+
++BOOL reuse_threadpool;
++
++static struct
++{
++    TP_POOL *pool;
++    LONG ref;
++}
++thread_pool_cache;
++
++static CRITICAL_SECTION thread_pool_cache_cs;
++static CRITICAL_SECTION_DEBUG thread_pool_cache_debug =
++{
++    0, 0, &thread_pool_cache_cs,
++    { &thread_pool_cache_debug.ProcessLocksList, &thread_pool_cache_debug.ProcessLocksList },
++      0, 0, { (DWORD_PTR)(__FILE__ ": thread_pool_cache_cs") }
++};
++static CRITICAL_SECTION thread_pool_cache_cs = { &thread_pool_cache_debug, -1, 0, 0, 0, 0 };
++
+ static const WCHAR *attribute_table[] =
+ {
+     L"Mime-Version",                /* WINHTTP_QUERY_MIME_VERSION               = 0  */
+@@ -122,13 +140,37 @@ static const WCHAR *attribute_table[] =
+     NULL                            /* WINHTTP_QUERY_PASSPORT_CONFIG            = 78 */
+ };
+
++static TP_POOL *create_thread_pool(void)
++{
++    TP_POOL *pool;
++
++    if (!(pool = CreateThreadpool( NULL ))) return NULL;
++    SetThreadpoolThreadMinimum( pool, 1 );
++    SetThreadpoolThreadMaximum( pool, 1 );
++
++    return pool;
++}
++
+ static DWORD start_queue( struct queue *queue )
+ {
+     if (queue->pool) return ERROR_SUCCESS;
+
+-    if (!(queue->pool = CreateThreadpool( NULL ))) return GetLastError();
+-    SetThreadpoolThreadMinimum( queue->pool, 1 );
+-    SetThreadpoolThreadMaximum( queue->pool, 1 );
++    if (reuse_threadpool)
++    {
++        EnterCriticalSection( &thread_pool_cache_cs );
++        if (!thread_pool_cache.pool)
++        {
++            assert( !thread_pool_cache.ref );
++            thread_pool_cache.pool = create_thread_pool();
++        }
++        ++thread_pool_cache.ref;
++        queue->pool = thread_pool_cache.pool;
++        LeaveCriticalSection( &thread_pool_cache_cs );
++    }
++    else
++    {
++        if (!(queue->pool = create_thread_pool())) return GetLastError();
++    }
+
+     memset( &queue->env, 0, sizeof(queue->env) );
+     queue->env.Version = 1;
+@@ -141,7 +183,21 @@ static DWORD start_queue( struct queue *queue )
+ void stop_queue( struct queue *queue )
+ {
+     if (!queue->pool) return;
+-    CloseThreadpool( queue->pool );
++    if (reuse_threadpool)
++    {
++        EnterCriticalSection( &thread_pool_cache_cs );
++        assert(thread_pool_cache.ref);
++        if (!--thread_pool_cache.ref)
++        {
++            CloseThreadpool( thread_pool_cache.pool );
++            thread_pool_cache.pool = NULL;
++        }
++        LeaveCriticalSection( &thread_pool_cache_cs );
++    }
++    else
++    {
++        CloseThreadpool( queue->pool );
++    }
+     queue->pool = NULL;
+     TRACE("stopped %p\n", queue);
+ }
+diff --git a/dlls/winhttp/winhttp_private.h b/dlls/winhttp/winhttp_private.h
+index 53c1f2e0122..93dffe8df32 100644
+--- a/dlls/winhttp/winhttp_private.h
++++ b/dlls/winhttp/winhttp_private.h
+@@ -403,5 +403,6 @@ static inline char *strdupWA_sized( const WCHAR *src, DWORD size )
+ }
+
+ extern HINSTANCE winhttp_instance DECLSPEC_HIDDEN;
++extern BOOL reuse_threadpool DECLSPEC_HIDDEN;
+
+ #endif /* _WINE_WINHTTP_PRIVATE_H_ */
+From e0bb7d1c458587a4ac5ba248de8a05f0b929bcd1 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 10 Dec 2018 12:48:41 -0600
+Subject: [PATCH] xaudio2: Set PulseAudio application name property in the
+ environment
+
+So PA doesn't present all Wine applications as "wine-preloader", and
+allows PA to store per-application settings.
+---
+ dlls/winepulse.drv/mmdevdrv.c |  1 +
+ dlls/xaudio2_7/xaudio_dll.c   | 21 +++++++++++++++++++++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 35a66e18d8a..f96b28c7c08 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -245,6 +245,7 @@ static char *get_application_name(void)
+     if (!(str = malloc(len)))
+         return NULL;
+     WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
++    SetEnvironmentVariableA("PULSE_PROP_application.name", str);
+     return str;
+ }
+
+diff --git a/dlls/xaudio2_7/xaudio_dll.c b/dlls/xaudio2_7/xaudio_dll.c
+index 699b904a131..1d5e8bf39ec 100644
+--- a/dlls/xaudio2_7/xaudio_dll.c
++++ b/dlls/xaudio2_7/xaudio_dll.c
+@@ -38,6 +38,7 @@
+ #include "wine/asm.h"
+ #include "wine/debug.h"
+ #include "wine/heap.h"
++#include "wine/unicode.h"
+
+ WINE_DEFAULT_DEBUG_CHANNEL(xaudio2);
+
+@@ -1951,6 +1952,26 @@ static HRESULT WINAPI XAudio2CF_CreateInstance(IClassFactory *iface, IUnknown *p
+     pthread_cond_init(&object->mst.engine_done, NULL);
+     pthread_cond_init(&object->mst.engine_ready, NULL);
+
++    /* set PulseAudio's application.name in the environment since FAudio and
++     * SDL provide no way to pass this in */
++    {
++        WCHAR path[MAX_PATH], *name;
++        char *str;
++        DWORD len;
++
++        GetModuleFileNameW(NULL, path, ARRAY_SIZE(path));
++        name = strrchrW(path, '\\');
++        if (!name)
++            name = path;
++        else
++            name++;
++        len = WideCharToMultiByte(CP_UNIXCP, 0, name, -1, NULL, 0, NULL, NULL);
++        str = HeapAlloc(GetProcessHeap(), 0, len);
++        WideCharToMultiByte(CP_UNIXCP, 0, name, -1, str, len, NULL, NULL);
++        setenv("PULSE_PROP_application.name", str, 1);
++        HeapFree(GetProcessHeap(), 0, str);
++    }
++
+     FAudioCOMConstructWithCustomAllocatorEXT(
+         &object->faudio,
+         XAUDIO2_VER,
+From cffb57818776b2a368f70861e84ec39f964cd212 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Thu, 23 Dec 2021 15:57:46 -0500
+Subject: [PATCH] secur32: Initialize SECBUFFER_ALERT type output buffer's
+ cbBuffer value to 0.
+
+Fixes Doom Eternal Multiplayer, which will send the contents of the
+SECBUFFER_ALERT output buffer if its cbBuffer value is non-zero.
+
+CW-Bug-Id: 17847
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+---
+ dlls/secur32/schannel.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/dlls/secur32/schannel.c b/dlls/secur32/schannel.c
+index c0187d9a1f7..e3a1a76d29b 100644
+--- a/dlls/secur32/schannel.c
++++ b/dlls/secur32/schannel.c
+@@ -909,6 +909,24 @@ static SECURITY_STATUS SEC_ENTRY schan_InitializeSecurityContextW(
+     dump_buffer_desc(pInput);
+     dump_buffer_desc(pOutput);
+
++    /*
++     * Find any SECBUFFER_ALERT output buffers and set their count values to
++     * 0. If we don't do this, and the initial count is non-zero, applications
++     * will think we've returned error data in the provided buffer.
++     */
++    if (pOutput && (pOutput->cBuffers > 1))
++    {
++        int i;
++
++        for (i = 0; i < pOutput->cBuffers; i++)
++        {
++            SecBuffer *b = &pOutput->pBuffers[i];
++
++            if (b->BufferType == SECBUFFER_ALERT)
++                b->cbBuffer = 0;
++        }
++    }
++
+     if (ptsExpiry)
+     {
+         ptsExpiry->LowPart = 0;
+From c52bbe771b56a72e5604830ba4a70f620bb90e6f Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Tue, 11 Jan 2022 15:18:41 -0500
+Subject: [PATCH] secur32: Initialize new context handle with current context
+ handle.
+
+Set the value of phNewContext to match the value of phContext if it's
+set. Doom Eternal/Sea of Thieves will delete the security context if
+these values do not match.
+
+CW-Bug-Id: 17847
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+---
+ dlls/secur32/schannel.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/secur32/schannel.c b/dlls/secur32/schannel.c
+index e3a1a76d29b..61812978484 100644
+--- a/dlls/secur32/schannel.c
++++ b/dlls/secur32/schannel.c
+@@ -1010,6 +1010,7 @@ static SECURITY_STATUS SEC_ENTRY schan_InitializeSecurityContextW(
+         if (!(ctx = schan_get_object(phContext->dwLower, SCHAN_HANDLE_CTX))) return SEC_E_INVALID_HANDLE;
+         if (!pInput) return is_dtls_context(ctx) ? SEC_E_INSUFFICIENT_MEMORY : SEC_E_INCOMPLETE_MESSAGE;
+         if ((idx = schan_find_sec_buffer_idx(pInput, 0, SECBUFFER_TOKEN)) == -1) return SEC_E_INCOMPLETE_MESSAGE;
++        if (phNewContext) *phNewContext = *phContext;
+
+         buffer = &pInput->pBuffers[idx];
+         ptr = buffer->pvBuffer;
