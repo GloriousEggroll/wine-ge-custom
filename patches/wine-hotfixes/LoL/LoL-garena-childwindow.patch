@@ -1,0 +1,2030 @@
+From 1fab03e654608206b8c7aef2d31314b7614ddb48 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 12 Mar 2021 18:27:41 +0100
+Subject: [PATCH 01/14] winex11.drv: Store swapchain surfaces associations.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Based on a patch from Felix Hädicke <felixhaedicke@web.de>.
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+CW-Bug-Id: 16608
+---
+ dlls/winex11.drv/vulkan.c | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index 619b0ecec1e..9875f76dfbd 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -54,6 +54,7 @@ static CRITICAL_SECTION_DEBUG critsect_debug =
+ static CRITICAL_SECTION context_section = { &critsect_debug, -1, 0, 0, 0, 0 };
+ 
+ static XContext vulkan_hwnd_context;
++static XContext vulkan_swapchain_context;
+ 
+ #define VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR 1000004000
+ 
+@@ -143,6 +144,7 @@ static BOOL WINAPI wine_vk_init(INIT_ONCE *once, void *param, void **context)
+ #undef LOAD_OPTIONAL_FUNCPTR
+ 
+     vulkan_hwnd_context = XUniqueContext();
++    vulkan_swapchain_context = XUniqueContext();
+ 
+     return TRUE;
+ 
+@@ -290,6 +292,8 @@ static VkResult X11DRV_vkCreateSwapchainKHR(VkDevice device,
+ {
+     struct wine_vk_surface *x11_surface = surface_from_handle(create_info->surface);
+     VkSwapchainCreateInfoKHR create_info_host;
++    VkResult result;
++
+     TRACE("%p %p %p %p\n", device, create_info, allocator, swapchain);
+ 
+     if (allocator)
+@@ -301,7 +305,14 @@ static VkResult X11DRV_vkCreateSwapchainKHR(VkDevice device,
+     create_info_host = *create_info;
+     create_info_host.surface = x11_surface->surface;
+ 
+-    return pvkCreateSwapchainKHR(device, &create_info_host, NULL /* allocator */, swapchain);
++    result = pvkCreateSwapchainKHR(device, &create_info_host, NULL /* allocator */, swapchain);
++    if (result == VK_SUCCESS)
++    {
++        EnterCriticalSection(&context_section);
++        XSaveContext(gdi_display, (XID)(*swapchain), vulkan_swapchain_context, (char *)wine_vk_surface_grab(x11_surface));
++        LeaveCriticalSection(&context_section);
++    }
++    return result;
+ }
+ 
+ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+@@ -413,12 +424,20 @@ static void X11DRV_vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface
+ static void X11DRV_vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain,
+          const VkAllocationCallbacks *allocator)
+ {
++    struct wine_vk_surface *surface;
++
+     TRACE("%p, 0x%s %p\n", device, wine_dbgstr_longlong(swapchain), allocator);
+ 
+     if (allocator)
+         FIXME("Support for allocation callbacks not implemented yet\n");
+ 
+     pvkDestroySwapchainKHR(device, swapchain, NULL /* allocator */);
++
++    EnterCriticalSection(&context_section);
++    if (!XFindContext(gdi_display, (XID)swapchain, vulkan_swapchain_context, (char **)&surface))
++        wine_vk_surface_release(surface);
++    XDeleteContext(gdi_display, (XID)swapchain, vulkan_swapchain_context);
++    LeaveCriticalSection(&context_section);
+ }
+ 
+ static VkResult X11DRV_vkEnumerateInstanceExtensionProperties(const char *layer_name,
+-- 
+2.34.1
+
+From 6af7059256dda9de44a62b274719d807f8f02446 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 22 Apr 2021 23:38:16 +0200
+Subject: [PATCH 02/14] winex11.drv: Hook vkAcquireNextImage(2)KHR functions.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+---
+ dlls/winemac.drv/vulkan.c    |  2 ++
+ dlls/winevulkan/make_vulkan  |  2 ++
+ dlls/winex11.drv/vulkan.c    | 19 +++++++++++++++++++
+ include/wine/vulkan_driver.h |  6 ++++++
+ 4 files changed, 29 insertions(+)
+
+diff --git a/dlls/winemac.drv/vulkan.c b/dlls/winemac.drv/vulkan.c
+index bc2128df275..6de6832fbd7 100644
+--- a/dlls/winemac.drv/vulkan.c
++++ b/dlls/winemac.drv/vulkan.c
+@@ -589,6 +589,8 @@ static VkSurfaceKHR macdrv_wine_get_native_surface(VkSurfaceKHR surface)
+ 
+ static const struct vulkan_funcs vulkan_funcs =
+ {
++    NULL,
++    NULL,
+     macdrv_vkCreateInstance,
+     macdrv_vkCreateSwapchainKHR,
+     macdrv_vkCreateWin32SurfaceKHR,
+diff --git a/dlls/winevulkan/make_vulkan b/dlls/winevulkan/make_vulkan
+index e9b1b456584..2b806174c67 100755
+--- a/dlls/winevulkan/make_vulkan
++++ b/dlls/winevulkan/make_vulkan
+@@ -227,6 +227,8 @@ FUNCTION_OVERRIDES = {
+     "vkGetPhysicalDeviceWin32PresentationSupportKHR" : {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
+ 
+     # VK_KHR_swapchain
++    "vkAcquireNextImageKHR" : {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
++    "vkAcquireNextImage2KHR": {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
+     "vkCreateSwapchainKHR" : {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
+     "vkDestroySwapchainKHR" : {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
+     "vkGetSwapchainImagesKHR": {"dispatch" : True, "driver" : True, "thunk" : ThunkType.PUBLIC},
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index 9875f76dfbd..ad372fae0fa 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -79,6 +79,7 @@ typedef struct VkXlibSurfaceCreateInfoKHR
+     Window window;
+ } VkXlibSurfaceCreateInfoKHR;
+ 
++static VkResult (*pvkAcquireNextImageKHR)(VkDevice, VkSwapchainKHR, uint64_t, VkSemaphore, VkFence, uint32_t *);
+ static VkResult (*pvkCreateInstance)(const VkInstanceCreateInfo *, const VkAllocationCallbacks *, VkInstance *);
+ static VkResult (*pvkCreateSwapchainKHR)(VkDevice, const VkSwapchainCreateInfoKHR *, const VkAllocationCallbacks *, VkSwapchainKHR *);
+ static VkResult (*pvkCreateXlibSurfaceKHR)(VkInstance, const VkXlibSurfaceCreateInfoKHR *, const VkAllocationCallbacks *, VkSurfaceKHR *);
+@@ -120,6 +121,7 @@ static BOOL WINAPI wine_vk_init(INIT_ONCE *once, void *param, void **context)
+ 
+ #define LOAD_FUNCPTR(f) if (!(p##f = dlsym(vulkan_handle, #f))) goto fail
+ #define LOAD_OPTIONAL_FUNCPTR(f) p##f = dlsym(vulkan_handle, #f)
++    LOAD_FUNCPTR(vkAcquireNextImageKHR);
+     LOAD_FUNCPTR(vkCreateInstance);
+     LOAD_FUNCPTR(vkCreateSwapchainKHR);
+     LOAD_FUNCPTR(vkCreateXlibSurfaceKHR);
+@@ -286,6 +288,21 @@ static VkResult X11DRV_vkCreateInstance(const VkInstanceCreateInfo *create_info,
+     return res;
+ }
+ 
++static VkResult X11DRV_vkAcquireNextImageKHR(VkDevice device,
++        VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore,
++        VkFence fence, uint32_t *image_index)
++{
++    return pvkAcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, image_index);
++}
++
++static VkResult X11DRV_vkAcquireNextImage2KHR(VkDevice device,
++        const VkAcquireNextImageInfoKHR *acquire_info, uint32_t *image_index)
++{
++    static int once;
++    if (!once++) FIXME("Emulating vkGetPhysicalDeviceSurfaceCapabilities2KHR with vkGetPhysicalDeviceSurfaceCapabilitiesKHR, pNext is ignored.\n");
++    return X11DRV_vkAcquireNextImageKHR(device, acquire_info->swapchain, acquire_info->timeout, acquire_info->semaphore, acquire_info->fence, image_index);
++}
++
+ static VkResult X11DRV_vkCreateSwapchainKHR(VkDevice device,
+         const VkSwapchainCreateInfoKHR *create_info,
+         const VkAllocationCallbacks *allocator, VkSwapchainKHR *swapchain)
+@@ -706,6 +723,8 @@ static VkSurfaceKHR X11DRV_wine_get_native_surface(VkSurfaceKHR surface)
+ 
+ static const struct vulkan_funcs vulkan_funcs =
+ {
++    X11DRV_vkAcquireNextImage2KHR,
++    X11DRV_vkAcquireNextImageKHR,
+     X11DRV_vkCreateInstance,
+     X11DRV_vkCreateSwapchainKHR,
+     X11DRV_vkCreateWin32SurfaceKHR,
+diff --git a/include/wine/vulkan_driver.h b/include/wine/vulkan_driver.h
+index 09b94d2775f..f244e44ecf1 100644
+--- a/include/wine/vulkan_driver.h
++++ b/include/wine/vulkan_driver.h
+@@ -21,6 +21,8 @@ struct vulkan_funcs
+      * needs to provide. Other function calls will be provided indirectly by dispatch
+      * tables part of dispatchable Vulkan objects such as VkInstance or vkDevice.
+      */
++    VkResult (*p_vkAcquireNextImage2KHR)(VkDevice, const VkAcquireNextImageInfoKHR *, uint32_t *);
++    VkResult (*p_vkAcquireNextImageKHR)(VkDevice, VkSwapchainKHR, uint64_t, VkSemaphore, VkFence, uint32_t *);
+     VkResult (*p_vkCreateInstance)(const VkInstanceCreateInfo *, const VkAllocationCallbacks *, VkInstance *);
+     VkResult (*p_vkCreateSwapchainKHR)(VkDevice, const VkSwapchainCreateInfoKHR *, const VkAllocationCallbacks *, VkSwapchainKHR *);
+     VkResult (*p_vkCreateWin32SurfaceKHR)(VkInstance, const VkWin32SurfaceCreateInfoKHR *, const VkAllocationCallbacks *, VkSurfaceKHR *);
+@@ -55,6 +57,10 @@ static inline void *get_vulkan_driver_device_proc_addr(
+ 
+     name += 2;
+ 
++    if (!strcmp(name, "AcquireNextImage2KHR"))
++        return vulkan_funcs->p_vkAcquireNextImage2KHR;
++    if (!strcmp(name, "AcquireNextImageKHR"))
++        return vulkan_funcs->p_vkAcquireNextImageKHR;
+     if (!strcmp(name, "CreateSwapchainKHR"))
+         return vulkan_funcs->p_vkCreateSwapchainKHR;
+     if (!strcmp(name, "DestroySwapchainKHR"))
+-- 
+2.34.1
+
+From 71eeeb177a4408c69de218aa891779db3a4a2728 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 22 Oct 2021 00:23:49 +0200
+Subject: [PATCH 03/14] winex11.drv: Rename X11DRV_FLUSH_GL_DRAWABLE to
+ X11DRV_PRESENT_DRAWABLE.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+CW-Bug-Id: 16608
+---
+ dlls/winex11.drv/init.c   |  8 ++++----
+ dlls/winex11.drv/opengl.c | 40 +++++++++++++++++++--------------------
+ dlls/winex11.drv/x11drv.h |  8 ++++----
+ 3 files changed, 28 insertions(+), 28 deletions(-)
+
+diff --git a/dlls/winex11.drv/init.c b/dlls/winex11.drv/init.c
+index 5b31c352a23..0e8d2ffbf9e 100644
+--- a/dlls/winex11.drv/init.c
++++ b/dlls/winex11.drv/init.c
+@@ -230,16 +230,16 @@ static INT CDECL X11DRV_ExtEscape( PHYSDEV dev, INT escape, INT in_count, LPCVOI
+                     return TRUE;
+                 }
+                 break;
+-            case X11DRV_FLUSH_GL_DRAWABLE:
+-                if (in_count >= sizeof(struct x11drv_escape_flush_gl_drawable))
++            case X11DRV_PRESENT_DRAWABLE:
++                if (in_count >= sizeof(struct x11drv_escape_present_drawable))
+                 {
+-                    const struct x11drv_escape_flush_gl_drawable *data = in_data;
++                    const struct x11drv_escape_present_drawable *data = in_data;
+                     RECT rect = physDev->dc_rect;
+ 
+                     OffsetRect( &rect, -physDev->dc_rect.left, -physDev->dc_rect.top );
+                     if (data->flush) XFlush( gdi_display );
+                     XSetFunction( gdi_display, physDev->gc, GXcopy );
+-                    XCopyArea( gdi_display, data->gl_drawable, physDev->drawable, physDev->gc,
++                    XCopyArea( gdi_display, data->drawable, physDev->drawable, physDev->gc,
+                                0, 0, rect.right, rect.bottom,
+                                physDev->dc_rect.left, physDev->dc_rect.top );
+                     add_device_bounds( physDev, &rect );
+diff --git a/dlls/winex11.drv/opengl.c b/dlls/winex11.drv/opengl.c
+index 567205f742c..3f3deae59ba 100644
+--- a/dlls/winex11.drv/opengl.c
++++ b/dlls/winex11.drv/opengl.c
+@@ -1942,20 +1942,20 @@ static BOOL WINAPI glxdrv_wglShareLists(struct wgl_context *org, struct wgl_cont
+ 
+ static void wglFinish(void)
+ {
+-    struct x11drv_escape_flush_gl_drawable escape;
++    struct x11drv_escape_present_drawable escape;
+     struct gl_drawable *gl;
+     struct wgl_context *ctx = NtCurrentTeb()->glContext;
+ 
+-    escape.code = X11DRV_FLUSH_GL_DRAWABLE;
+-    escape.gl_drawable = 0;
++    escape.code = X11DRV_PRESENT_DRAWABLE;
++    escape.drawable = 0;
+     escape.flush = FALSE;
+ 
+     if ((gl = get_gl_drawable( WindowFromDC( ctx->hdc ), 0 )))
+     {
+         switch (gl->type)
+         {
+-        case DC_GL_PIXMAP_WIN: escape.gl_drawable = gl->pixmap; break;
+-        case DC_GL_CHILD_WIN:  escape.gl_drawable = gl->window; break;
++        case DC_GL_PIXMAP_WIN: escape.drawable = gl->pixmap; break;
++        case DC_GL_CHILD_WIN:  escape.drawable = gl->window; break;
+         default: break;
+         }
+         sync_context(ctx);
+@@ -1963,25 +1963,25 @@ static void wglFinish(void)
+     }
+ 
+     pglFinish();
+-    if (escape.gl_drawable) ExtEscape( ctx->hdc, X11DRV_ESCAPE, sizeof(escape), (LPSTR)&escape, 0, NULL );
++    if (escape.drawable) ExtEscape( ctx->hdc, X11DRV_ESCAPE, sizeof(escape), (LPSTR)&escape, 0, NULL );
+ }
+ 
+ static void wglFlush(void)
+ {
+-    struct x11drv_escape_flush_gl_drawable escape;
++    struct x11drv_escape_present_drawable escape;
+     struct gl_drawable *gl;
+     struct wgl_context *ctx = NtCurrentTeb()->glContext;
+ 
+-    escape.code = X11DRV_FLUSH_GL_DRAWABLE;
+-    escape.gl_drawable = 0;
++    escape.code = X11DRV_PRESENT_DRAWABLE;
++    escape.drawable = 0;
+     escape.flush = FALSE;
+ 
+     if ((gl = get_gl_drawable( WindowFromDC( ctx->hdc ), 0 )))
+     {
+         switch (gl->type)
+         {
+-        case DC_GL_PIXMAP_WIN: escape.gl_drawable = gl->pixmap; break;
+-        case DC_GL_CHILD_WIN:  escape.gl_drawable = gl->window; break;
++        case DC_GL_PIXMAP_WIN: escape.drawable = gl->pixmap; break;
++        case DC_GL_CHILD_WIN:  escape.drawable = gl->window; break;
+         default: break;
+         }
+         sync_context(ctx);
+@@ -1989,7 +1989,7 @@ static void wglFlush(void)
+     }
+ 
+     pglFlush();
+-    if (escape.gl_drawable) ExtEscape( ctx->hdc, X11DRV_ESCAPE, sizeof(escape), (LPSTR)&escape, 0, NULL );
++    if (escape.drawable) ExtEscape( ctx->hdc, X11DRV_ESCAPE, sizeof(escape), (LPSTR)&escape, 0, NULL );
+ }
+ 
+ static const GLubyte *wglGetString(GLenum name)
+@@ -3304,15 +3304,15 @@ static void X11DRV_WineGL_LoadExtensions(void)
+  */
+ static BOOL WINAPI glxdrv_wglSwapBuffers( HDC hdc )
+ {
+-    struct x11drv_escape_flush_gl_drawable escape;
++    struct x11drv_escape_present_drawable escape;
+     struct gl_drawable *gl;
+     struct wgl_context *ctx = NtCurrentTeb()->glContext;
+     INT64 ust, msc, sbc, target_sbc = 0;
+ 
+     TRACE("(%p)\n", hdc);
+ 
+-    escape.code = X11DRV_FLUSH_GL_DRAWABLE;
+-    escape.gl_drawable = 0;
++    escape.code = X11DRV_PRESENT_DRAWABLE;
++    escape.drawable = 0;
+     escape.flush = !pglXWaitForSbcOML;
+ 
+     if (!(gl = get_gl_drawable( WindowFromDC( hdc ), hdc )))
+@@ -3333,7 +3333,7 @@ static BOOL WINAPI glxdrv_wglSwapBuffers( HDC hdc )
+     {
+     case DC_GL_PIXMAP_WIN:
+         if (ctx) sync_context( ctx );
+-        escape.gl_drawable = gl->pixmap;
++        escape.drawable = gl->pixmap;
+         if (pglXCopySubBufferMESA) {
+             /* (glX)SwapBuffers has an implicit glFlush effect, however
+              * GLX_MESA_copy_sub_buffer doesn't. Make sure GL is flushed before
+@@ -3354,10 +3354,10 @@ static BOOL WINAPI glxdrv_wglSwapBuffers( HDC hdc )
+     case DC_GL_WINDOW:
+     case DC_GL_CHILD_WIN:
+         if (ctx) sync_context( ctx );
+-        if (gl->type == DC_GL_CHILD_WIN) escape.gl_drawable = gl->window;
++        if (gl->type == DC_GL_CHILD_WIN) escape.drawable = gl->window;
+         /* fall through */
+     default:
+-        if (escape.gl_drawable && pglXSwapBuffersMscOML)
++        if (escape.drawable && pglXSwapBuffersMscOML)
+         {
+             pglFlush();
+             target_sbc = pglXSwapBuffersMscOML( gdi_display, gl->drawable, 0, 0, 0 );
+@@ -3367,12 +3367,12 @@ static BOOL WINAPI glxdrv_wglSwapBuffers( HDC hdc )
+         break;
+     }
+ 
+-    if (escape.gl_drawable && pglXWaitForSbcOML)
++    if (escape.drawable && pglXWaitForSbcOML)
+         pglXWaitForSbcOML( gdi_display, gl->drawable, target_sbc, &ust, &msc, &sbc );
+ 
+     release_gl_drawable( gl );
+ 
+-    if (escape.gl_drawable) ExtEscape( ctx->hdc, X11DRV_ESCAPE, sizeof(escape), (LPSTR)&escape, 0, NULL );
++    if (escape.drawable) ExtEscape( ctx->hdc, X11DRV_ESCAPE, sizeof(escape), (LPSTR)&escape, 0, NULL );
+     return TRUE;
+ }
+ 
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index f389f3e0836..33b2fc485ef 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -342,7 +342,7 @@ enum x11drv_escape_codes
+     X11DRV_SET_DRAWABLE,     /* set current drawable for a DC */
+     X11DRV_START_EXPOSURES,  /* start graphics exposures */
+     X11DRV_END_EXPOSURES,    /* end graphics exposures */
+-    X11DRV_FLUSH_GL_DRAWABLE, /* flush changes made to the gl drawable */
++    X11DRV_PRESENT_DRAWABLE, /* present the drawable on screen */
+     X11DRV_FLUSH_GDI_DISPLAY /* flush the gdi display */
+ };
+
+@@ -357,10 +357,10 @@ struct x11drv_escape_get_drawable
+     int                      pixel_format; /* internal GL pixel format */
+ };
+ 
+-struct x11drv_escape_flush_gl_drawable
++struct x11drv_escape_present_drawable
+ {
+-    enum x11drv_escape_codes code;         /* escape code (X11DRV_FLUSH_GL_DRAWABLE) */
+-    Drawable                 gl_drawable;  /* GL drawable */
++    enum x11drv_escape_codes code;         /* escape code (X11DRV_PRESENT_DRAWABLE) */
++    Drawable                 drawable;     /* GL / VK drawable */
+     BOOL                     flush;        /* flush X11 before copying */
+ };
+ 
+-- 
+2.34.1
+
+From 8cc58eac111ad4be438ccaa63af30aac1f09694f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 22 Oct 2021 00:30:19 +0200
+Subject: [PATCH 04/14] winex11.drv: Support child window vulkan rendering.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Based on a patch from Felix Hädicke <felixhaedicke@web.de>.
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+CW-Bug-Id: 16608
+---
+ dlls/winex11.drv/vulkan.c | 90 +++++++++++++++++++++++++++++++++++----
+ dlls/winex11.drv/window.c | 15 +++++++
+ dlls/winex11.drv/x11drv.h |  1 +
+ 3 files changed, 97 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index ad372fae0fa..fae262dc9a8 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -32,6 +32,7 @@
+ #include "wine/debug.h"
+ #include "wine/heap.h"
+ #include "x11drv.h"
++#include "xcomposite.h"
+ 
+ #define VK_NO_PROTOTYPES
+ #define WINE_VK_HOST
+@@ -66,6 +67,8 @@ struct wine_vk_surface
+     struct list entry;
+     Window window;
+     VkSurfaceKHR surface; /* native surface */
++    BOOL offscreen; /* drawable is offscreen */
++    HDC hdc;
+     HWND hwnd;
+     DWORD hwnd_thread_id;
+ };
+@@ -231,15 +234,54 @@ static void wine_vk_surface_release(struct wine_vk_surface *surface)
+ void wine_vk_surface_destroy(HWND hwnd)
+ {
+     struct wine_vk_surface *surface;
++    HDC hdc = 0;
++
+     EnterCriticalSection(&context_section);
+     if (!XFindContext(gdi_display, (XID)hwnd, vulkan_hwnd_context, (char **)&surface))
+     {
++        hdc = surface->hdc;
+         surface->hwnd_thread_id = 0;
+-        surface->hwnd = NULL;
++        surface->hwnd = 0;
++        surface->hdc = 0;
+         wine_vk_surface_release(surface);
+     }
+     XDeleteContext(gdi_display, (XID)hwnd, vulkan_hwnd_context);
+     LeaveCriticalSection(&context_section);
++    if (hdc) ReleaseDC(hwnd, hdc);
++}
++
++static BOOL wine_vk_surface_set_offscreen(struct wine_vk_surface *surface, BOOL offscreen)
++{
++#ifdef SONAME_LIBXCOMPOSITE
++    if (usexcomposite)
++    {
++        if (!surface->offscreen && offscreen)
++        {
++            FIXME("Redirecting vulkan surface offscreen, expect degraded performance.\n");
++            pXCompositeRedirectWindow(gdi_display, surface->window, CompositeRedirectManual);
++        }
++        else if (surface->offscreen && !offscreen)
++        {
++            FIXME("Putting vulkan surface back onscreen, expect standard performance.\n");
++            pXCompositeUnredirectWindow(gdi_display, surface->window, CompositeRedirectManual);
++        }
++        surface->offscreen = offscreen;
++        return TRUE;
++    }
++#endif
++
++    if (offscreen) FIXME("Application requires child window rendering, which is not implemented yet!\n");
++    surface->offscreen = offscreen;
++    return !offscreen;
++}
++
++void sync_vk_surface(HWND hwnd, BOOL known_child)
++{
++    struct wine_vk_surface *surface;
++    EnterCriticalSection(&context_section);
++    if (!XFindContext(gdi_display, (XID)hwnd, vulkan_hwnd_context, (char **)&surface))
++        wine_vk_surface_set_offscreen(surface, known_child);
++    LeaveCriticalSection(&context_section);
+ }
+ 
+ void vulkan_thread_detach(void)
+@@ -292,7 +334,30 @@ static VkResult X11DRV_vkAcquireNextImageKHR(VkDevice device,
+         VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore,
+         VkFence fence, uint32_t *image_index)
+ {
+-    return pvkAcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, image_index);
++    struct x11drv_escape_present_drawable escape;
++    struct wine_vk_surface *surface = NULL;
++    VkResult result;
++    HDC hdc = 0;
++
++    EnterCriticalSection(&context_section);
++    if (!XFindContext(gdi_display, (XID)swapchain, vulkan_swapchain_context, (char **)&surface))
++    {
++        wine_vk_surface_grab(surface);
++        hdc = surface->hdc;
++    }
++    LeaveCriticalSection(&context_section);
++
++    result = pvkAcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, image_index);
++    if (result == VK_SUCCESS && hdc && surface && surface->offscreen)
++    {
++        escape.code = X11DRV_PRESENT_DRAWABLE;
++        escape.drawable = surface->window;
++        escape.flush = TRUE;
++        ExtEscape(hdc, X11DRV_ESCAPE, sizeof(escape), (char *)&escape, 0, NULL);
++    }
++
++    if (surface) wine_vk_surface_release(surface);
++    return result;
+ }
+ 
+ static VkResult X11DRV_vkAcquireNextImage2KHR(VkDevice device,
+@@ -345,13 +410,6 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+     if (allocator)
+         FIXME("Support for allocation callbacks not implemented yet\n");
+ 
+-    /* TODO: support child window rendering. */
+-    if (create_info->hwnd && GetAncestor(create_info->hwnd, GA_PARENT) != GetDesktopWindow())
+-    {
+-        FIXME("Application requires child window rendering, which is not implemented yet!\n");
+-        return VK_ERROR_INCOMPATIBLE_DRIVER;
+-    }
+-
+     x11_surface = heap_alloc_zero(sizeof(*x11_surface));
+     if (!x11_surface)
+         return VK_ERROR_OUT_OF_HOST_MEMORY;
+@@ -360,6 +418,7 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+     x11_surface->hwnd = create_info->hwnd;
+     if (x11_surface->hwnd)
+     {
++        x11_surface->hdc = GetDC(create_info->hwnd);
+         x11_surface->window = create_client_window(create_info->hwnd, &default_visual);
+         x11_surface->hwnd_thread_id = GetWindowThreadProcessId(x11_surface->hwnd, NULL);
+     }
+@@ -377,6 +436,15 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+         goto err;
+     }
+ 
++    if (create_info->hwnd && (GetWindow( create_info->hwnd, GW_CHILD ) || GetAncestor( create_info->hwnd, GA_PARENT ) != GetDesktopWindow()))
++    {
++        if (!wine_vk_surface_set_offscreen(x11_surface, TRUE))
++        {
++            res = VK_ERROR_INCOMPATIBLE_DRIVER;
++            goto err;
++        }
++    }
++
+     create_info_host.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+     create_info_host.pNext = NULL;
+     create_info_host.flags = 0; /* reserved */
+diff --git a/dlls/winex11.drv/window.c b/dlls/winex11.drv/window.c
+index 1b1abffa36c..dc7960d0234 100644
+--- a/dlls/winex11.drv/window.c
++++ b/dlls/winex11.drv/window.c
+@@ -1730,6 +1730,15 @@ void CDECL X11DRV_SetWindowStyle( HWND hwnd, INT offset, STYLESTRUCT *style )
+ {
+     struct x11drv_win_data *data;
+     DWORD changed = style->styleNew ^ style->styleOld;
++    HWND parent = GetAncestor( hwnd, GA_PARENT );
++
++    if (offset == GWL_STYLE && (changed & WS_CHILD))
++    {
++        if (GetWindow( parent, GW_CHILD ) || GetAncestor( parent, GA_PARENT ) != GetDesktopWindow())
++            sync_vk_surface( parent, TRUE );
++        else
++            sync_vk_surface( parent, FALSE );
++    }
+ 
+     if (hwnd == GetDesktopWindow()) return;
+     if (!(data = get_win_data( hwnd ))) return;
+@@ -1756,6 +1765,10 @@ void CDECL X11DRV_DestroyWindow( HWND hwnd )
+ {
+     struct x11drv_thread_data *thread_data = x11drv_thread_data();
+     struct x11drv_win_data *data;
++    HWND parent = GetAncestor( hwnd, GA_PARENT );
++
++    if (!GetWindow( parent, GW_CHILD ) && GetAncestor( parent, GA_PARENT ) == GetDesktopWindow())
++        sync_vk_surface( parent, FALSE );
+ 
+     if (!(data = get_win_data( hwnd ))) return;
+ 
+@@ -1969,6 +1982,7 @@ static struct x11drv_win_data *X11DRV_create_win_data( HWND hwnd, const RECT *wi
+      * that will need clipping support.
+      */
+     sync_gl_drawable( parent, TRUE );
++    sync_vk_surface( parent, TRUE );
+ 
+     display = thread_init_display();
+     init_clip_window();  /* make sure the clip window is initialized in this thread */
+@@ -2307,6 +2321,7 @@ done:
+      * that will need clipping support.
+      */
+     sync_gl_drawable( parent, TRUE );
++    sync_vk_surface( parent, TRUE );
+ 
+     fetch_icon_data( hwnd, 0, 0 );
+ }
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index 33b2fc485ef..9c8def1b068 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -646,6 +646,7 @@ extern void sync_gl_drawable( HWND hwnd, BOOL known_child ) DECLSPEC_HIDDEN;
+ extern void set_gl_drawable_parent( HWND hwnd, HWND parent ) DECLSPEC_HIDDEN;
+ extern void destroy_gl_drawable( HWND hwnd ) DECLSPEC_HIDDEN;
+ extern void wine_vk_surface_destroy( HWND hwnd ) DECLSPEC_HIDDEN;
++extern void sync_vk_surface( HWND hwnd, BOOL known_child ) DECLSPEC_HIDDEN;
+ extern void vulkan_thread_detach(void) DECLSPEC_HIDDEN;
+ 
+ extern void wait_for_withdrawn_state( HWND hwnd, BOOL set ) DECLSPEC_HIDDEN;
+-- 
+2.34.1
+
+From 1b8a890d0f9ad04a62cad6293d0f0cf43bdcb224 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 22 Oct 2021 00:49:09 +0200
+Subject: [PATCH 05/14] winex11.drv: Wait on vkAcquireNextImageKHR before
+ flushing.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+To prevent tearing, when present mode is mailbox or fifo.
+
+Based on a patch from Felix Hädicke <felixhaedicke@web.de>.
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+CW-Bug-Id: 16608
+---
+ dlls/winex11.drv/vulkan.c | 35 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 35 insertions(+)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index fae262dc9a8..e8ea33131a4 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -67,6 +67,7 @@ struct wine_vk_surface
+     struct list entry;
+     Window window;
+     VkSurfaceKHR surface; /* native surface */
++    VkPresentModeKHR present_mode;
+     BOOL offscreen; /* drawable is offscreen */
+     HDC hdc;
+     HWND hwnd;
+@@ -103,6 +104,9 @@ static VkResult (*pvkGetPhysicalDeviceSurfaceSupportKHR)(VkPhysicalDevice, uint3
+ static VkBool32 (*pvkGetPhysicalDeviceXlibPresentationSupportKHR)(VkPhysicalDevice, uint32_t, Display *, VisualID);
+ static VkResult (*pvkGetSwapchainImagesKHR)(VkDevice, VkSwapchainKHR, uint32_t *, VkImage *);
+ static VkResult (*pvkQueuePresentKHR)(VkQueue, const VkPresentInfoKHR *);
++static VkResult (*pvkWaitForFences)(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBool32 waitAll, uint64_t timeout);
++static VkResult (*pvkCreateFence)(VkDevice device, const VkFenceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkFence *pFence);
++static void (*pvkDestroyFence)(VkDevice device, VkFence fence, const VkAllocationCallbacks *pAllocator);
+ 
+ static void *X11DRV_get_vk_device_proc_addr(const char *name);
+ static void *X11DRV_get_vk_instance_proc_addr(VkInstance instance, const char *name);
+@@ -145,6 +149,9 @@ static BOOL WINAPI wine_vk_init(INIT_ONCE *once, void *param, void **context)
+     LOAD_FUNCPTR(vkQueuePresentKHR);
+     LOAD_OPTIONAL_FUNCPTR(vkGetDeviceGroupSurfacePresentModesKHR);
+     LOAD_OPTIONAL_FUNCPTR(vkGetPhysicalDevicePresentRectanglesKHR);
++    LOAD_FUNCPTR(vkWaitForFences);
++    LOAD_FUNCPTR(vkCreateFence);
++    LOAD_FUNCPTR(vkDestroyFence);
+ #undef LOAD_FUNCPTR
+ #undef LOAD_OPTIONAL_FUNCPTR
+ 
+@@ -334,9 +341,12 @@ static VkResult X11DRV_vkAcquireNextImageKHR(VkDevice device,
+         VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore,
+         VkFence fence, uint32_t *image_index)
+ {
++    static int once;
+     struct x11drv_escape_present_drawable escape;
+     struct wine_vk_surface *surface = NULL;
+     VkResult result;
++    VkFence orig_fence;
++    BOOL wait_fence = FALSE;
+     HDC hdc = 0;
+ 
+     EnterCriticalSection(&context_section);
+@@ -347,15 +357,35 @@ static VkResult X11DRV_vkAcquireNextImageKHR(VkDevice device,
+     }
+     LeaveCriticalSection(&context_section);
+ 
++    if (!surface || !surface->offscreen)
++        wait_fence = FALSE;
++    else if (surface->present_mode == VK_PRESENT_MODE_MAILBOX_KHR ||
++             surface->present_mode == VK_PRESENT_MODE_FIFO_KHR)
++        wait_fence = TRUE;
++
++    orig_fence = fence;
++    if (wait_fence && !fence)
++    {
++        VkFenceCreateInfo create_info;
++        create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
++        create_info.pNext = NULL;
++        create_info.flags = 0;
++        pvkCreateFence(device, &create_info, NULL, &fence);
++    }
++
+     result = pvkAcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, image_index);
+     if (result == VK_SUCCESS && hdc && surface && surface->offscreen)
+     {
++        if (wait_fence) pvkWaitForFences(device, 1, &fence, 0, timeout);
+         escape.code = X11DRV_PRESENT_DRAWABLE;
+         escape.drawable = surface->window;
+         escape.flush = TRUE;
+         ExtEscape(hdc, X11DRV_ESCAPE, sizeof(escape), (char *)&escape, 0, NULL);
++        if (surface->present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
++            if (once++) FIXME("Application requires child window rendering with mailbox present mode, expect possible tearing!\n");
+     }
+ 
++    if (fence != orig_fence) pvkDestroyFence(device, fence, NULL);
+     if (surface) wine_vk_surface_release(surface);
+     return result;
+ }
+@@ -387,6 +417,11 @@ static VkResult X11DRV_vkCreateSwapchainKHR(VkDevice device,
+     create_info_host = *create_info;
+     create_info_host.surface = x11_surface->surface;
+ 
++    /* force fifo when running offscreen so the acquire fence is more likely to be vsynced */
++    if (x11_surface->offscreen && create_info->presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
++        create_info_host.presentMode = VK_PRESENT_MODE_FIFO_KHR;
++    x11_surface->present_mode = create_info->presentMode;
++
+     result = pvkCreateSwapchainKHR(device, &create_info_host, NULL /* allocator */, swapchain);
+     if (result == VK_SUCCESS)
+     {
+-- 
+2.34.1
+
+From 16e0ba8b783c70334ced631f3e4c81682118a59e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 11 Mar 2021 23:27:57 +0100
+Subject: [PATCH 06/14] winex11.drv: Remove unused X11DRV_GET_DRAWABLE
+ ExtEscape code.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+CW-Bug-Id: 16608
+---
+ dlls/winex11.drv/init.c   | 8 --------
+ dlls/winex11.drv/x11drv.h | 9 ---------
+ 2 files changed, 17 deletions(-)
+
+diff --git a/dlls/winex11.drv/init.c b/dlls/winex11.drv/init.c
+index 0e8d2ffbf9e..8f152eedc69 100644
+--- a/dlls/winex11.drv/init.c
++++ b/dlls/winex11.drv/init.c
+@@ -222,14 +222,6 @@ static INT CDECL X11DRV_ExtEscape( PHYSDEV dev, INT escape, INT in_count, LPCVOI
+                     return TRUE;
+                 }
+                 break;
+-            case X11DRV_GET_DRAWABLE:
+-                if (out_count >= sizeof(struct x11drv_escape_get_drawable))
+-                {
+-                    struct x11drv_escape_get_drawable *data = out_data;
+-                    data->drawable = physDev->drawable;
+-                    return TRUE;
+-                }
+-                break;
+             case X11DRV_PRESENT_DRAWABLE:
+                 if (in_count >= sizeof(struct x11drv_escape_present_drawable))
+                 {
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index 9c8def1b068..dd7b9be0524 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -335,7 +335,6 @@ extern int *get_window_surface_mapping( int bpp, int *mapping ) DECLSPEC_HIDDEN;
+ enum x11drv_escape_codes
+ {
+     X11DRV_SET_DRAWABLE,     /* set current drawable for a DC */
+-    X11DRV_GET_DRAWABLE,     /* get current drawable for a DC */
+     X11DRV_START_EXPOSURES,  /* start graphics exposures */
+     X11DRV_END_EXPOSURES,    /* end graphics exposures */
+     X11DRV_PRESENT_DRAWABLE, /* present the drawable on screen */
+@@ -349,14 +348,6 @@ struct x11drv_escape_set_drawable
+     RECT                     dc_rect;      /* DC rectangle relative to drawable */
+ };
+ 
+-struct x11drv_escape_get_drawable
+-{
+-    enum x11drv_escape_codes code;         /* escape code (X11DRV_GET_DRAWABLE) */
+-    Drawable                 drawable;     /* X drawable */
+-    Drawable                 gl_drawable;  /* GL drawable */
+-    int                      pixel_format; /* internal GL pixel format */
+-};
+-
+ struct x11drv_escape_present_drawable
+ {
+     enum x11drv_escape_codes code;         /* escape code (X11DRV_PRESENT_DRAWABLE) */
+-- 
+2.34.1
+
+From 2f0fc08b4684a4fe6caa7d1fa201399ea952929e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 12 Mar 2021 00:10:49 +0100
+Subject: [PATCH 07/14] winex11.drv: Move Xfixes extension query to
+ process_attach.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+CW-Bug-Id: 16608
+---
+ dlls/winex11.drv/clipboard.c   | 26 ++------------
+ dlls/winex11.drv/x11drv.h      |  2 ++
+ dlls/winex11.drv/x11drv_main.c | 63 ++++++++++++++++++++++++++++++++++
+ dlls/winex11.drv/xfixes.h      | 36 +++++++++++++++++++
+ 4 files changed, 103 insertions(+), 24 deletions(-)
+ create mode 100644 dlls/winex11.drv/xfixes.h
+
+diff --git a/dlls/winex11.drv/clipboard.c b/dlls/winex11.drv/clipboard.c
+index a13d0a55b76..7953ae5d925 100644
+--- a/dlls/winex11.drv/clipboard.c
++++ b/dlls/winex11.drv/clipboard.c
+@@ -77,6 +77,7 @@
+ #include <assert.h>
+ 
+ #include "x11drv.h"
++#include "xfixes.h"
+ 
+ #ifdef HAVE_X11_EXTENSIONS_XFIXES_H
+ #include <X11/extensions/Xfixes.h>
+@@ -196,7 +197,6 @@ static UINT rendered_formats;
+ static ULONG64 last_clipboard_update;
+ static struct clipboard_format **current_x11_formats;
+ static unsigned int nb_current_x11_formats;
+-static BOOL use_xfixes;
+ 
+ Display *clipboard_display = NULL;
+ 
+@@ -1975,28 +1975,6 @@ static BOOL selection_notify_event( HWND hwnd, XEvent *event )
+ static void xfixes_init(void)
+ {
+ #ifdef SONAME_LIBXFIXES
+-    typeof(XFixesSelectSelectionInput) *pXFixesSelectSelectionInput;
+-    typeof(XFixesQueryExtension) *pXFixesQueryExtension;
+-    typeof(XFixesQueryVersion) *pXFixesQueryVersion;
+-
+-    int event_base, error_base;
+-    int major = 3, minor = 0;
+-    void *handle;
+-
+-    handle = dlopen(SONAME_LIBXFIXES, RTLD_NOW);
+-    if (!handle) return;
+-
+-    pXFixesQueryExtension = dlsym(handle, "XFixesQueryExtension");
+-    if (!pXFixesQueryExtension) return;
+-    pXFixesQueryVersion = dlsym(handle, "XFixesQueryVersion");
+-    if (!pXFixesQueryVersion) return;
+-    pXFixesSelectSelectionInput = dlsym(handle, "XFixesSelectSelectionInput");
+-    if (!pXFixesSelectSelectionInput) return;
+-
+-    if (!pXFixesQueryExtension(clipboard_display, &event_base, &error_base))
+-        return;
+-    pXFixesQueryVersion(clipboard_display, &major, &minor);
+-    use_xfixes = (major >= 1);
+     if (!use_xfixes) return;
+ 
+     pXFixesSelectSelectionInput(clipboard_display, import_window, x11drv_atom(CLIPBOARD),
+@@ -2010,7 +1988,7 @@ static void xfixes_init(void)
+                 XFixesSelectionWindowDestroyNotifyMask |
+                 XFixesSelectionClientCloseNotifyMask);
+     }
+-    X11DRV_register_event_handler(event_base + XFixesSelectionNotify,
++    X11DRV_register_event_handler(xfixes_event_base + XFixesSelectionNotify,
+             selection_notify_event, "XFixesSelectionNotify");
+     TRACE("xfixes succesully initialized\n");
+ #else
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index dd7b9be0524..8dc74aa2e39 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -435,6 +435,7 @@ extern BOOL show_systray DECLSPEC_HIDDEN;
+ extern BOOL grab_pointer DECLSPEC_HIDDEN;
+ extern BOOL grab_fullscreen DECLSPEC_HIDDEN;
+ extern BOOL usexcomposite DECLSPEC_HIDDEN;
++extern BOOL use_xfixes DECLSPEC_HIDDEN;
+ extern BOOL managed_mode DECLSPEC_HIDDEN;
+ extern BOOL decorated_mode DECLSPEC_HIDDEN;
+ extern BOOL private_color_map DECLSPEC_HIDDEN;
+@@ -442,6 +443,7 @@ extern int primary_monitor DECLSPEC_HIDDEN;
+ extern int copy_default_colors DECLSPEC_HIDDEN;
+ extern int alloc_system_colors DECLSPEC_HIDDEN;
+ extern int xrender_error_base DECLSPEC_HIDDEN;
++extern int xfixes_event_base DECLSPEC_HIDDEN;
+ extern HMODULE x11drv_module DECLSPEC_HIDDEN;
+ extern char *process_name DECLSPEC_HIDDEN;
+ extern Display *clipboard_display DECLSPEC_HIDDEN;
+diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
+index 32beb84a009..bf5cbaf7ef9 100644
+--- a/dlls/winex11.drv/x11drv_main.c
++++ b/dlls/winex11.drv/x11drv_main.c
+@@ -46,6 +46,7 @@
+ 
+ #include "x11drv.h"
+ #include "xcomposite.h"
++#include "xfixes.h"
+ #include "wine/server.h"
+ #include "wine/unicode.h"
+ #include "wine/debug.h"
+@@ -65,6 +66,7 @@ Window root_window;
+ BOOL usexvidmode = TRUE;
+ BOOL usexrandr = TRUE;
+ BOOL usexcomposite = TRUE;
++BOOL use_xfixes = FALSE;
+ BOOL use_xkb = TRUE;
+ BOOL use_take_focus = TRUE;
+ BOOL use_primary_selection = FALSE;
+@@ -83,6 +85,7 @@ int copy_default_colors = 128;
+ int alloc_system_colors = 256;
+ DWORD thread_data_tls_index = TLS_OUT_OF_INDEXES;
+ int xrender_error_base = 0;
++int xfixes_event_base = 0;
+ HMODULE x11drv_module = 0;
+ char *process_name = NULL;
+ 
+@@ -510,6 +513,63 @@ sym_not_found:
+ }
+ #endif /* defined(SONAME_LIBXCOMPOSITE) */
+ 
++#ifdef SONAME_LIBXFIXES
++
++#define MAKE_FUNCPTR(f) typeof(f) * p##f;
++MAKE_FUNCPTR(XFixesQueryExtension)
++MAKE_FUNCPTR(XFixesQueryVersion)
++MAKE_FUNCPTR(XFixesCreateRegion)
++MAKE_FUNCPTR(XFixesCreateRegionFromGC)
++MAKE_FUNCPTR(XFixesSelectSelectionInput)
++#undef MAKE_FUNCPTR
++
++static void x11drv_load_xfixes(void)
++{
++    int event, error, major = 3, minor = 0;
++    void *xfixes;
++
++    if (!(xfixes = dlopen(SONAME_LIBXFIXES, RTLD_NOW)))
++    {
++        WARN("Xfixes library %s not found, disabled.\n", SONAME_LIBXFIXES);
++        return;
++    }
++
++#define LOAD_FUNCPTR(f) \
++    if (!(p##f = dlsym(xfixes, #f)))                          \
++    {                                                         \
++        WARN("Xfixes function %s not found, disabled\n", #f); \
++        dlclose(xfixes);                                      \
++        return;                                               \
++    }
++    LOAD_FUNCPTR(XFixesQueryExtension)
++    LOAD_FUNCPTR(XFixesQueryVersion)
++    LOAD_FUNCPTR(XFixesCreateRegion)
++    LOAD_FUNCPTR(XFixesCreateRegionFromGC)
++    LOAD_FUNCPTR(XFixesSelectSelectionInput)
++#undef LOAD_FUNCPTR
++
++    if (!pXFixesQueryExtension(gdi_display, &event, &error))
++    {
++        WARN("Xfixes extension not found, disabled.\n");
++        dlclose(xfixes);
++        return;
++    }
++
++    if (!pXFixesQueryVersion(gdi_display, &major, &minor) ||
++        major < 2)
++    {
++        WARN("Xfixes version 2.0 not found, disabled.\n");
++        dlclose(xfixes);
++        return;
++    }
++
++    TRACE("Xfixes, error %d, event %d, version %d.%d found\n",
++          error, event, major, minor);
++    use_xfixes = TRUE;
++    xfixes_event_base = event;
++}
++#endif /* SONAME_LIBXFIXES */
++
+ static void init_visuals( Display *display, int screen )
+ {
+     int count;
+@@ -616,6 +676,9 @@ static BOOL process_attach(void)
+     X11DRV_XF86VM_Init();
+     /* initialize XRandR */
+     X11DRV_XRandR_Init();
++#ifdef SONAME_LIBXFIXES
++    x11drv_load_xfixes();
++#endif
+ #ifdef SONAME_LIBXCOMPOSITE
+     X11DRV_XComposite_Init();
+ #endif
+diff --git a/dlls/winex11.drv/xfixes.h b/dlls/winex11.drv/xfixes.h
+new file mode 100644
+index 00000000000..3ab31201d3d
+--- /dev/null
++++ b/dlls/winex11.drv/xfixes.h
+@@ -0,0 +1,36 @@
++/*
++ * Wine X11DRV Xfixes interface
++ *
++ * Copyright 2021 Rémi Bernon for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++#ifndef __WINE_XFIXES_H
++#define __WINE_XFIXES_H
++
++#ifndef __WINE_CONFIG_H
++# error You must include config.h to use this header
++#endif
++
++#ifdef SONAME_LIBXFIXES
++#include <X11/extensions/Xfixes.h>
++#define MAKE_FUNCPTR(f) extern typeof(f) * p##f DECLSPEC_HIDDEN;
++MAKE_FUNCPTR(XFixesQueryExtension)
++MAKE_FUNCPTR(XFixesQueryVersion)
++MAKE_FUNCPTR(XFixesSelectSelectionInput)
++#undef MAKE_FUNCPTR
++#endif /* defined(SONAME_LIBXFIXES) */
++
++#endif /* __WINE_XFIXES_H */
+-- 
+2.34.1
+
+From c4ae929040e75c7b4e3f8e567c33d14bb5e7b6ea Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 11 Mar 2021 23:38:35 +0100
+Subject: [PATCH 08/14] winex11.drv: Use XPresentPixmap instead of XCopyArea
+ when available.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+CW-Bug-Id: 16608
+---
+ configure.ac                   | 13 ++++++++
+ dlls/winex11.drv/init.c        | 34 +++++++++++++++++---
+ dlls/winex11.drv/vulkan.c      |  9 ++++--
+ dlls/winex11.drv/x11drv.h      |  1 +
+ dlls/winex11.drv/x11drv_main.c | 58 ++++++++++++++++++++++++++++++++++
+ dlls/winex11.drv/xfixes.h      |  3 ++
+ dlls/winex11.drv/xpresent.h    | 36 +++++++++++++++++++++
+ 7 files changed, 147 insertions(+), 7 deletions(-)
+ create mode 100644 dlls/winex11.drv/xpresent.h
+
+diff --git a/configure.ac b/configure.ac
+index b42cb8a5346..cebf14ae39c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -77,6 +77,8 @@ AC_ARG_WITH(xinput,    AS_HELP_STRING([--without-xinput],[do not use the Xinput
+             [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_XInput_h=no; fi])
+ AC_ARG_WITH(xinput2,   AS_HELP_STRING([--without-xinput2],[do not use the Xinput 2 extension]),
+             [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_XInput2_h=no; fi])
++AC_ARG_WITH(xpresent,  AS_HELP_STRING([--without-xpresent],[do not use the Xpresent extension]),
++            [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xpresent_h=no; fi])
+ AC_ARG_WITH(xrandr,    AS_HELP_STRING([--without-xrandr],[do not use Xrandr (multi-monitor support)]),
+             [if test "x$withval" = "xno"; then ac_cv_header_X11_extensions_Xrandr_h=no; fi])
+ AC_ARG_WITH(xrender,   AS_HELP_STRING([--without-xrender],[do not use the Xrender extension]),
+@@ -1144,6 +1146,7 @@ then
+                       X11/extensions/Xcomposite.h \
+                       X11/extensions/Xfixes.h \
+                       X11/extensions/Xinerama.h \
++                      X11/extensions/Xpresent.h \
+                       X11/extensions/Xrandr.h \
+                       X11/extensions/Xrender.h \
+                       X11/extensions/xf86vmode.h \
+@@ -1261,6 +1264,16 @@ then
+         WINE_NOTICE_WITH(xinerama,[test "x$ac_cv_lib_soname_Xinerama" = "x"],
+                          [libxinerama ${notice_platform}development files not found, multi-monitor setups won't be supported.])
+ 
++        dnl *** Check for Xpresent extension
++        if test "$ac_cv_header_X11_extensions_Xpresent_h" = "yes"
++        then
++                AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <X11/Xlib.h>
++#include <X11/extensions/Xpresent.h>]], [[static typeof(XPresentQueryVersion) * func; if (func) return 0;]])],
++                  [WINE_CHECK_SONAME(Xpresent,XPresentQueryVersion,,,[$X_LIBS $X_EXTRA_LIBS])])
++        fi
++        WINE_NOTICE_WITH(Xpresent,[test "x$ac_cv_lib_soname_Xpresent" = "x"],
++                         [libXpresent ${notice_platform}development files not found, Xpresent won't be supported.])
++
+         dnl *** Check for X Composite extension
+         if test "$ac_cv_header_X11_extensions_Xcomposite_h" = "yes"
+         then
+diff --git a/dlls/winex11.drv/init.c b/dlls/winex11.drv/init.c
+index 8f152eedc69..afd1512dd89 100644
+--- a/dlls/winex11.drv/init.c
++++ b/dlls/winex11.drv/init.c
+@@ -27,6 +27,9 @@
+ #include "winbase.h"
+ #include "winreg.h"
+ #include "x11drv.h"
++#include "xfixes.h"
++#include "xpresent.h"
++#include "xcomposite.h"
+ #include "wine/debug.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(x11drv);
+@@ -230,10 +233,33 @@ static INT CDECL X11DRV_ExtEscape( PHYSDEV dev, INT escape, INT in_count, LPCVOI
+ 
+                     OffsetRect( &rect, -physDev->dc_rect.left, -physDev->dc_rect.top );
+                     if (data->flush) XFlush( gdi_display );
+-                    XSetFunction( gdi_display, physDev->gc, GXcopy );
+-                    XCopyArea( gdi_display, data->drawable, physDev->drawable, physDev->gc,
+-                               0, 0, rect.right, rect.bottom,
+-                               physDev->dc_rect.left, physDev->dc_rect.top );
++
++#if defined(SONAME_LIBXPRESENT) && defined(SONAME_LIBXFIXES)
++                    if (use_xpresent && use_xfixes && usexcomposite)
++                    {
++                        XserverRegion update, valid;
++                        XRectangle xrect = {0, 0, rect.right - rect.left, rect.bottom - rect.top};
++                        Drawable drawable = data->drawable;
++                        update = pXFixesCreateRegionFromGC( gdi_display, physDev->gc );
++                        valid = pXFixesCreateRegion( gdi_display, &xrect, 1 );
++#ifdef SONAME_LIBXCOMPOSITE
++                        if (usexcomposite) drawable = pXCompositeNameWindowPixmap( gdi_display, drawable );
++#endif
++                        pXPresentPixmap( gdi_display, physDev->drawable, drawable, XNextRequest( gdi_display ),
++                                         valid, update, physDev->dc_rect.left, physDev->dc_rect.top, None, None,
++                                         None, 0, 0, 0, 0, NULL, 0 );
++                        pXFixesDestroyRegion( gdi_display, update );
++                        pXFixesDestroyRegion( gdi_display, valid );
++                    }
++                    else
++#endif
++                    {
++                        XSetFunction( gdi_display, physDev->gc, GXcopy );
++                        XCopyArea( gdi_display, data->drawable, physDev->drawable, physDev->gc,
++                                   0, 0, rect.right, rect.bottom,
++                                   physDev->dc_rect.left, physDev->dc_rect.top );
++                    }
++
+                     add_device_bounds( physDev, &rect );
+                     return TRUE;
+                 }
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index e8ea33131a4..250239b48af 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -359,6 +359,8 @@ static VkResult X11DRV_vkAcquireNextImageKHR(VkDevice device,
+ 
+     if (!surface || !surface->offscreen)
+         wait_fence = FALSE;
++    else if (use_xpresent && use_xfixes && usexcomposite) /* X11DRV_PRESENT_DRAWABLE will use XPresentPixmap */
++        wait_fence = FALSE;
+     else if (surface->present_mode == VK_PRESENT_MODE_MAILBOX_KHR ||
+              surface->present_mode == VK_PRESENT_MODE_FIFO_KHR)
+         wait_fence = TRUE;
+@@ -381,7 +383,7 @@ static VkResult X11DRV_vkAcquireNextImageKHR(VkDevice device,
+         escape.drawable = surface->window;
+         escape.flush = TRUE;
+         ExtEscape(hdc, X11DRV_ESCAPE, sizeof(escape), (char *)&escape, 0, NULL);
+-        if (surface->present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
++        if (wait_fence && surface->present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
+             if (once++) FIXME("Application requires child window rendering with mailbox present mode, expect possible tearing!\n");
+     }
+ 
+@@ -417,8 +419,9 @@ static VkResult X11DRV_vkCreateSwapchainKHR(VkDevice device,
+     create_info_host = *create_info;
+     create_info_host.surface = x11_surface->surface;
+ 
+-    /* force fifo when running offscreen so the acquire fence is more likely to be vsynced */
+-    if (x11_surface->offscreen && create_info->presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
++    /* unless we use XPresentPixmap, force fifo when running offscreen so the acquire fence is more likely to be vsynced */
++    if (x11_surface->offscreen && create_info->presentMode == VK_PRESENT_MODE_MAILBOX_KHR &&
++        !(use_xpresent && use_xfixes && usexcomposite))
+         create_info_host.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+     x11_surface->present_mode = create_info->presentMode;
+ 
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index 8dc74aa2e39..cba93b2a417 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -436,6 +436,7 @@ extern BOOL grab_pointer DECLSPEC_HIDDEN;
+ extern BOOL grab_fullscreen DECLSPEC_HIDDEN;
+ extern BOOL usexcomposite DECLSPEC_HIDDEN;
+ extern BOOL use_xfixes DECLSPEC_HIDDEN;
++extern BOOL use_xpresent DECLSPEC_HIDDEN;
+ extern BOOL managed_mode DECLSPEC_HIDDEN;
+ extern BOOL decorated_mode DECLSPEC_HIDDEN;
+ extern BOOL private_color_map DECLSPEC_HIDDEN;
+diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
+index bf5cbaf7ef9..e59403e8ccc 100644
+--- a/dlls/winex11.drv/x11drv_main.c
++++ b/dlls/winex11.drv/x11drv_main.c
+@@ -47,6 +47,7 @@
+ #include "x11drv.h"
+ #include "xcomposite.h"
+ #include "xfixes.h"
++#include "xpresent.h"
+ #include "wine/server.h"
+ #include "wine/unicode.h"
+ #include "wine/debug.h"
+@@ -67,6 +68,7 @@ BOOL usexvidmode = TRUE;
+ BOOL usexrandr = TRUE;
+ BOOL usexcomposite = TRUE;
+ BOOL use_xfixes = FALSE;
++BOOL use_xpresent = FALSE;
+ BOOL use_xkb = TRUE;
+ BOOL use_take_focus = TRUE;
+ BOOL use_primary_selection = FALSE;
+@@ -520,6 +522,7 @@ MAKE_FUNCPTR(XFixesQueryExtension)
+ MAKE_FUNCPTR(XFixesQueryVersion)
+ MAKE_FUNCPTR(XFixesCreateRegion)
+ MAKE_FUNCPTR(XFixesCreateRegionFromGC)
++MAKE_FUNCPTR(XFixesDestroyRegion)
+ MAKE_FUNCPTR(XFixesSelectSelectionInput)
+ #undef MAKE_FUNCPTR
+ 
+@@ -545,6 +548,7 @@ static void x11drv_load_xfixes(void)
+     LOAD_FUNCPTR(XFixesQueryVersion)
+     LOAD_FUNCPTR(XFixesCreateRegion)
+     LOAD_FUNCPTR(XFixesCreateRegionFromGC)
++    LOAD_FUNCPTR(XFixesDestroyRegion)
+     LOAD_FUNCPTR(XFixesSelectSelectionInput)
+ #undef LOAD_FUNCPTR
+ 
+@@ -570,6 +574,57 @@ static void x11drv_load_xfixes(void)
+ }
+ #endif /* SONAME_LIBXFIXES */
+ 
++#ifdef SONAME_LIBXPRESENT
++
++#define MAKE_FUNCPTR(f) typeof(f) * p##f;
++MAKE_FUNCPTR(XPresentQueryExtension)
++MAKE_FUNCPTR(XPresentQueryVersion)
++MAKE_FUNCPTR(XPresentPixmap)
++#undef MAKE_FUNCPTR
++
++static void x11drv_load_xpresent(void)
++{
++    int opcode, event, error, major = 1, minor = 0;
++    void *xpresent;
++
++    if (!(xpresent = dlopen( SONAME_LIBXPRESENT, RTLD_NOW )))
++    {
++        WARN( "Xpresent library %s not found, disabled.\n", SONAME_LIBXPRESENT );
++        return;
++    }
++
++#define LOAD_FUNCPTR(f) \
++    if (!(p##f = dlsym( xpresent, #f )))                          \
++    {                                                             \
++        WARN( "Xpresent function %s not found, disabled\n", #f ); \
++        dlclose( xpresent );                                      \
++        return;                                                   \
++    }
++    LOAD_FUNCPTR(XPresentQueryExtension)
++    LOAD_FUNCPTR(XPresentQueryVersion)
++    LOAD_FUNCPTR(XPresentPixmap)
++#undef LOAD_FUNCPTR
++
++    if (!pXPresentQueryExtension( gdi_display, &opcode, &event, &error ))
++    {
++        WARN("Xpresent extension not found, disabled.\n");
++        dlclose(xpresent);
++        return;
++    }
++
++    if (!pXPresentQueryVersion( gdi_display, &major, &minor ))
++    {
++        WARN("Xpresent version not found, disabled.\n");
++        dlclose(xpresent);
++        return;
++    }
++
++    TRACE( "Xpresent, opcode %d, error %d, event %d, version %d.%d found\n",
++           opcode, error, event, major, minor );
++    use_xpresent = TRUE;
++}
++#endif /* SONAME_LIBXPRESENT */
++
+ static void init_visuals( Display *display, int screen )
+ {
+     int count;
+@@ -679,6 +734,9 @@ static BOOL process_attach(void)
+ #ifdef SONAME_LIBXFIXES
+     x11drv_load_xfixes();
+ #endif
++#ifdef SONAME_LIBXPRESENT
++    x11drv_load_xpresent();
++#endif
+ #ifdef SONAME_LIBXCOMPOSITE
+     X11DRV_XComposite_Init();
+ #endif
+diff --git a/dlls/winex11.drv/xfixes.h b/dlls/winex11.drv/xfixes.h
+index 3ab31201d3d..80f8cca04e4 100644
+--- a/dlls/winex11.drv/xfixes.h
++++ b/dlls/winex11.drv/xfixes.h
+@@ -29,6 +29,9 @@
+ #define MAKE_FUNCPTR(f) extern typeof(f) * p##f DECLSPEC_HIDDEN;
+ MAKE_FUNCPTR(XFixesQueryExtension)
+ MAKE_FUNCPTR(XFixesQueryVersion)
++MAKE_FUNCPTR(XFixesCreateRegion)
++MAKE_FUNCPTR(XFixesCreateRegionFromGC)
++MAKE_FUNCPTR(XFixesDestroyRegion)
+ MAKE_FUNCPTR(XFixesSelectSelectionInput)
+ #undef MAKE_FUNCPTR
+ #endif /* defined(SONAME_LIBXFIXES) */
+diff --git a/dlls/winex11.drv/xpresent.h b/dlls/winex11.drv/xpresent.h
+new file mode 100644
+index 00000000000..6fd813a930e
+--- /dev/null
++++ b/dlls/winex11.drv/xpresent.h
+@@ -0,0 +1,36 @@
++/*
++ * Wine X11DRV Xpresent interface
++ *
++ * Copyright 2021 Rémi Bernon for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++#ifndef __WINE_XPRESENT_H
++#define __WINE_XPRESENT_H
++
++#ifndef __WINE_CONFIG_H
++# error You must include config.h to use this header
++#endif
++
++#ifdef SONAME_LIBXPRESENT
++#include <X11/extensions/Xpresent.h>
++#define MAKE_FUNCPTR(f) extern typeof(f) * p##f DECLSPEC_HIDDEN;
++MAKE_FUNCPTR(XPresentQueryExtension)
++MAKE_FUNCPTR(XPresentQueryVersion)
++MAKE_FUNCPTR(XPresentPixmap)
++#undef MAKE_FUNCPTR
++#endif /* defined(SONAME_LIBXPRESENT) */
++
++#endif /* __WINE_XPRESENT_H */
+-- 
+2.34.1
+
+From 5fe54e742728cf695c2c1d19fa2b6e59fb714b60 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 22 Oct 2021 01:01:24 +0200
+Subject: [PATCH 09/14] winex11.drv: Support multiple vulkan surfaces per HWND.
+
+Fixes games failing to render after displaying a video, e.g. Age of
+Empires II (2013).
+
+    https://github.com/doitsujin/dxvk/issues/1726
+---
+ dlls/winex11.drv/vulkan.c | 51 ++++++++++++++++++++-------------------
+ dlls/winex11.drv/window.c |  2 +-
+ dlls/winex11.drv/x11drv.h |  2 +-
+ 3 files changed, 28 insertions(+), 27 deletions(-)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index 250239b48af..47287b9e55e 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -54,7 +54,6 @@ static CRITICAL_SECTION_DEBUG critsect_debug =
+ };
+ static CRITICAL_SECTION context_section = { &critsect_debug, -1, 0, 0, 0, 0 };
+ 
+-static XContext vulkan_hwnd_context;
+ static XContext vulkan_swapchain_context;
+ 
+ #define VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR 1000004000
+@@ -155,7 +154,6 @@ static BOOL WINAPI wine_vk_init(INIT_ONCE *once, void *param, void **context)
+ #undef LOAD_FUNCPTR
+ #undef LOAD_OPTIONAL_FUNCPTR
+ 
+-    vulkan_hwnd_context = XUniqueContext();
+     vulkan_swapchain_context = XUniqueContext();
+ 
+     return TRUE;
+@@ -238,23 +236,30 @@ static void wine_vk_surface_release(struct wine_vk_surface *surface)
+     heap_free(surface);
+ }
+ 
+-void wine_vk_surface_destroy(HWND hwnd)
++void wine_vk_surface_destroy(struct wine_vk_surface *surface)
+ {
+-    struct wine_vk_surface *surface;
+-    HDC hdc = 0;
++    TRACE("Detaching surface %p, hwnd %p.\n", surface, surface->hwnd);
++    XReparentWindow(gdi_display, surface->window, get_dummy_parent(), 0, 0);
++    XSync(gdi_display, False);
+ 
++    if (surface->hdc) ReleaseDC(surface->hwnd, surface->hdc);
++    surface->hwnd_thread_id = 0;
++    surface->hwnd = 0;
++    surface->hdc = 0;
++    wine_vk_surface_release(surface);
++}
++
++void destroy_vk_surface(HWND hwnd)
++{
++    struct wine_vk_surface *surface, *next;
+     EnterCriticalSection(&context_section);
+-    if (!XFindContext(gdi_display, (XID)hwnd, vulkan_hwnd_context, (char **)&surface))
++    LIST_FOR_EACH_ENTRY_SAFE(surface, next, &surface_list, struct wine_vk_surface, entry)
+     {
+-        hdc = surface->hdc;
+-        surface->hwnd_thread_id = 0;
+-        surface->hwnd = 0;
+-        surface->hdc = 0;
+-        wine_vk_surface_release(surface);
++        if (surface->hwnd != hwnd)
++            continue;
++        wine_vk_surface_destroy(surface);
+     }
+-    XDeleteContext(gdi_display, (XID)hwnd, vulkan_hwnd_context);
+     LeaveCriticalSection(&context_section);
+-    if (hdc) ReleaseDC(hwnd, hdc);
+ }
+ 
+ static BOOL wine_vk_surface_set_offscreen(struct wine_vk_surface *surface, BOOL offscreen)
+@@ -286,8 +291,12 @@ void sync_vk_surface(HWND hwnd, BOOL known_child)
+ {
+     struct wine_vk_surface *surface;
+     EnterCriticalSection(&context_section);
+-    if (!XFindContext(gdi_display, (XID)hwnd, vulkan_hwnd_context, (char **)&surface))
++    LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
++    {
++        if (surface->hwnd != hwnd)
++            continue;
+         wine_vk_surface_set_offscreen(surface, known_child);
++    }
+     LeaveCriticalSection(&context_section);
+ }
+ 
+@@ -301,11 +310,7 @@ void vulkan_thread_detach(void)
+     {
+         if (surface->hwnd_thread_id != thread_id)
+             continue;
+-
+-        TRACE("Detaching surface %p, hwnd %p.\n", surface, surface->hwnd);
+-        XReparentWindow(gdi_display, surface->window, get_dummy_parent(), 0, 0);
+-        XSync(gdi_display, False);
+-        wine_vk_surface_destroy(surface->hwnd);
++        wine_vk_surface_destroy(surface);
+     }
+     LeaveCriticalSection(&context_section);
+ }
+@@ -476,6 +481,7 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+ 
+     if (create_info->hwnd && (GetWindow( create_info->hwnd, GW_CHILD ) || GetAncestor( create_info->hwnd, GA_PARENT ) != GetDesktopWindow()))
+     {
++        TRACE("hwnd %p creating offscreen child window surface\n", x11_surface->hwnd);
+         if (!wine_vk_surface_set_offscreen(x11_surface, TRUE))
+         {
+             res = VK_ERROR_INCOMPATIBLE_DRIVER;
+@@ -497,11 +503,6 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+     }
+ 
+     EnterCriticalSection(&context_section);
+-    if (x11_surface->hwnd)
+-    {
+-        wine_vk_surface_destroy( x11_surface->hwnd );
+-        XSaveContext(gdi_display, (XID)create_info->hwnd, vulkan_hwnd_context, (char *)wine_vk_surface_grab(x11_surface));
+-    }
+     list_add_tail(&surface_list, &x11_surface->entry);
+     LeaveCriticalSection(&context_section);
+ 
+diff --git a/dlls/winex11.drv/window.c b/dlls/winex11.drv/window.c
+index dc7960d0234..ef41672acd6 100644
+--- a/dlls/winex11.drv/window.c
++++ b/dlls/winex11.drv/window.c
+@@ -1783,7 +1783,7 @@ void CDECL X11DRV_DestroyWindow( HWND hwnd )
+     release_win_data( data );
+     HeapFree( GetProcessHeap(), 0, data );
+     destroy_gl_drawable( hwnd );
+-    wine_vk_surface_destroy( hwnd );
++    destroy_vk_surface( hwnd );
+ }
+ 
+ 
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index cba93b2a417..d6a1dce57f6 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -639,7 +639,7 @@ extern Window get_dummy_parent(void) DECLSPEC_HIDDEN;
+ extern void sync_gl_drawable( HWND hwnd, BOOL known_child ) DECLSPEC_HIDDEN;
+ extern void set_gl_drawable_parent( HWND hwnd, HWND parent ) DECLSPEC_HIDDEN;
+ extern void destroy_gl_drawable( HWND hwnd ) DECLSPEC_HIDDEN;
+-extern void wine_vk_surface_destroy( HWND hwnd ) DECLSPEC_HIDDEN;
++extern void destroy_vk_surface( HWND hwnd ) DECLSPEC_HIDDEN;
+ extern void sync_vk_surface( HWND hwnd, BOOL known_child ) DECLSPEC_HIDDEN;
+ extern void vulkan_thread_detach(void) DECLSPEC_HIDDEN;
+ 
+-- 
+2.34.1
+
+From d7b5ec7a29eee5c5e124b55b8010c2e2ece92c46 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 22 Oct 2021 00:12:16 +0200
+Subject: [PATCH 10/14] winex11.drv: Resize vulkan surfaces client rect size
+ changes.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+CW-Bug-Id: 16608
+---
+ dlls/winex11.drv/vulkan.c | 16 ++++++++++++++++
+ dlls/winex11.drv/window.c |  1 +
+ dlls/winex11.drv/x11drv.h |  1 +
+ 3 files changed, 18 insertions(+)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index 47287b9e55e..fd68e000d2f 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -287,6 +287,18 @@ static BOOL wine_vk_surface_set_offscreen(struct wine_vk_surface *surface, BOOL
+     return !offscreen;
+ }
+ 
++void resize_vk_surfaces(HWND hwnd, Window active, int mask, XWindowChanges *changes)
++{
++    struct wine_vk_surface *surface;
++    EnterCriticalSection(&context_section);
++    LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
++    {
++        if (surface->hwnd != hwnd) continue;
++        if (surface->window != active) XConfigureWindow(gdi_display, surface->window, mask, changes);
++    }
++    LeaveCriticalSection(&context_section);
++}
++
+ void sync_vk_surface(HWND hwnd, BOOL known_child)
+ {
+     struct wine_vk_surface *surface;
+diff --git a/dlls/winex11.drv/window.c b/dlls/winex11.drv/window.c
+index ef41672acd6..97e46193159 100644
+--- a/dlls/winex11.drv/window.c
++++ b/dlls/winex11.drv/window.c
+@@ -1365,6 +1365,7 @@ static void sync_client_position( struct x11drv_win_data *data,
+         TRACE( "setting client win %lx pos %d,%d,%dx%d changes=%x\n",
+                data->client_window, changes.x, changes.y, changes.width, changes.height, mask );
+         XConfigureWindow( data->display, data->client_window, mask, &changes );
++        resize_vk_surfaces( data->hwnd, data->client_window, mask, &changes );
+     }
+ }
+ 
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index d6a1dce57f6..5ca202441e5 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -641,6 +641,7 @@ extern void set_gl_drawable_parent( HWND hwnd, HWND parent ) DECLSPEC_HIDDEN;
+ extern void destroy_gl_drawable( HWND hwnd ) DECLSPEC_HIDDEN;
+ extern void destroy_vk_surface( HWND hwnd ) DECLSPEC_HIDDEN;
+ extern void sync_vk_surface( HWND hwnd, BOOL known_child ) DECLSPEC_HIDDEN;
++extern void resize_vk_surfaces( HWND hwnd, Window active, int mask, XWindowChanges *changes ) DECLSPEC_HIDDEN;
+ extern void vulkan_thread_detach(void) DECLSPEC_HIDDEN;
+ 
+ extern void wait_for_withdrawn_state( HWND hwnd, BOOL set ) DECLSPEC_HIDDEN;
+-- 
+2.34.1
+
+From ac66a909535987b18d49c97e681d2cb6a1c7c46b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 22 Oct 2021 00:22:00 +0200
+Subject: [PATCH 11/14] winex11.drv: Update client_window pointer on surface
+ destroy.
+
+To prevent reusing already destroyed client_window with the thread
+display requests.
+
+This lets us restore another client window, as the primary client
+window.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=45277
+CW-Bug-Id: 16608
+---
+ dlls/winex11.drv/vulkan.c | 20 ++++++++++++++++++++
+ dlls/winex11.drv/window.c | 16 ++++++++++++++++
+ dlls/winex11.drv/x11drv.h |  2 ++
+ 3 files changed, 38 insertions(+)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index fd68e000d2f..ebc6f7a2323 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -312,6 +312,24 @@ void sync_vk_surface(HWND hwnd, BOOL known_child)
+     LeaveCriticalSection(&context_section);
+ }
+ 
++Window wine_vk_active_surface( HWND hwnd )
++{
++    struct wine_vk_surface *surface, *active = NULL;
++    Window window;
++
++    EnterCriticalSection(&context_section);
++    LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
++    {
++        if (surface->hwnd != hwnd) continue;
++        active = surface;
++    }
++    if (!active) window = None;
++    else window = active->window;
++    LeaveCriticalSection(&context_section);
++
++    return window;
++}
++
+ void vulkan_thread_detach(void)
+ {
+     struct wine_vk_surface *surface, *next;
+@@ -542,6 +560,7 @@ static void X11DRV_vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface
+         const VkAllocationCallbacks *allocator)
+ {
+     struct wine_vk_surface *x11_surface = surface_from_handle(surface);
++    HWND hwnd = x11_surface->hwnd;
+ 
+     TRACE("%p 0x%s %p\n", instance, wine_dbgstr_longlong(surface), allocator);
+ 
+@@ -554,6 +573,7 @@ static void X11DRV_vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface
+         pvkDestroySurfaceKHR(instance, x11_surface->surface, NULL /* allocator */);
+ 
+         wine_vk_surface_release(x11_surface);
++        update_client_window(hwnd);
+     }
+ }
+ 
+diff --git a/dlls/winex11.drv/window.c b/dlls/winex11.drv/window.c
+index 97e46193159..11d87419856 100644
+--- a/dlls/winex11.drv/window.c
++++ b/dlls/winex11.drv/window.c
+@@ -1470,6 +1470,22 @@ Window get_dummy_parent(void)
+ }
+ 
+ 
++/**********************************************************************
++ *		update_client_window
++ */
++void update_client_window( HWND hwnd )
++{
++    struct x11drv_win_data *data;
++    if ((data = get_win_data( hwnd )))
++    {
++        data->client_window = wine_vk_active_surface( hwnd );
++        /* make sure any request that could use old client window has been flushed */
++        XFlush( data->display );
++        release_win_data( data );
++    }
++}
++
++
+ /**********************************************************************
+  *		create_dummy_client_window
+  */
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index 5ca202441e5..54bbe1a6203 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -642,6 +642,7 @@ extern void destroy_gl_drawable( HWND hwnd ) DECLSPEC_HIDDEN;
+ extern void destroy_vk_surface( HWND hwnd ) DECLSPEC_HIDDEN;
+ extern void sync_vk_surface( HWND hwnd, BOOL known_child ) DECLSPEC_HIDDEN;
+ extern void resize_vk_surfaces( HWND hwnd, Window active, int mask, XWindowChanges *changes ) DECLSPEC_HIDDEN;
++extern Window wine_vk_active_surface( HWND hwnd ) DECLSPEC_HIDDEN;
+ extern void vulkan_thread_detach(void) DECLSPEC_HIDDEN;
+ 
+ extern void wait_for_withdrawn_state( HWND hwnd, BOOL set ) DECLSPEC_HIDDEN;
+@@ -652,6 +653,7 @@ extern void update_net_wm_states( struct x11drv_win_data *data ) DECLSPEC_HIDDEN
+ extern void make_window_embedded( struct x11drv_win_data *data ) DECLSPEC_HIDDEN;
+ extern Window create_dummy_client_window(void) DECLSPEC_HIDDEN;
+ extern Window create_client_window( HWND hwnd, const XVisualInfo *visual ) DECLSPEC_HIDDEN;
++extern void update_client_window( HWND hwnd ) DECLSPEC_HIDDEN;
+ extern void set_window_visual( struct x11drv_win_data *data, const XVisualInfo *vis, BOOL use_alpha ) DECLSPEC_HIDDEN;
+ extern void change_systray_owner( Display *display, Window systray_window ) DECLSPEC_HIDDEN;
+ extern void update_systray_balloon_position(void) DECLSPEC_HIDDEN;
+-- 
+2.34.1
+
+From a13821345dd3a1ff8e1ed15a378deb1a789927f8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Sun, 12 Dec 2021 14:50:47 +0100
+Subject: [PATCH 12/14] winex11.drv: Support concurrent Vulkan surfaces using
+ XComposite.
+
+---
+ dlls/winex11.drv/vulkan.c | 37 ++++++++++++++++++++++++++++++++-----
+ 1 file changed, 32 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index ebc6f7a2323..f2152627dfd 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -67,6 +67,7 @@ struct wine_vk_surface
+     Window window;
+     VkSurfaceKHR surface; /* native surface */
+     VkPresentModeKHR present_mode;
++    BOOL known_child; /* hwnd is or has a child */
+     BOOL offscreen; /* drawable is offscreen */
+     HDC hdc;
+     HWND hwnd;
+@@ -302,12 +303,21 @@ void resize_vk_surfaces(HWND hwnd, Window active, int mask, XWindowChanges *chan
+ void sync_vk_surface(HWND hwnd, BOOL known_child)
+ {
+     struct wine_vk_surface *surface;
++    DWORD surface_count = 0;
++
+     EnterCriticalSection(&context_section);
+     LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
+     {
+-        if (surface->hwnd != hwnd)
+-            continue;
+-        wine_vk_surface_set_offscreen(surface, known_child);
++        if (surface->hwnd != hwnd) continue;
++        surface->known_child = known_child;
++        surface_count++;
++    }
++    TRACE("hwnd %p surface_count %u known_child %u\n", hwnd, surface_count, known_child);
++    LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
++    {
++        if (surface->hwnd != hwnd) continue;
++        if (surface_count > 1) wine_vk_surface_set_offscreen(surface, TRUE);
++        else wine_vk_surface_set_offscreen(surface, known_child);
+     }
+     LeaveCriticalSection(&context_section);
+ }
+@@ -315,6 +325,7 @@ void sync_vk_surface(HWND hwnd, BOOL known_child)
+ Window wine_vk_active_surface( HWND hwnd )
+ {
+     struct wine_vk_surface *surface, *active = NULL;
++    DWORD surface_count = 0;
+     Window window;
+ 
+     EnterCriticalSection(&context_section);
+@@ -322,9 +333,16 @@ Window wine_vk_active_surface( HWND hwnd )
+     {
+         if (surface->hwnd != hwnd) continue;
+         active = surface;
++        surface_count++;
+     }
+     if (!active) window = None;
+-    else window = active->window;
++    else
++    {
++        TRACE("hwnd %p surface_count %u known_child %u\n", hwnd, surface_count, active->known_child);
++        if (surface_count > 1) wine_vk_surface_set_offscreen(active, TRUE);
++        else wine_vk_surface_set_offscreen(active, active->known_child);
++        window = active->window;
++    }
+     LeaveCriticalSection(&context_section);
+ 
+     return window;
+@@ -476,7 +494,7 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+ {
+     VkResult res;
+     VkXlibSurfaceCreateInfoKHR create_info_host;
+-    struct wine_vk_surface *x11_surface;
++    struct wine_vk_surface *x11_surface, *other;
+ 
+     TRACE("%p %p %p %p\n", instance, create_info, allocator, surface);
+ 
+@@ -489,6 +507,7 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+ 
+     x11_surface->ref = 1;
+     x11_surface->hwnd = create_info->hwnd;
++    x11_surface->known_child = FALSE;
+     if (x11_surface->hwnd)
+     {
+         x11_surface->hdc = GetDC(create_info->hwnd);
+@@ -511,6 +530,7 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+ 
+     if (create_info->hwnd && (GetWindow( create_info->hwnd, GW_CHILD ) || GetAncestor( create_info->hwnd, GA_PARENT ) != GetDesktopWindow()))
+     {
++        x11_surface->known_child = TRUE;
+         TRACE("hwnd %p creating offscreen child window surface\n", x11_surface->hwnd);
+         if (!wine_vk_surface_set_offscreen(x11_surface, TRUE))
+         {
+@@ -533,6 +553,13 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+     }
+ 
+     EnterCriticalSection(&context_section);
++    LIST_FOR_EACH_ENTRY(other, &surface_list, struct wine_vk_surface, entry)
++    {
++        if (other->hwnd != x11_surface->hwnd) continue;
++        TRACE("hwnd %p already has a swapchain, moving surface offscreen\n", x11_surface->hwnd);
++        wine_vk_surface_set_offscreen(other, TRUE);
++        wine_vk_surface_set_offscreen(x11_surface, TRUE);
++    }
+     list_add_tail(&surface_list, &x11_surface->entry);
+     LeaveCriticalSection(&context_section);
+ 
+-- 
+2.34.1
+
+From 50e544e0c92d325e714d455eb50bc103f19bfc6e Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Mon, 22 Nov 2021 20:00:43 +0200
+Subject: [PATCH 13/14] winex11.drv: Consider only Vulkan surfaces with
+ swapchains for offscreen rendering.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+"A native window cannot be associated with more than one non-retired
+swapchain at a time."[1]
+
+The hack introduced in 81f5a09134e5 ("winex11: Allow multiple vulkan
+surfaces per hwnd") sends surfaces for offscreen rendering using
+XComposite when there are multiple surfaces associated with a single
+hwnd.
+
+That's overzealous though, as some of the swapchains may be already
+destroyed.
+
+E.g. DOOM Eternal with vsync enabled does the following:
+
+    vkCreateWin32SurfaceKHR(vk_inst, &surface_create_info, NULL, &old_surface)
+    vkCreateSwapchainKHR(vk_inst, &sc_create_info, NULL, &old_sc);
+    vkDestroySwapchainKHR(vk_inst, old_sc, NULL);
+    /* old_surface never gets destroyed */
+
+    vkCreateWin32SurfaceKHR(vk_inst, &surface_create_info, NULL, &new_surface);
+    vkCreateSwapchainKHR(vk_inst, &sc_create_info, NULL, &new_swapchain);
+
+Which makes the hack kick in and degrades the performance.
+
+This change makes sure that we only count surfaces that have any
+swapchains associated with them, whether they are retired or not.
+
+That's a bit of oversimplification, as swapchain can get retired without
+new swapchain being created:
+
+"Upon calling vkCreateSwapchainKHR with an oldSwapchain that is not
+VK_NULL_HANDLE, oldSwapchain is retired — even if creation of the new
+swapchain fails. The new swapchain is created in the non-retired state
+whether or not oldSwapchain is VK_NULL_HANDLE."[2]
+
+but that's unlikely to happen and cause problems.
+
+[1]: https://khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkSwapchainKHR.html
+[2]: https://khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkSwapchainCreateInfoKHR.html
+
+CW-Bug-Id: #19666
+---
+ dlls/winex11.drv/vulkan.c | 47 ++++++++++++++++++++++-----------------
+ 1 file changed, 27 insertions(+), 20 deletions(-)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index f2152627dfd..36091e76879 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -69,6 +69,7 @@ struct wine_vk_surface
+     VkPresentModeKHR present_mode;
+     BOOL known_child; /* hwnd is or has a child */
+     BOOL offscreen; /* drawable is offscreen */
++    LONG swapchain_count; /* surface can have one active an many retired swapchains */
+     HDC hdc;
+     HWND hwnd;
+     DWORD hwnd_thread_id;
+@@ -303,43 +304,43 @@ void resize_vk_surfaces(HWND hwnd, Window active, int mask, XWindowChanges *chan
+ void sync_vk_surface(HWND hwnd, BOOL known_child)
+ {
+     struct wine_vk_surface *surface;
+-    DWORD surface_count = 0;
++    DWORD surface_with_swapchain_count = 0;
+ 
+     EnterCriticalSection(&context_section);
+     LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
+     {
+         if (surface->hwnd != hwnd) continue;
++        if (surface->swapchain_count) surface_with_swapchain_count++;
+         surface->known_child = known_child;
+-        surface_count++;
+     }
+-    TRACE("hwnd %p surface_count %u known_child %u\n", hwnd, surface_count, known_child);
++    TRACE("hwnd %p surface_with_swapchain_count %u known_child %u\n", hwnd, surface_with_swapchain_count, known_child);
+     LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
+     {
+         if (surface->hwnd != hwnd) continue;
+-        if (surface_count > 1) wine_vk_surface_set_offscreen(surface, TRUE);
++        if (surface_with_swapchain_count > 1) wine_vk_surface_set_offscreen(surface, TRUE);
+         else wine_vk_surface_set_offscreen(surface, known_child);
+     }
+     LeaveCriticalSection(&context_section);
+ }
+ 
+-Window wine_vk_active_surface( HWND hwnd )
++Window wine_vk_active_surface(HWND hwnd)
+ {
+     struct wine_vk_surface *surface, *active = NULL;
+-    DWORD surface_count = 0;
++    DWORD surface_with_swapchain_count = 0;
+     Window window;
+ 
+     EnterCriticalSection(&context_section);
+     LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
+     {
+         if (surface->hwnd != hwnd) continue;
++        if (surface->swapchain_count) surface_with_swapchain_count++;
+         active = surface;
+-        surface_count++;
+     }
+     if (!active) window = None;
+     else
+     {
+-        TRACE("hwnd %p surface_count %u known_child %u\n", hwnd, surface_count, active->known_child);
+-        if (surface_count > 1) wine_vk_surface_set_offscreen(active, TRUE);
++        TRACE("hwnd %p surface_with_swapchain_count %u known_child %u\n", hwnd, surface_with_swapchain_count, active->known_child);
++        if (surface_with_swapchain_count > 1) wine_vk_surface_set_offscreen(active, TRUE);
+         else wine_vk_surface_set_offscreen(active, active->known_child);
+         window = active->window;
+     }
+@@ -457,7 +458,7 @@ static VkResult X11DRV_vkCreateSwapchainKHR(VkDevice device,
+         const VkSwapchainCreateInfoKHR *create_info,
+         const VkAllocationCallbacks *allocator, VkSwapchainKHR *swapchain)
+ {
+-    struct wine_vk_surface *x11_surface = surface_from_handle(create_info->surface);
++    struct wine_vk_surface *other, *x11_surface = surface_from_handle(create_info->surface);
+     VkSwapchainCreateInfoKHR create_info_host;
+     VkResult result;
+ 
+@@ -478,13 +479,22 @@ static VkResult X11DRV_vkCreateSwapchainKHR(VkDevice device,
+         create_info_host.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+     x11_surface->present_mode = create_info->presentMode;
+ 
++    EnterCriticalSection(&context_section);
++    LIST_FOR_EACH_ENTRY(other, &surface_list, struct wine_vk_surface, entry)
++    {
++        if (other->hwnd != x11_surface->hwnd) continue;
++        if (!other->swapchain_count) continue;
++        TRACE("hwnd %p already has a swapchain, moving surface offscreen\n", x11_surface->hwnd);
++        wine_vk_surface_set_offscreen(other, TRUE);
++        wine_vk_surface_set_offscreen(x11_surface, TRUE);
++    }
+     result = pvkCreateSwapchainKHR(device, &create_info_host, NULL /* allocator */, swapchain);
+     if (result == VK_SUCCESS)
+     {
+-        EnterCriticalSection(&context_section);
++        x11_surface->swapchain_count++;
+         XSaveContext(gdi_display, (XID)(*swapchain), vulkan_swapchain_context, (char *)wine_vk_surface_grab(x11_surface));
+-        LeaveCriticalSection(&context_section);
+     }
++    LeaveCriticalSection(&context_section);
+     return result;
+ }
+ 
+@@ -494,7 +504,7 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+ {
+     VkResult res;
+     VkXlibSurfaceCreateInfoKHR create_info_host;
+-    struct wine_vk_surface *x11_surface, *other;
++    struct wine_vk_surface *x11_surface;
+ 
+     TRACE("%p %p %p %p\n", instance, create_info, allocator, surface);
+ 
+@@ -508,6 +518,7 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+     x11_surface->ref = 1;
+     x11_surface->hwnd = create_info->hwnd;
+     x11_surface->known_child = FALSE;
++    x11_surface->swapchain_count = 0;
+     if (x11_surface->hwnd)
+     {
+         x11_surface->hdc = GetDC(create_info->hwnd);
+@@ -553,13 +564,6 @@ static VkResult X11DRV_vkCreateWin32SurfaceKHR(VkInstance instance,
+     }
+ 
+     EnterCriticalSection(&context_section);
+-    LIST_FOR_EACH_ENTRY(other, &surface_list, struct wine_vk_surface, entry)
+-    {
+-        if (other->hwnd != x11_surface->hwnd) continue;
+-        TRACE("hwnd %p already has a swapchain, moving surface offscreen\n", x11_surface->hwnd);
+-        wine_vk_surface_set_offscreen(other, TRUE);
+-        wine_vk_surface_set_offscreen(x11_surface, TRUE);
+-    }
+     list_add_tail(&surface_list, &x11_surface->entry);
+     LeaveCriticalSection(&context_section);
+ 
+@@ -618,7 +622,10 @@ static void X11DRV_vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapcha
+ 
+     EnterCriticalSection(&context_section);
+     if (!XFindContext(gdi_display, (XID)swapchain, vulkan_swapchain_context, (char **)&surface))
++    {
++        surface->swapchain_count--;
+         wine_vk_surface_release(surface);
++    }
+     XDeleteContext(gdi_display, (XID)swapchain, vulkan_swapchain_context);
+     LeaveCriticalSection(&context_section);
+ }
+-- 
+2.34.1
+
+From 33d159ee59f6e21bc47938f966a2105da6426b02 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Tue, 23 Nov 2021 13:54:34 +0200
+Subject: [PATCH 14/14] winex11.drv: Don't consider swapchain-less Vulkan
+ surfaces active.
+
+---
+ dlls/winex11.drv/vulkan.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winex11.drv/vulkan.c b/dlls/winex11.drv/vulkan.c
+index 36091e76879..287fb069bec 100644
+--- a/dlls/winex11.drv/vulkan.c
++++ b/dlls/winex11.drv/vulkan.c
+@@ -333,8 +333,9 @@ Window wine_vk_active_surface(HWND hwnd)
+     LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
+     {
+         if (surface->hwnd != hwnd) continue;
+-        if (surface->swapchain_count) surface_with_swapchain_count++;
++        if (!surface->swapchain_count) continue;
+         active = surface;
++        surface_with_swapchain_count++;
+     }
+     if (!active) window = None;
+     else
+-- 
+2.34.1
+

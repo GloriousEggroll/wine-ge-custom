@@ -1,0 +1,692 @@
+From: Alexandre Julliard <julliard@winehq.org>
+
+This removes the ability to use Windows sockets on Unix.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=52250
+Signed-off-by: Zebediah Figura <zfigura@codeweavers.com>
+---
+
+Extended from the original revision to include all headers that interpret
+USE_WS_PREFIX, not just the main socket ones. Note that in particular inaddr.h
+can be included by iphlpapi.h without requiring winsock.h or winsock2.h.
+
+It seems more than a little tempting to define a Wine-internal header to take
+care of both this and defining the WS() macro...
+
+ include/af_irda.h  | 4 ++++
+ include/in6addr.h  | 4 ++++
+ include/inaddr.h   | 4 ++++
+ include/mswsock.h  | 4 ++++
+ include/winsock.h  | 4 ++++
+ include/winsock2.h | 4 ++++
+ include/wsipx.h    | 4 ++++
+ include/wsnwlink.h | 4 ++++
+ 8 files changed, 32 insertions(+)
+
+diff --git a/include/af_irda.h b/include/af_irda.h
+index 3be5b39af02..6a6dca83079 100644
+--- a/include/af_irda.h
++++ b/include/af_irda.h
+@@ -18,6 +18,10 @@
+ #ifndef AF_IRDA_H
+ #define AF_IRDA_H
+
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#define USE_WS_PREFIX
++#endif
++
+ typedef struct _IRDA_DEVICE_INFO
+ {
+     UCHAR irdaDeviceID[4];
+diff --git a/include/in6addr.h b/include/in6addr.h
+index a745bd249fa..663478fea12 100644
+--- a/include/in6addr.h
++++ b/include/in6addr.h
+@@ -19,6 +19,10 @@
+ #ifndef __IN6ADDR__
+ #define __IN6ADDR__
+
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#define USE_WS_PREFIX
++#endif
++
+ #ifdef USE_WS_PREFIX
+ #define WS(x)    WS_##x
+ #else
+diff --git a/include/inaddr.h b/include/inaddr.h
+index 72a50284092..078c031ad0d 100644
+--- a/include/inaddr.h
++++ b/include/inaddr.h
+@@ -20,6 +20,10 @@
+ #ifndef __INADDR_H__
+ #define __INADDR_H__
+
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#define USE_WS_PREFIX
++#endif
++
+ #ifdef USE_WS_PREFIX
+ #define WS(x)    WS_##x
+ #else
+diff --git a/include/mswsock.h b/include/mswsock.h
+index fa97d5bf04d..4afd8a7ceb1 100644
+--- a/include/mswsock.h
++++ b/include/mswsock.h
+@@ -18,6 +18,10 @@
+ #ifndef _MSWSOCK_
+ #define _MSWSOCK_
+
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#define USE_WS_PREFIX
++#endif
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif /* defined(__cplusplus) */
+diff --git a/include/winsock.h b/include/winsock.h
+index b8a7a4ec400..6afe00e8bd7 100644
+--- a/include/winsock.h
++++ b/include/winsock.h
+@@ -24,6 +24,10 @@
+ # error Please use winsock2 in Wine
+ #endif
+
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#define USE_WS_PREFIX
++#endif
++
+ #ifndef __WINE_WINSOCKAPI_STDLIB_H
+ #define __WINE_WINSOCKAPI_STDLIB_H
+
+diff --git a/include/winsock2.h b/include/winsock2.h
+index f1d43acad40..9923ea0f6d1 100644
+--- a/include/winsock2.h
++++ b/include/winsock2.h
+@@ -19,6 +19,10 @@
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  */
+
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#define USE_WS_PREFIX
++#endif
++
+ #ifndef __WINE_WINSOCKAPI_STDLIB_H
+ #define __WINE_WINSOCKAPI_STDLIB_H
+
+diff --git a/include/wsipx.h b/include/wsipx.h
+index 671e7563470..56395e26456 100644
+--- a/include/wsipx.h
++++ b/include/wsipx.h
+@@ -19,6 +19,10 @@
+ #ifndef _WINE_WSIPX_
+ #define _WINE_WSIPX_
+
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#define USE_WS_PREFIX
++#endif
++
+ #ifdef USE_WS_PREFIX
+ # define WS(x)    WS_##x
+ #else
+diff --git a/include/wsnwlink.h b/include/wsnwlink.h
+index f237f0d1de5..161f9366df8 100644
+--- a/include/wsnwlink.h
++++ b/include/wsnwlink.h
+@@ -19,6 +19,10 @@
+ #ifndef _WSNWLINK_
+ #define _WSNWLINK_
+
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#define USE_WS_PREFIX
++#endif
++
+ #ifdef USE_WS_PREFIX
+ #define WS(x)    WS_##x
+ #else
+--
+2.34.1
+
+From: Zebediah Figura <zfigura@codeweavers.com>
+Subject: [PATCH 2/4] include: Allow using Windows sockets on Unix.
+Message-Id: <20220110233107.97773-2-zfigura@codeweavers.com>
+Date: Mon, 10 Jan 2022 17:31:05 -0600
+In-Reply-To: <20220110233107.97773-1-zfigura@codeweavers.com>
+References: <20220110233107.97773-1-zfigura@codeweavers.com>
+
+By explicitly defining WINELIB_USE_WINSOCK.
+
+Signed-off-by: Zebediah Figura <zfigura@codeweavers.com>
+---
+ include/af_irda.h  | 3 ++-
+ include/in6addr.h  | 3 ++-
+ include/inaddr.h   | 3 ++-
+ include/mswsock.h  | 3 ++-
+ include/winsock.h  | 3 ++-
+ include/winsock2.h | 3 ++-
+ include/wsipx.h    | 3 ++-
+ include/wsnwlink.h | 3 ++-
+ 8 files changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/include/af_irda.h b/include/af_irda.h
+index 6a6dca83079..80ce7e1d6b8 100644
+--- a/include/af_irda.h
++++ b/include/af_irda.h
+@@ -18,7 +18,8 @@
+ #ifndef AF_IRDA_H
+ #define AF_IRDA_H
+ 
+-#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && \
++    !defined(__WINE_USE_MSVCRT) && !defined(WINELIB_USE_WINSOCK)
+ #define USE_WS_PREFIX
+ #endif
+ 
+diff --git a/include/in6addr.h b/include/in6addr.h
+index 663478fea12..07f95d7ef64 100644
+--- a/include/in6addr.h
++++ b/include/in6addr.h
+@@ -19,7 +19,8 @@
+ #ifndef __IN6ADDR__
+ #define __IN6ADDR__
+ 
+-#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && \
++    !defined(__WINE_USE_MSVCRT) && !defined(WINELIB_USE_WINSOCK)
+ #define USE_WS_PREFIX
+ #endif
+ 
+diff --git a/include/inaddr.h b/include/inaddr.h
+index 078c031ad0d..9c88c32864d 100644
+--- a/include/inaddr.h
++++ b/include/inaddr.h
+@@ -20,7 +20,8 @@
+ #ifndef __INADDR_H__
+ #define __INADDR_H__
+ 
+-#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && \
++    !defined(__WINE_USE_MSVCRT) && !defined(WINELIB_USE_WINSOCK)
+ #define USE_WS_PREFIX
+ #endif
+ 
+diff --git a/include/mswsock.h b/include/mswsock.h
+index 4afd8a7ceb1..5a216a80c13 100644
+--- a/include/mswsock.h
++++ b/include/mswsock.h
+@@ -18,7 +18,8 @@
+ #ifndef _MSWSOCK_
+ #define _MSWSOCK_
+ 
+-#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && \
++    !defined(__WINE_USE_MSVCRT) && !defined(WINELIB_USE_WINSOCK)
+ #define USE_WS_PREFIX
+ #endif
+ 
+diff --git a/include/winsock.h b/include/winsock.h
+index 6afe00e8bd7..d6160bea446 100644
+--- a/include/winsock.h
++++ b/include/winsock.h
+@@ -24,7 +24,8 @@
+ # error Please use winsock2 in Wine
+ #endif
+ 
+-#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && \
++    !defined(__WINE_USE_MSVCRT) && !defined(WINELIB_USE_WINSOCK)
+ #define USE_WS_PREFIX
+ #endif
+ 
+diff --git a/include/winsock2.h b/include/winsock2.h
+index 9923ea0f6d1..31b7bd13675 100644
+--- a/include/winsock2.h
++++ b/include/winsock2.h
+@@ -19,7 +19,8 @@
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  */
+ 
+-#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && \
++    !defined(__WINE_USE_MSVCRT) && !defined(WINELIB_USE_WINSOCK)
+ #define USE_WS_PREFIX
+ #endif
+ 
+diff --git a/include/wsipx.h b/include/wsipx.h
+index 56395e26456..215aa155a12 100644
+--- a/include/wsipx.h
++++ b/include/wsipx.h
+@@ -19,7 +19,8 @@
+ #ifndef _WINE_WSIPX_
+ #define _WINE_WSIPX_
+ 
+-#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && \
++    !defined(__WINE_USE_MSVCRT) && !defined(WINELIB_USE_WINSOCK)
+ #define USE_WS_PREFIX
+ #endif
+ 
+diff --git a/include/wsnwlink.h b/include/wsnwlink.h
+index 161f9366df8..c960b8eb7cd 100644
+--- a/include/wsnwlink.h
++++ b/include/wsnwlink.h
+@@ -19,7 +19,8 @@
+ #ifndef _WSNWLINK_
+ #define _WSNWLINK_
+ 
+-#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && !defined(__WINE_USE_MSVCRT)
++#if !defined(USE_WS_PREFIX) && !defined(__MINGW32__) && !defined (_MSC_VER) && \
++    !defined(__WINE_USE_MSVCRT) && !defined(WINELIB_USE_WINSOCK)
+ #define USE_WS_PREFIX
+ #endif
+ 
+
+-- 
+2.34.1
+
+From: Zebediah Figura <zfigura@codeweavers.com>
+Subject: [PATCH 3/4] include: Do not define winsock functions if using the WS_* prefix.
+Message-Id: <20220110233107.97773-3-zfigura@codeweavers.com>
+Date: Mon, 10 Jan 2022 17:31:06 -0600
+In-Reply-To: <20220110233107.97773-1-zfigura@codeweavers.com>
+References: <20220110233107.97773-1-zfigura@codeweavers.com>
+
+They cannot be linked to this way.
+
+Signed-off-by: Zebediah Figura <zfigura@codeweavers.com>
+---
+ include/winsock.h  | 58 +++++++++++++++++++++++----------------------
+ include/winsock2.h | 59 ++++++++++++++++++++++++----------------------
+ 2 files changed, 61 insertions(+), 56 deletions(-)
+
+diff --git a/include/winsock.h b/include/winsock.h
+index d6160bea446..4b8242e404d 100644
+--- a/include/winsock.h
++++ b/include/winsock.h
+@@ -947,39 +947,41 @@ void WINAPI WSASetLastError(int);
+ int WINAPI WSAStartup(WORD,LPWSADATA);
+ int WINAPI WSAUnhookBlockingHook(void);
+ 
+-SOCKET WINAPI WS(accept)(SOCKET,struct WS(sockaddr)*,int*);
+-int WINAPI WS(bind)(SOCKET,const struct WS(sockaddr)*,int);
+-int WINAPI WS(closesocket)(SOCKET);
+-int WINAPI WS(connect)(SOCKET,const struct WS(sockaddr)*,int);
+-struct WS(hostent)* WINAPI WS(gethostbyaddr)(const char*,int,int);
+-struct WS(hostent)* WINAPI WS(gethostbyname)(const char*);
+-int WINAPI WS(getpeername)(SOCKET,struct WS(sockaddr)*,int*);
+-struct WS(protoent)* WINAPI WS(getprotobyname)(const char*);
+-struct WS(protoent)* WINAPI WS(getprotobynumber)(int);
+-#ifdef WS_DEFINE_SELECT
+-int WINAPI WS(select)(int,WS(fd_set)*,WS(fd_set)*,WS(fd_set)*,const struct WS(timeval)*);
+-#endif
+-struct WS(servent)* WINAPI WS(getservbyname)(const char*,const char*);
+-struct WS(servent)* WINAPI WS(getservbyport)(int,const char*);
+-int WINAPI WS(getsockname)(SOCKET,struct WS(sockaddr)*,int*);
+-int WINAPI WS(getsockopt)(SOCKET,int,int,char*,int*);
+-ULONG WINAPI WS(inet_addr)(const char*);
+-char* WINAPI WS(inet_ntoa)(struct WS(in_addr));
+-int WINAPI WS(ioctlsocket)(SOCKET,LONG,ULONG*);
+-int WINAPI WS(listen)(SOCKET,int);
+-int WINAPI WS(recv)(SOCKET,char*,int,int);
+-int WINAPI WS(recvfrom)(SOCKET,char*,int,int,struct WS(sockaddr)*,int*);
+-int WINAPI WS(send)(SOCKET,const char*,int,int);
+-int WINAPI WS(sendto)(SOCKET,const char*,int,int,const struct WS(sockaddr)*,int);
+-int WINAPI WS(setsockopt)(SOCKET,int,int,const char*,int);
+-int WINAPI WS(shutdown)(SOCKET,int);
+-SOCKET WINAPI WS(socket)(int,int,int);
++#ifndef USE_WS_PREFIX
++
++SOCKET WINAPI accept(SOCKET s, struct sockaddr *addr, int *len);
++int WINAPI bind(SOCKET s, const struct sockaddr *addr, int len);
++int WINAPI closesocket(SOCKET s);
++int WINAPI connect(SOCKET s, const struct sockaddr *addr, int len);
++struct hostent * WINAPI gethostbyaddr(const char *addr, int len, int family);
++struct hostent * WINAPI gethostbyname(const char *name);
++int WINAPI getpeername(SOCKET s, struct sockaddr *addr, int *len);
++struct protoent * WINAPI getprotobyname(const char *name);
++struct protoent * WINAPI getprotobynumber(int number);
++struct servent * WINAPI getservbyname(const char *name, const char *protocol);
++struct servent * WINAPI getservbyport(int port, const char *protocol);
++int WINAPI getsockname(SOCKET s, struct sockaddr *addr, int *len);
++int WINAPI getsockopt(SOCKET s, int level, int name, char *value, int *len);
++ULONG WINAPI inet_addr(const char *addr);
++char * WINAPI inet_ntoa(struct in_addr addr);
++int WINAPI ioctlsocket(SOCKET s, LONG cmd, u_long *argp);
++int WINAPI listen(SOCKET s, int backlog);
++int WINAPI recv(SOCKET s, char *buffer, int size, int flags);
++int WINAPI recvfrom(SOCKET s, char *buffer, int size, int flags, struct sockaddr *addr, int *addr_len);
++int WINAPI select(int unused, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, const struct timeval *timeout);
++int WINAPI send(SOCKET s, const char *buffer, int size, int flags);
++int WINAPI sendto(SOCKET s, const char *buffer, int size, int flags, const struct sockaddr *addr, int addr_len);
++int WINAPI setsockopt(SOCKET s, int level, int name, const char *value, int len);
++int WINAPI shutdown(SOCKET s, int how);
++SOCKET WINAPI socket(int family, int type, int protocol);
+ 
+ #if defined(__MINGW32__) || defined (_MSC_VER) || defined(__WINE_USE_MSVCRT)
+ /* gethostname is not defined on Unix because of conflicts with unistd.h */
+-int WINAPI WS(gethostname)(char*,int);
++int WINAPI gethostname(char *name, int len);
+ #endif
+ 
++#endif /* USE_WS_PREFIX */
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/include/winsock2.h b/include/winsock2.h
+index 31b7bd13675..565979a74c0 100644
+--- a/include/winsock2.h
++++ b/include/winsock2.h
+@@ -1113,37 +1113,40 @@ typedef SOCKET (WINAPI *LPFN_SOCKET)(int,int,int);
+ #if WS_API_PROTOTYPES
+ int WINAPI __WSAFDIsSet(SOCKET, WS(fd_set) *);
+ 
+-SOCKET WINAPI WS(accept)(SOCKET, struct WS(sockaddr) *, int *);
+-int WINAPI WS(bind)(SOCKET, const struct WS(sockaddr) *, int);
+-int WINAPI WS(closesocket)(SOCKET);
+-int WINAPI WS(connect)(SOCKET, const struct WS(sockaddr) *, int);
+-struct WS(hostent) * WINAPI WS(gethostbyaddr)(const char *, int, int);
+-struct WS(hostent) * WINAPI WS(gethostbyname)(const char *);
++
++#ifndef USE_WS_PREFIX
++
++SOCKET WINAPI accept(SOCKET s, struct sockaddr *addr, int *len);
++int WINAPI bind(SOCKET s, const struct sockaddr *addr, int len);
++int WINAPI closesocket(SOCKET s);
++int WINAPI connect(SOCKET s, const struct sockaddr *addr, int len);
++struct hostent * WINAPI gethostbyaddr(const char *addr, int len, int family);
++struct hostent * WINAPI gethostbyname(const char *name);
+ #if defined(__MINGW32__) || defined(_MSC_VER) || defined(__WINE_USE_MSVCRT)
+ /* gethostname is defined in unistd.h */
+-int WINAPI WS(gethostname)(char *, int);
++int WINAPI gethostname(char *name, int len);
+ #endif
+-int WINAPI WS(getpeername)(SOCKET, struct WS(sockaddr) *, int *);
+-struct WS(protoent) * WINAPI WS(getprotobyname)(const char *);
+-struct WS(protoent) * WINAPI WS(getprotobynumber)(int);
+-struct WS(servent) * WINAPI WS(getservbyname)(const char *, const char *);
+-struct WS(servent) * WINAPI WS(getservbyport)(int, const char *);
+-int WINAPI WS(getsockname)(SOCKET, struct WS(sockaddr) *, int *);
+-int WINAPI WS(getsockopt)(SOCKET, int, int, char *, int *);
+-ULONG WINAPI WS(inet_addr)(const char *);
+-char * WINAPI WS(inet_ntoa)(struct WS(in_addr));
+-int WINAPI WS(ioctlsocket)(SOCKET, LONG, WS(u_long) *);
+-int WINAPI WS(listen)(SOCKET, int);
+-int WINAPI WS(recv)(SOCKET, char *, int, int);
+-int WINAPI WS(recvfrom)(SOCKET, char *, int, int, struct WS(sockaddr) *, int *);
+-#ifdef WS_DEFINE_SELECT
+-int WINAPI WS(select)(int, WS(fd_set) *, WS(fd_set) *, WS(fd_set) *, const struct WS(timeval) *);
+-#endif
+-int WINAPI WS(send)(SOCKET, const char *, int, int);
+-int WINAPI WS(sendto)(SOCKET, const char *, int, int, const struct WS(sockaddr) *, int);
+-int WINAPI WS(setsockopt)(SOCKET, int, int, const char *, int);
+-int WINAPI WS(shutdown)(SOCKET, int);
+-SOCKET WINAPI WS(socket)(int, int, int);
++int WINAPI getpeername(SOCKET s, struct sockaddr *addr, int *len);
++struct protoent * WINAPI getprotobyname(const char *name);
++struct protoent * WINAPI getprotobynumber(int number);
++struct servent * WINAPI getservbyname(const char *name, const char *protocol);
++struct servent * WINAPI getservbyport(int port, const char *protocol);
++int WINAPI getsockname(SOCKET s, struct sockaddr *addr, int *len);
++int WINAPI getsockopt(SOCKET s, int level, int name, char *value, int *len);
++ULONG WINAPI inet_addr(const char *addr);
++char * WINAPI inet_ntoa(struct in_addr addr);
++int WINAPI ioctlsocket(SOCKET s, LONG cmd, u_long *argp);
++int WINAPI listen(SOCKET s, int backlog);
++int WINAPI recv(SOCKET s, char *buffer, int size, int flags);
++int WINAPI recvfrom(SOCKET s, char *buffer, int size, int flags, struct sockaddr *addr, int *addr_len);
++int WINAPI select(int unused, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, const struct timeval *timeout);
++int WINAPI send(SOCKET s, const char *buffer, int size, int flags);
++int WINAPI sendto(SOCKET s, const char *buffer, int size, int flags, const struct sockaddr *addr, int addr_len);
++int WINAPI setsockopt(SOCKET s, int level, int name, const char *value, int len);
++int WINAPI shutdown(SOCKET s, int how);
++SOCKET WINAPI socket(int family, int type, int protocol);
++
++#endif /* USE_WS_PREFIX */
+ 
+ int WINAPI GetHostNameW(WCHAR *, int);
+ SOCKET WINAPI WSAAccept(SOCKET,struct WS(sockaddr)*,LPINT,LPCONDITIONPROC,DWORD_PTR);
+
+-- 
+2.34.1
+
+From: Zebediah Figura <zfigura@codeweavers.com>
+Subject: [PATCH 4/4] include: Require winsock headers to be included before system headers.
+Message-Id: <20220110233107.97773-4-zfigura@codeweavers.com>
+Date: Mon, 10 Jan 2022 17:31:07 -0600
+In-Reply-To: <20220110233107.97773-1-zfigura@codeweavers.com>
+References: <20220110233107.97773-1-zfigura@codeweavers.com>
+
+We have already started requiring WINELIB_USE_WINSOCK for this case; let's also
+take the opportunity to remove some workarounds.
+
+Signed-off-by: Zebediah Figura <zfigura@codeweavers.com>
+---
+ include/winsock.h  | 73 +++++++++-------------------------------------
+ include/winsock2.h | 58 ++++--------------------------------
+ 2 files changed, 18 insertions(+), 113 deletions(-)
+
+diff --git a/include/winsock.h b/include/winsock.h
+index 4b8242e404d..38186f8c80d 100644
+--- a/include/winsock.h
++++ b/include/winsock.h
+@@ -32,53 +32,12 @@
+ #ifndef __WINE_WINSOCKAPI_STDLIB_H
+ #define __WINE_WINSOCKAPI_STDLIB_H
+ 
+-/*
+- * This section defines the items that conflict with the Unix headers.
+- */
+ #ifndef USE_WS_PREFIX
+-/* We are not using the WS_ prefix we risk getting conflicts for
+- * everything related to select.
+- */
+-# ifdef FD_CLR
+-/* Too late, the Unix version of stdlib.h was included before winsock.h.
+- * This means select and all the related stuff is already defined and we
+- * cannot override types and function prototypes.
+- * All we can do is disable all these symbols so that they are not used
+- * inadvertently.
+- */
+-#  include <sys/types.h>
+-#  undef FD_SETSIZE
+-#  undef FD_CLR
+-#  undef FD_SET
+-#  undef FD_ZERO
+-#  undef FD_ISSET
+ 
+-#  define FD_SETSIZE Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define FD_CLR     Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define FD_SET     Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define FD_ZERO    Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define FD_ISSET   Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define fd_set     Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define select     Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-# elif defined(RLIM_INFINITY)
+ /* On Darwin stdlib.h includes sys/resource.h which defines timeval but not the fd_set macros */
+-#  define fd_set unix_fd_set
+-#  include <sys/types.h>
+-#  include <time.h>
+-#  include <stdlib.h>
+-#  undef fd_set
+-#  undef FD_SETSIZE
+-#  undef FD_CLR
+-#  undef FD_SET
+-#  undef FD_ZERO
+-#  undef FD_ISSET
+-#  define select     Include_winsock_h_before_sys_types_h_or_use_the_MSVCRT_library
+-#  define timeval    Include_winsock_h_before_sys_types_h_or_use_the_MSVCRT_library
+-# else  /* FD_CLR */
+-/* stdlib.h has not been included yet so it's not too late. Include it now
+- * making sure that none of the select symbols is affected. Then we can
+- * define them with our own values.
+- */
++# if defined(FD_CLR) || defined(RLIM_INFINITY)
++#  error Include winsock.h before stdlib.h, time.h, or sys/types.h, or use the MSVCRT library
++# else
+ #  define fd_set unix_fd_set
+ #  define timeval unix_timeval
+ #  define select unix_select
+@@ -98,14 +57,13 @@
+ #  undef FD_ZERO
+ #  undef FD_ISSET
+ #  undef _TIMEVAL_DEFINED
+-
+-#  define WS_DEFINE_SELECT
+ # endif /* FD_CLR */
+ 
+ #else
+-# define WS_DEFINE_SELECT
++
+ # include <sys/types.h>
+ # include <stdlib.h>
++
+ #endif /* !USE_WS_PREFIX */
+ 
+ #endif /* __WINE_WINSOCKAPI_STDLIB_H */
+@@ -406,18 +364,15 @@ typedef struct WS(linger)
+  * Select
+  */
+ 
+-#ifdef WS_DEFINE_SELECT
+-/* Define our own version of select and the associated types and macros */
+-
+-# ifndef USE_WS_PREFIX
+-#  ifndef FD_SETSIZE
+-#   define FD_SETSIZE              64
+-#  endif
+-# else
+-#  ifndef WS_FD_SETSIZE
+-#   define WS_FD_SETSIZE           64
+-#  endif
++#ifndef USE_WS_PREFIX
++# ifndef FD_SETSIZE
++#  define FD_SETSIZE                64
+ # endif
++#else
++# ifndef WS_FD_SETSIZE
++#  define WS_FD_SETSIZE             64
++# endif
++#endif
+ 
+ typedef struct WS(fd_set)
+ {
+@@ -475,8 +430,6 @@ typedef struct WS(timeval)
+ 
+ int WINAPI __WSAFDIsSet(SOCKET,WS(fd_set)*);
+ 
+-#endif /* WS_DEFINE_SELECT */
+-
+ /* we have to define hton/ntoh as macros to avoid conflicts with Unix headers */
+ #ifndef USE_WS_PREFIX
+ 
+diff --git a/include/winsock2.h b/include/winsock2.h
+index 565979a74c0..0e6fa448570 100644
+--- a/include/winsock2.h
++++ b/include/winsock2.h
+@@ -27,53 +27,12 @@
+ #ifndef __WINE_WINSOCKAPI_STDLIB_H
+ #define __WINE_WINSOCKAPI_STDLIB_H
+ 
+-/*
+- * This section defines the items that conflict with the Unix headers.
+- */
+ #ifndef USE_WS_PREFIX
+-/* We are not using the WS_ prefix we risk getting conflicts for
+- * everything related to select.
+- */
+-# ifdef FD_CLR
+-/* Too late, the Unix version of stdlib.h was included before winsock.h.
+- * This means select and all the related stuff is already defined and we
+- * cannot override types and function prototypes.
+- * All we can do is disable all these symbols so that they are not used
+- * inadvertently.
+- */
+-#  include <sys/types.h>
+-#  undef FD_SETSIZE
+-#  undef FD_CLR
+-#  undef FD_SET
+-#  undef FD_ZERO
+-#  undef FD_ISSET
+ 
+-#  define FD_SETSIZE Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define FD_CLR     Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define FD_SET     Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define FD_ZERO    Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define FD_ISSET   Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define fd_set     Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-#  define select     Include_winsock_h_before_stdlib_h_or_use_the_MSVCRT_library
+-# elif defined(RLIM_INFINITY)
+ /* On Darwin stdlib.h includes sys/resource.h which defines timeval but not the fd_set macros */
+-#  define fd_set unix_fd_set
+-#  include <sys/types.h>
+-#  include <time.h>
+-#  include <stdlib.h>
+-#  undef fd_set
+-#  undef FD_SETSIZE
+-#  undef FD_CLR
+-#  undef FD_SET
+-#  undef FD_ZERO
+-#  undef FD_ISSET
+-#  define select     Include_winsock_h_before_sys_types_h_or_use_the_MSVCRT_library
+-#  define timeval    Include_winsock_h_before_sys_types_h_or_use_the_MSVCRT_library
+-# else  /* FD_CLR */
+-/* stdlib.h has not been included yet so it's not too late. Include it now
+- * making sure that none of the select symbols is affected. Then we can
+- * define them with our own values.
+- */
++# if defined(FD_CLR) || defined(RLIM_INFINITY)
++#  error Include winsock2.h before stdlib.h, time.h, or sys/types.h, or use the MSVCRT library
++# else
+ #  define fd_set unix_fd_set
+ #  define timeval unix_timeval
+ #  define select unix_select
+@@ -93,14 +52,13 @@
+ #  undef FD_ZERO
+ #  undef FD_ISSET
+ #  undef _TIMEVAL_DEFINED
+-
+-#  define WS_DEFINE_SELECT
+ # endif /* FD_CLR */
+ 
+ #else
+-# define WS_DEFINE_SELECT
++
+ # include <sys/types.h>
+ # include <stdlib.h>
++
+ #endif /* !USE_WS_PREFIX */
+ 
+ #endif /* __WINE_WINSOCKAPI_STDLIB_H */
+@@ -562,8 +520,6 @@ typedef struct WS(timeval)
+ } TIMEVAL, *PTIMEVAL, *LPTIMEVAL;
+ #endif
+ 
+-#ifdef WS_DEFINE_SELECT
+-
+ #define __WS_FD_CLR(fd, set, cast) do { \
+     unsigned int __i; \
+     for (__i = 0; __i < ((cast*)(set))->fd_count; __i++) \
+@@ -626,8 +582,6 @@ typedef struct WS(fd_set)
+     SOCKET fd_array[WS(FD_SETSIZE)];
+ } WS(fd_set), FD_SET, *PFD_SET, *LPFD_SET;
+ 
+-#endif
+-
+ typedef struct /*WS(pollfd)*/
+ {
+     SOCKET fd;
+@@ -1078,9 +1032,7 @@ typedef int (WINAPI *LPFN_GETHOSTNAME)(char*,int);
+ typedef int (WINAPI *LPFN_GETPEERNAME)(SOCKET,struct WS(sockaddr)*,int*);
+ typedef struct WS(protoent)* (WINAPI *LPFN_GETPROTOBYNAME)(const char*);
+ typedef struct WS(protoent)* (WINAPI *LPFN_GETPROTOBYNUMBER)(int);
+-#ifdef WS_DEFINE_SELECT
+ typedef int (WINAPI* LPFN_SELECT)(int,WS(fd_set)*,WS(fd_set)*,WS(fd_set)*,const struct WS(timeval)*);
+-#endif
+ typedef struct WS(servent)* (WINAPI *LPFN_GETSERVBYNAME)(const char*,const char*);
+ typedef struct WS(servent)* (WINAPI *LPFN_GETSERVBYPORT)(int,const char*);
+ typedef int (WINAPI *LPFN_GETSOCKNAME)(SOCKET,struct WS(sockaddr)*,int*);
+
+-- 
+2.34.1
+
+

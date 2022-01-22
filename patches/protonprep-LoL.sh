@@ -11,40 +11,38 @@
     git reset --hard HEAD
     git clean -xdf
 
-
     echo "applying staging patches"
-    ../wine-staging/patches/patchinstall.sh DESTDIR="." --all \
-    -W winex11-_NET_ACTIVE_WINDOW \
-    -W winex11-WM_WINDOWPOSCHANGING \
-    -W imm32-com-initialization \
-    -W ntdll-NtAlertThreadByThreadId
-
-    # apply this manually since imm32-com-initialization is disabled in staging.
-    patch -Np1 < ../patches/wine-hotfixes/staging/imm32-com-initialization_no_net_active_window.patch
+    ../wine-staging/patches/patchinstall.sh DESTDIR="." --all
 
     echo "clock monotonic"
     patch -Np1 < ../patches/proton/01-proton-use_clock_monotonic.patch
 
-    echo "LAA"
-    patch -Np1 < ../patches/proton/04-proton-LAA_staging.patch
-
     echo "applying fsync patches"
     patch -Np1 < ../patches/proton/03-proton-fsync_staging.patch
 
-    echo "proton futex2 patches"
-    patch -Np1 < ../patches/proton/40-proton-futex2.patch
+    echo "proton futex waitv patches"
+    patch -Np1 < ../patches/proton/57-fsync_futex_waitv.patch
+
+    echo "LAA"
+    patch -Np1 < ../patches/proton/04-proton-LAA_staging.patch
 
     echo "proton QPC performance patch"
-    patch -Np1 < ../patches/proton/49-proton_QPC.patch
+    patch -Np1 < ../patches/proton/49-proton_QPC-update-replace.patch
 
     echo "proton LFH performance patch"
     patch -Np1 < ../patches/wine-hotfixes/LoL/lfh-non-proton-pre-needed.patch
     patch -Np1 < ../patches/proton/50-proton_LFH.patch
 
-    echo "LoL fix"
-    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-6.19-fix.patch
-    patch -Np1 < ../patches/wine-hotfixes/LoL/alternative_patch_by_using_a_fake_cs_segment.patch
-    patch -Np1 < ../patches/wine-hotfixes/LoL/lol-update-fix.patch
+    echo "LoL fixes"
+    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-6.17+-syscall-fix.patch
+    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-abi.vsyscall32-alternative_patch_by_using_a_fake_cs_segment.patch
+    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-broken-client-update-fix.patch
+    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-launcher-client-connectivity-fix-0001-ws2_32-Return-a-valid-value-for-WSAIoctl-SIO_IDEAL_S.patch
+    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-garena-childwindow.patch
+
+    echo "cleanup .orig files"
+    find ./ -name '*.orig' -delete
+
 
     # need to run these after applying patches
     ./dlls/winevulkan/make_vulkan

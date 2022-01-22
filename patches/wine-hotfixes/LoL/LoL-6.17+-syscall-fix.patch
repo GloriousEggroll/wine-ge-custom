@@ -1,0 +1,27 @@
+diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
+index c876d51f8e6..654c84de587 100644
+--- a/tools/winebuild/import.c
++++ b/tools/winebuild/import.c
+@@ -1401,19 +1401,9 @@ void output_syscalls( DLLSPEC *spec )
+         switch (target.cpu)
+         {
+         case CPU_i386:
+-            if (UsePIC)
+-            {
+-                output( "\tcall %s\n", asm_name("__wine_spec_get_pc_thunk_eax") );
+-                output( "1:\tmovl %s-1b(%%eax),%%edx\n", asm_name("__wine_syscall_dispatcher") );
+-                output( "\tmovl $%u,%%eax\n", id );
+-                needs_get_pc_thunk = 1;
+-            }
+-            else
+-            {
+-                output( "\tmovl $%u,%%eax\n", id );
+-                output( "\tmovl $%s,%%edx\n", asm_name("__wine_syscall") );
+-            }
+-            output( "\tcall *%%edx\n" );
++            output( "\t.byte 0xb8\n" );                               /* mov eax, SYSCALL */
++            output( "\t.long %d\n", id );
++            output( "\t.byte 0x64,0xff,0x15,0xc0,0x00,0x00,0x00\n" ); /* call dword ptr fs:[0C0h] */
+             output( "\tret $%u\n", odp->type == TYPE_STDCALL ? get_args_size( odp ) : 0 );
+             break;
+         case CPU_x86_64:
