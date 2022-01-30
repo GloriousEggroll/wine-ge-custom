@@ -7,6 +7,9 @@
     git reset --hard HEAD
     git clean -xdf
 
+    # faudio revert fix in staging:
+    patch -Np1 < ../patches/wine-hotfixes/staging/x3daudio_staging_revert.patch
+
     cd ..
 
 ### END PREP SECTION ###
@@ -24,7 +27,13 @@
     git revert --no-commit 2ad44002da683634de768dbe49a0ba09c5f26f08
     git revert --no-commit dfa4c07941322dbcad54507cd0acf271a6c719ab
 
+    echp "revert in favor of proton stub to allow ffxiv intro videos to work"
+    git revert --no-commit 85747f0abe0b013d9f287a33e10738e28d7418e9
+
     echo "temporary fshack reverts"
+    git revert --no-commit ef9c0b3f691f6897f0acfd72af0a9ea020f0a0bf
+    git revert --no-commit 3b8d7f7f036f3f4771284df97cce99d114fe42cb
+    git revert --no-commit fe5e06185dfc828b5d3873fd1b28f29f15d7c627
     git revert --no-commit c2384cf23378953b6960e7044a0e467944e8814a
     git revert --no-commit c3862f2a6121796814ae31913bfb0efeba565087
     git revert --no-commit 37be0989540cf84dd9336576577ae535f2b6bbb8
@@ -32,6 +41,7 @@
     git revert --no-commit 9aef654392756aacdce6109ccbe21ba446ee4387
 
     echo "mfplat early reverts to re-enable staging mfplat patches"
+    git revert --no-commit 11d1e967b6be4e948ad49cc893e27150c220b02d
     git revert --no-commit cb41e4b1753891f5aa22cb617e8dd124c3dd8983
     git revert --no-commit 03d92af78a5000097b26560bba97320eb013441a
     git revert --no-commit 4d2a628dfe9e4aad9ba772854717253d0c6a7bb7
@@ -106,8 +116,17 @@
     git revert --no-commit 831c6a88aab78db054beb42ca9562146b53963e7
     git revert --no-commit 2d0dc2d47ca6b2d4090dfe32efdba4f695b197ce
 
-    echo "1/2 revert faudio updates -- we still need to use our proton version to fix WMA playback"
+    echo "revert faudio updates -- WINE faudio does not have WMA decoding (notably needed for Skyrim voices) so we still need to provide our own with gstreamer support"
     git revert --no-commit 22c26a2dde318b5b370fc269cab871e5a8bc4231
+    patch -RNp1 < ../patches/wine-hotfixes/pending/revert-d8be858-faudio.patch
+
+    echo "manual revert of 70f59eb179d6a1c1b4dbc9e0a45b5731cd260793"
+    # the msvcrt build of winepulse causes Forza Horizon 5 to crash at the splash screen
+    patch -RNp1 < ../patches/wine-hotfixes/pending/revert-70f59eb-msvcrt.patch
+
+    # due to this commit 'makefiles: Make -mno-cygwin the default.' 088a787a2cd45ea70e4439251a279260401e9287
+    # we need to revert the change for pulseaudio by intentionally setting empty EXTRADLLFLAGS
+    patch -Np1 < ../patches/wine-hotfixes/pending/msvcrt-default-global-revert-for-winepulse.patch
 
 ### END PROBLEMATIC COMMIT REVERT SECTION ###
 
@@ -136,14 +155,15 @@
     # almost immediately on newer Wine Staging/TKG inside pe_load_debug_info function unless the dbghelp-Debug_Symbols staging # patchset is disabled.
     # -W dbghelp-Debug_Symbols
 
+    # Disable when using external FAudio
+    # -W xactengine3_7-callbacks \
+
     echo "applying staging patches"
     ../wine-staging/patches/patchinstall.sh DESTDIR="." --all \
     -W winex11-_NET_ACTIVE_WINDOW \
     -W winex11-WM_WINDOWPOSCHANGING \
-    -W dbghelp-Debug_Symbols
-
-    echo "2/2 revert faudio updates -- we still need to use our proton version to fix WMA playback"
-    patch -RNp1 < ../patches/wine-hotfixes/pending/revert-d8be858-faudio.patch
+    -W dbghelp-Debug_Symbols \
+    -W xactengine3_7-callbacks
 
 
 ### END WINE STAGING APPLY SECTION ###
@@ -153,8 +173,9 @@
     echo "mech warrior online"
     patch -Np1 < ../patches/game-patches/mwo.patch
 
-    echo "ffxiv launcher"
-    patch -Np1 < ../patches/game-patches/ffxiv-launcher-workaround.patch
+    echo "ffxiv"
+    patch -Np1 < ../patches/game-patches/ffxiv-launcher-fix.patch
+    patch -Np1 < ../patches/game-patches/ffxiv-opening-video-fix.patch
 
     echo "assetto corsa"
     patch -Np1 < ../patches/game-patches/assettocorsa-hud.patch
@@ -191,6 +212,9 @@
 
     echo "protonify"
     patch -Np1 < ../patches/proton/10-proton-protonify_staging.patch
+
+    echo "protonify-audio"
+    patch -Np1 < ../patches/proton/11-proton-pa-staging.patch
 
     echo "amd ags"
     patch -Np1 < ../patches/proton/18-proton-amd_ags.patch
@@ -373,8 +397,7 @@
 #    disabled, not compatible with fshack, not compatible with fsr, missing dependencies inside proton.
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
 
-#    disabled, breaks Elder Scrolls Online. Only use for League of Legends
-#    https://bugs.winehq.org/show_bug.cgi?id=51687
+#    # https://bugs.winehq.org/show_bug.cgi?id=51687
 #    patch -Np1 < ../patches/wine-hotfixes/pending/Return_nt_filename_and_resolve_DOS_drive_path.patch
 
 ### END WINE HOTFIX SECTION ###
