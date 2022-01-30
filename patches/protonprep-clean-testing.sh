@@ -16,13 +16,13 @@
     ../wine-staging/patches/patchinstall.sh DESTDIR="." --all \
     -W winex11-_NET_ACTIVE_WINDOW \
     -W winex11-WM_WINDOWPOSCHANGING \
-    -W ntdll-Junction_Points \
-    -W server-File_Permissions \
-    -W server-Stored_ACLs \
     -W dbghelp-Debug_Symbols \
     -W dwrite-FontFallback
 
     # apply any custom patches here for testing
+
+    echo "cleanup .orig files"
+    find ./ -name '*.orig' -delete
 
     # need to run these after applying patches
     ./dlls/winevulkan/make_vulkan
