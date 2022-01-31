@@ -27,7 +27,7 @@
     git revert --no-commit 2ad44002da683634de768dbe49a0ba09c5f26f08
     git revert --no-commit dfa4c07941322dbcad54507cd0acf271a6c719ab
 
-    echp "revert in favor of proton stub to allow ffxiv intro videos to work"
+    echo "revert in favor of proton stub to allow ffxiv intro videos to work"
     git revert --no-commit 85747f0abe0b013d9f287a33e10738e28d7418e9
 
     echo "temporary fshack reverts"

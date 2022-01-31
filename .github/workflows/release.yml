@@ -1,0 +1,303 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  build-wine-ge:
+    runs-on: ubuntu-18.04
+    steps:
+
+      - name: Get branch names
+        id: branch-name
+        uses: tj-actions/branch-names@v5.1
+    
+      - name: Clone repo
+        run: git clone -b ${{ steps.branch-name.outputs.current_branch }} ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY} . && git submodule update --init buildbot
+
+      - name: Get Proton Versions
+        run: echo "RELEASE_VERSION=$(cat VERSION | cut -d ' ' -f 3 | cut -d '-' -f 1)" >> $GITHUB_ENV
+        
+      - name: Display version
+        run: echo ${{ env.RELEASE_VERSION }}
+
+      - name: Install dependencies
+        working-directory: ./buildbot
+        run: |
+          sudo apt-get install -y lxd lxd-client sshpass
+          sudo adduser $USER lxd
+          newgrp lxd
+          id
+          
+      - name: Setup lxc containers
+        run: |
+          cat buildbot/preseed | sudo lxd init --preseed
+          sudo lxc launch images:ubuntu/bionic/i386 buildbot-bionic-i386
+          sudo lxc launch images:ubuntu/bionic/amd64 buildbot-bionic-amd64
+      
+      - name: Add and execute 0-buildbot-usersetup.sh
+        run: |
+          sudo lxc exec buildbot-bionic-amd64 -- bash -c "echo -e 'ubuntu\nubuntu' | passwd ubuntu && echo 'ubuntu ALL=NOPASSWD: ALL' | EDITOR='tee -a' visudo"
+          sudo lxc exec buildbot-bionic-i386 -- bash -c "echo -e 'ubuntu\nubuntu' | passwd ubuntu && echo 'ubuntu ALL=NOPASSWD: ALL' | EDITOR='tee -a' visudo"
+  
+      - name: Execute 1-setup-container-networking.sh
+        run: |
+          sleep 10
+          mkdir ~/.ssh/
+          touch ~/.ssh/config
+          sudo ./1-setup-container-networking.sh buildbot-bionic-i386 buildbot-bionic-amd64
+          cat ~/.ssh/config
+
+      - name: Execute setup-container.sh
+        working-directory: ./buildbot
+        run: |
+          ./setup-container.sh buildbot-bionic-i386
+          ./setup-container.sh buildbot-bionic-amd64
+
+      - name: Execute ssh-copy-id for buildbot32 and buildbot64
+        run: |
+          ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
+          sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-i386
+          sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-amd64
+
+      - name: Install dependencies
+        run: |
+          ssh ubuntu@buildbot-bionic-i386 "
+            sudo apt install -y dh-autoreconf autoconf bison ccache debhelper desktop-file-utils docbook-to-man \
+            docbook-utils docbook-xsl flex fontforge gawk gettext libacl1-dev \
+            libasound2-dev libcloog-ppl1 libcups2-dev libdbus-1-dev \
+            libgcrypt-dev libgif-dev libglu1-mesa-dev libgsm1-dev libgtk-3-dev \
+            liblcms2-dev libldap2-dev libmpg123-dev libncurses5-dev \
+            libopenal-dev libosmesa6-dev libpcap-dev libpulse-dev \
+            libssl-dev libtiff5-dev libudev-dev libv4l-dev libva-dev libxslt1-dev libxt-dev \
+            ocl-icd-opencl-dev prelink valgrind linux-libc-dev libppl14 libcolord2 libvulkan-dev \
+            libgnutls28-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev \
+            libpng-dev libsdl2-dev libavcodec-dev \
+            libavutil-dev libswresample-dev libavcodec58 libswresample3 libavutil56 libfaudio0 libfaudio-dev \
+            libvkd3d1 libvkd3d-dev libvkd3d-utils1 libvkd3d-shader1 vkd3d-demos libvulkan1 \
+            libgstreamer1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-doc gstreamer1.0-tools gstreamer1.0-x \
+            gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
+          "
+          ssh ubuntu@buildbot-bionic-amd64 "
+            sudo apt install -y dh-autoreconf autoconf bison ccache debhelper desktop-file-utils docbook-to-man \
+            docbook-utils docbook-xsl flex fontforge gawk gettext libacl1-dev \
+            libasound2-dev libcloog-ppl1 libcups2-dev libdbus-1-dev \
+            libgcrypt-dev libgif-dev libglu1-mesa-dev libgsm1-dev libgtk-3-dev \
+            liblcms2-dev libldap2-dev libmpg123-dev libncurses5-dev \
+            libopenal-dev libosmesa6-dev libpcap-dev libpulse-dev \
+            libssl-dev libtiff5-dev libudev-dev libv4l-dev libva-dev libxslt1-dev libxt-dev \
+            ocl-icd-opencl-dev prelink valgrind linux-libc-dev libppl14 libcolord2 libvulkan-dev \
+            libgnutls28-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev \
+            libpng-dev libsdl2-dev libavcodec-dev \
+            libavutil-dev libswresample-dev libavcodec58 libswresample3 libavutil56 libfaudio0 libfaudio-dev \
+            libvkd3d1 libvkd3d-dev libvkd3d-utils1 libvkd3d-shader1 vkd3d-demos libvulkan1 \
+            libgstreamer1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-doc gstreamer1.0-tools gstreamer1.0-x \
+            gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
+          "
+
+      - name: Push Wine,Staging and patches files
+        run: |
+          ssh ubuntu@buildbot-bionic-i386 "rm -r ~/buildbot/runners/wine/patches/"
+          ssh ubuntu@buildbot-bionic-amd64 "rm -r ~/buildbot/runners/wine/patches/"
+          ssh ubuntu@buildbot-bionic-i386 "cd buildbot/runners/wine && git clone -b wine-${{ env.RELEASE_VERSION }} https://github.com/wine-mirror/wine/"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && git clone -b wine-${{ env.RELEASE_VERSION }} https://github.com/wine-mirror/wine/"
+          ssh ubuntu@buildbot-bionic-i386 "cd buildbot/runners/wine && git clone -b v${{ env.RELEASE_VERSION }} https://github.com/wine-staging/wine-staging"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && git clone -b v${{ env.RELEASE_VERSION }} https://github.com/wine-staging/wine-staging"
+          scp -r patches ubuntu@buildbot-bionic-i386:~/buildbot/runners/wine/
+          scp -r patches ubuntu@buildbot-bionic-amd64:~/buildbot/runners/wine/
+          scp build.sh ubuntu@buildbot-bionic-i386:~/buildbot/runners/wine/
+          scp build.sh ubuntu@buildbot-bionic-amd64:~/buildbot/runners/wine/
+
+      - name: Execute buildbot32-sshsetup
+        run: |
+          
+          ssh ubuntu@buildbot-bionic-i386 'ls ~/.ssh'
+          ssh ubuntu@buildbot-bionic-i386 'sudo chown -R ubuntu:ubuntu ~/.ssh/config'
+          ssh ubuntu@buildbot-bionic-i386 "ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1"
+          ssh ubuntu@buildbot-bionic-i386 'sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot64'
+          
+      - name: Execute buildbot64-sshsetup
+        run: |
+          ssh ubuntu@buildbot-bionic-amd64 'ls ~/.ssh'
+          ssh ubuntu@buildbot-bionic-amd64 'sudo chown -R ubuntu:ubuntu ~/.ssh/config'
+          ssh ubuntu@buildbot-bionic-amd64 "ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1"
+          ssh ubuntu@buildbot-bionic-amd64 'sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot32'
+
+      - name: Apply patches
+        run: |
+          ssh ubuntu@buildbot-bionic-i386 "cd buildbot/runners/wine/ && bash patches/protonprep.sh"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine/ && bash patches/protonprep.sh"
+
+      - name: Build Wine GE
+        run: |
+          ssh ubuntu@buildbot-bionic-i386 "cd buildbot/runners/wine && mv wine wine-src"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && mv wine wine-src"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && ./build.sh --as lutris --version ${{ env.RELEASE_VERSION }} --usemingw --keep"
+  
+      - name: Move Archive
+        run: |
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && ls"
+          ssh ubuntu@buildbot-bionic-amd64 "mv buildbot/runners/wine/wine-*.tar.xz ~/"
+          ssh ubuntu@buildbot-bionic-amd64 "cd ~/ && ls"
+          scp ubuntu@buildbot-bionic-amd64:~/wine-*.tar.xz /home/runner/work/${{ github.event.repository.name }}/${{ github.event.repository.name }}/
+          ls
+          mv wine-lutris-${{ env.RELEASE_VERSION }}-x86_64.tar.xz wine-lutris-ge-${{ env.RELEASE_VERSION }}-x86_64.tar.xz
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.PROTON_GE_GITHUB_ACTIONS_BUILD }}
+          file: wine-lutris-ge-${{ env.RELEASE_VERSION }}-x86_64.tar.xz
+          file_glob: true
+          tag: "Wine-Lutris-GE-${{ env.RELEASE_VERSION }}-build-${{ github.run_number }}"
+          overwrite: false
+
+  build-wine-ge-lol:
+    runs-on: ubuntu-18.04
+    steps:
+
+      - name: Get branch names
+        id: branch-name
+        uses: tj-actions/branch-names@v5.1
+    
+      - name: Clone repo
+        run: git clone -b ${{ steps.branch-name.outputs.current_branch }} ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY} . && git submodule update --init buildbot
+
+      - name: Get Proton Versions
+        run: echo "RELEASE_VERSION=$(cat VERSION | cut -d ' ' -f 3 | cut -d '-' -f 1)" >> $GITHUB_ENV
+        
+      - name: Display version
+        run: echo ${{ env.RELEASE_VERSION }}
+
+      - name: Install dependencies
+        working-directory: ./buildbot
+        run: |
+          sudo apt-get install -y lxd lxd-client sshpass
+          sudo adduser $USER lxd
+          newgrp lxd
+          id
+          
+      - name: Setup lxc containers
+        run: |
+          cat buildbot/preseed | sudo lxd init --preseed
+          sudo lxc launch images:ubuntu/bionic/i386 buildbot-bionic-i386
+          sudo lxc launch images:ubuntu/bionic/amd64 buildbot-bionic-amd64
+      
+      - name: Add and execute 0-buildbot-usersetup.sh
+        run: |
+          sudo lxc exec buildbot-bionic-amd64 -- bash -c "echo -e 'ubuntu\nubuntu' | passwd ubuntu && echo 'ubuntu ALL=NOPASSWD: ALL' | EDITOR='tee -a' visudo"
+          sudo lxc exec buildbot-bionic-i386 -- bash -c "echo -e 'ubuntu\nubuntu' | passwd ubuntu && echo 'ubuntu ALL=NOPASSWD: ALL' | EDITOR='tee -a' visudo"
+  
+      - name: Execute 1-setup-container-networking.sh
+        run: |
+          sleep 10
+          mkdir ~/.ssh/
+          touch ~/.ssh/config
+          sudo ./1-setup-container-networking.sh buildbot-bionic-i386 buildbot-bionic-amd64
+          cat ~/.ssh/config
+
+      - name: Execute setup-container.sh
+        working-directory: ./buildbot
+        run: |
+          ./setup-container.sh buildbot-bionic-i386
+          ./setup-container.sh buildbot-bionic-amd64
+
+      - name: Execute ssh-copy-id for buildbot32 and buildbot64
+        run: |
+          ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1
+          sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-i386
+          sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-amd64
+
+      - name: Install dependencies
+        run: |
+          ssh ubuntu@buildbot-bionic-i386 "
+            sudo apt install -y dh-autoreconf autoconf bison ccache debhelper desktop-file-utils docbook-to-man \
+            docbook-utils docbook-xsl flex fontforge gawk gettext libacl1-dev \
+            libasound2-dev libcloog-ppl1 libcups2-dev libdbus-1-dev \
+            libgcrypt-dev libgif-dev libglu1-mesa-dev libgsm1-dev libgtk-3-dev \
+            liblcms2-dev libldap2-dev libmpg123-dev libncurses5-dev \
+            libopenal-dev libosmesa6-dev libpcap-dev libpulse-dev \
+            libssl-dev libtiff5-dev libudev-dev libv4l-dev libva-dev libxslt1-dev libxt-dev \
+            ocl-icd-opencl-dev prelink valgrind linux-libc-dev libppl14 libcolord2 libvulkan-dev \
+            libgnutls28-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev \
+            libpng-dev libsdl2-dev libavcodec-dev \
+            libavutil-dev libswresample-dev libavcodec58 libswresample3 libavutil56 libfaudio0 libfaudio-dev \
+            libvkd3d1 libvkd3d-dev libvkd3d-utils1 libvkd3d-shader1 vkd3d-demos libvulkan1 \
+            libgstreamer1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-doc gstreamer1.0-tools gstreamer1.0-x \
+            gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
+          "
+          ssh ubuntu@buildbot-bionic-amd64 "
+            sudo apt install -y dh-autoreconf autoconf bison ccache debhelper desktop-file-utils docbook-to-man \
+            docbook-utils docbook-xsl flex fontforge gawk gettext libacl1-dev \
+            libasound2-dev libcloog-ppl1 libcups2-dev libdbus-1-dev \
+            libgcrypt-dev libgif-dev libglu1-mesa-dev libgsm1-dev libgtk-3-dev \
+            liblcms2-dev libldap2-dev libmpg123-dev libncurses5-dev \
+            libopenal-dev libosmesa6-dev libpcap-dev libpulse-dev \
+            libssl-dev libtiff5-dev libudev-dev libv4l-dev libva-dev libxslt1-dev libxt-dev \
+            ocl-icd-opencl-dev prelink valgrind linux-libc-dev libppl14 libcolord2 libvulkan-dev \
+            libgnutls28-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev \
+            libpng-dev libsdl2-dev libavcodec-dev \
+            libavutil-dev libswresample-dev libavcodec58 libswresample3 libavutil56 libfaudio0 libfaudio-dev \
+            libvkd3d1 libvkd3d-dev libvkd3d-utils1 libvkd3d-shader1 vkd3d-demos libvulkan1 \
+            libgstreamer1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-doc gstreamer1.0-tools gstreamer1.0-x \
+            gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
+          "
+
+      - name: Push Wine,Staging and patches files
+        run: |
+          ssh ubuntu@buildbot-bionic-i386 "rm -r ~/buildbot/runners/wine/patches/"
+          ssh ubuntu@buildbot-bionic-amd64 "rm -r ~/buildbot/runners/wine/patches/"
+          ssh ubuntu@buildbot-bionic-i386 "cd buildbot/runners/wine && git clone -b wine-${{ env.RELEASE_VERSION }} https://github.com/wine-mirror/wine/"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && git clone -b wine-${{ env.RELEASE_VERSION }} https://github.com/wine-mirror/wine/"
+          ssh ubuntu@buildbot-bionic-i386 "cd buildbot/runners/wine && git clone -b v${{ env.RELEASE_VERSION }} https://github.com/wine-staging/wine-staging"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && git clone -b v${{ env.RELEASE_VERSION }} https://github.com/wine-staging/wine-staging"
+          scp -r patches ubuntu@buildbot-bionic-i386:~/buildbot/runners/wine/
+          scp -r patches ubuntu@buildbot-bionic-amd64:~/buildbot/runners/wine/
+          scp build.sh ubuntu@buildbot-bionic-i386:~/buildbot/runners/wine/
+          scp build.sh ubuntu@buildbot-bionic-amd64:~/buildbot/runners/wine/
+
+      - name: Execute buildbot32-sshsetup
+        run: |
+          
+          ssh ubuntu@buildbot-bionic-i386 'ls ~/.ssh'
+          ssh ubuntu@buildbot-bionic-i386 'sudo chown -R ubuntu:ubuntu ~/.ssh/config'
+          ssh ubuntu@buildbot-bionic-i386 "ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1"
+          ssh ubuntu@buildbot-bionic-i386 'sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot64'
+          
+      - name: Execute buildbot64-sshsetup
+        run: |
+          ssh ubuntu@buildbot-bionic-amd64 'ls ~/.ssh'
+          ssh ubuntu@buildbot-bionic-amd64 'sudo chown -R ubuntu:ubuntu ~/.ssh/config'
+          ssh ubuntu@buildbot-bionic-amd64 "ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa <<<y >/dev/null 2>&1"
+          ssh ubuntu@buildbot-bionic-amd64 'sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot32'
+
+      - name: Apply patches
+        run: |
+          ssh ubuntu@buildbot-bionic-i386 "cd buildbot/runners/wine/ && bash patches/protonprep-LoL.sh"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine/ && bash patches/protonprep-LoL.sh"
+
+      - name: Build Wine GE
+        run: |
+          ssh ubuntu@buildbot-bionic-i386 "cd buildbot/runners/wine && mv wine wine-src"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && mv wine wine-src"
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && ./build.sh --as lol --version ${{ env.RELEASE_VERSION }} --usemingw --keep"
+  
+      - name: Move Archive
+        run: |
+          ssh ubuntu@buildbot-bionic-amd64 "cd buildbot/runners/wine && ls"
+          ssh ubuntu@buildbot-bionic-amd64 "mv buildbot/runners/wine/wine-*.tar.xz ~/"
+          ssh ubuntu@buildbot-bionic-amd64 "cd ~/ && ls"
+          scp ubuntu@buildbot-bionic-amd64:~/wine-*.tar.xz /home/runner/work/${{ github.event.repository.name }}/${{ github.event.repository.name }}/
+          ls
+          mv wine-lol-${{ env.RELEASE_VERSION }}-x86_64.tar.xz wine-lol-ge-${{ env.RELEASE_VERSION }}-x86_64.tar.xz
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.PROTON_GE_GITHUB_ACTIONS_BUILD }}
+          file: wine-lol-ge-${{ env.RELEASE_VERSION }}-x86_64.tar.xz
+          file_glob: true
+          tag: "Wine-LoL-GE-${{ env.RELEASE_VERSION }}-build-${{ github.run_number }}"
+          overwrite: false
