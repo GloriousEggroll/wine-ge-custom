@@ -304,6 +304,10 @@
     echo "proton battleye patches"
     patch -Np1 < ../patches/proton/59-proton-battleye_patches.patch
 
+    echo "proton fake current res patches"
+    patch -Np1 < ../patches/proton/65-proton-fake_current_res_patches.patch
+
+
 ### END PROTON PATCH SECTION ###
 
 ### START MFPLAT PATCH SECTION ###
