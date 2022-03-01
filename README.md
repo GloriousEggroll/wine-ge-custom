@@ -6,7 +6,9 @@ For Steam games, I provide Proton-GE for usage with Lutris, found here:
 
 https://github.com/gloriouseggroll/proton-ge-custom
 
-# If you have an issue that happens with my Wine-GE build, provided FROM this repository, please contact me on Discord about the issue:
+## Occasionally, I also release League of Legends builds -- These builds will specifically have 'lol' or 'LoL' in the name. Please note these 'LoL' builds are for specific use with League of Legends, and NO other games.
+
+## If you have an issue that happens with my Wine-GE or Wine-LoL-GE builds, provided FROM this repository, please contact me on Discord about the issue:
 
 https://discord.gg/6y3BdzC
 
