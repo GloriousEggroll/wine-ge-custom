@@ -20,6 +20,32 @@
 
 ### (2-2) WINE STAGING APPLY SECTION ###
 
+    # these cause window freezes/hangs with origin
+    # -W winex11-_NET_ACTIVE_WINDOW \
+    # -W winex11-WM_WINDOWPOSCHANGING \
+
+    # this interferes with fshack
+    #-W winex11-MWM_Decorations \
+
+    # this interferes with protons keyboard translation patches
+    #-W winex11-key_translation \
+
+    # ntdll-Junction_Points breaks Valve's CEG drm
+    # the other two rely on it.
+    # note: we also have to manually remove the ntdll-Junction_Points patchset from esync in staging.
+    # we also disable esync and apply it manually instead
+    # -W ntdll-Junction_Points \
+    # -W server-File_Permissions \
+    # -W server-Stored_ACLs \
+    # -W eventfd_synchronization \
+
+    # Sancreed — 11/21/2021
+    # Heads up, it appears that a bunch of Ubisoft Connect games (3/3 I had installed and could test) will crash
+    # almost immediately on newer Wine Staging/TKG inside pe_load_debug_info function unless the dbghelp-Debug_Symbols staging # patchset is disabled.
+    # -W dbghelp-Debug_Symbols \
+
+### END WINE STAGING APPLY SECTION ###
+
     echo "WINE: -STAGING- applying staging patches"
 
     # HideWineExports
@@ -37,6 +63,7 @@
     # /wine-staging/patches/user32-rawinput-mouse-experimental/0006-winex11.drv-Send-relative-RawMotion-events-unprocess.patch
     # we use a rebased version for proton
     patch -Np1 < ../patches/wine-hotfixes/staging/rawinput/0006-winex11.drv-Send-relative-RawMotion-events-unprocess.patch
+
 
     # nvapi/nvcuda
     patch -Np1 < ../wine-staging/patches/nvcuda-CUDA_Support/0001-include-Add-cuda.h.h.patch
@@ -80,8 +107,6 @@
 
     # this was added in 7.1, so it's not in the 7.0 tree
     patch -Np1 < ../patches/wine-hotfixes/staging/nvcuda/0016-nvcuda-Make-nvcuda-attempt-to-load-libcuda.so.1.patch
-
-### END WINE STAGING APPLY SECTION ###
 
 ### (2-3) GAME PATCH SECTION ###
 
@@ -132,20 +157,24 @@
 
 ### END MFPLAT PATCH SECTION ###
 
+
+
+
+
 ### (2-5) WINE HOTFIX SECTION ###
 
     # https://github.com/Frogging-Family/wine-tkg-git/commit/ca0daac62037be72ae5dd7bf87c705c989eba2cb
     echo "WINE: -HOTFIX- unity crash hotfix"
-    patch -Np1 < ../patches/wine-hotfixes/hotfixes/unity_crash_hotfix.patch
+    patch -Np1 < ../patches/wine-hotfixes/pending/unity_crash_hotfix.patch
 
     echo "WINE: -HOTFIX- 32 bit compilation crashes with newer libldap, upstream patch fixes it"
     patch -Np1 < ../patches/wine-hotfixes/upstream/32-bit-ldap-upstream-fix.patch
 
-    echo "WINE: -HOTFIX- update mono version"
-    patch -Np1 < ../patches/wine-hotfixes/hotfixes/hotfix-update_mono_version.patch
-
 #    disabled, not compatible with fshack, not compatible with fsr, missing dependencies inside proton.
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
+
+#    # https://bugs.winehq.org/show_bug.cgi?id=51687
+#    patch -Np1 < ../patches/wine-hotfixes/pending/Return_nt_filename_and_resolve_DOS_drive_path.patch
 
 ### END WINE HOTFIX SECTION ###
 
@@ -159,7 +188,6 @@
 
 ### END WINE CUSTOM PATCHES ###
 ### END WINE PATCHING ###
-
     # need to run these after applying patches
     ./dlls/winevulkan/make_vulkan
     ./tools/make_requests
