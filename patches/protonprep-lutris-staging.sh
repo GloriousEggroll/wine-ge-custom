@@ -15,6 +15,9 @@
     # nvapi
     git revert --no-commit fdfb4b925f52fbec580dd30bef37fb22c219c667
 
+    # this commit causes some FSR resolutions to be removed
+    git revert --no-commit ca3681631adc4723e672aacc0a25a109983781fa
+
 ### END PROBLEMATIC COMMIT REVERT SECTION ###
 
 
@@ -99,7 +102,7 @@
     # server-Realtime_Priority - replaced by proton's patches
     # server-Signal_Thread - breaks steamclient for some games -- notably DBFZ
     # Pipelight - for MS Silverlight, not needed
-    # loader-KeyboardLayouts - replaced by proton's keyboard patches
+    # ** loader-KeyboardLayouts - applied manually -- needed to prevent Overwatch huge FPS drop
     # msxml3-FreeThreadedXMLHTTP60 - already applied
     # ntdll-ForceBottomUpAlloc - already applied
     # ntdll-WRITECOPY - already applied
@@ -151,6 +154,10 @@
 
     # server-PeekMessage
     patch -Np1 < ../patches/wine-hotfixes/staging/server-PeekMessage/0001-server-Fix-handling-of-GetMessage-after-previous-Pee.patch
+
+    # loader-KeyboardLayouts
+	patch -Np1 < ../wine-staging/patches/loader-KeyboardLayouts/0001-loader-Add-Keyboard-Layouts-registry-enteries.patch
+	patch -Np1 < ../wine-staging/patches/loader-KeyboardLayouts/0002-user32-Improve-GetKeyboardLayoutList.patch
 
     # ntdll-Exception
     patch -Np1 < ../wine-staging/patches/ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
@@ -298,10 +305,11 @@
     echo "WINE: -HOTFIX- 32 bit compilation crashes with newer libldap, upstream patch fixes it"
     patch -Np1 < ../patches/wine-hotfixes/upstream/32-bit-ldap-upstream-fix.patch
 
-    # https://github.com/Frogging-Family/wine-tkg-git/commit/ca0daac62037be72ae5dd7bf87c705c989eba2cb
     echo "WINE: -HOTFIX- fix mono version"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-update_mono_version.patch
 
+    echo "WINE: -HOTFIX- fix audio regression caused by 0e7fd41"
+    patch -Np1 < ../patches/wine-hotfixes/upstream/Fix-regression-introduced-by-0e7fd41.patch
 
 #    disabled, not compatible with fshack, not compatible with fsr, missing dependencies inside proton.
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
