@@ -1,6 +1,6 @@
-[submodule "wine"]
-	path = wine
-	url = http://github.com/gloriouseggroll/wine/
+[submodule "proton-wine"]
+	path = proton-wine
+	url = http://github.com/gloriouseggroll/proton-wine/
 [submodule "wine-staging"]
 	path = wine-staging
 	url = https://github.com/wine-staging/wine-staging/
