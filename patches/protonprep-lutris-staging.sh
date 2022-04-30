@@ -279,6 +279,9 @@
     echo "WINE: -PROTON- fake current res patches"
     patch -Np1 < ../patches/proton/65-proton-fake_current_res_patches.patch
 
+    echo "WINE: -PROTON- add fsync patch to fix Elden Ring crashes"
+    patch -Np1 < ../patches/proton/0001-fsync-Reuse-shared-mem-indices.patch
+
 ### END PROTON PATCH SECTION ###
 
 ### START MFPLAT PATCH SECTION ###
@@ -304,8 +307,9 @@
     echo "WINE: -HOTFIX- 32 bit compilation crashes with newer libldap, upstream patch fixes it"
     patch -Np1 < ../patches/wine-hotfixes/upstream/32-bit-ldap-upstream-fix.patch
 
-    echo "WINE: -HOTFIX- fix mono version"
-    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-update_mono_version.patch
+#    currently not needed, keep in case proton gets ahead of normal wine and we have to revert again.
+#    echo "WINE: -HOTFIX- fix mono version"
+#    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-update_mono_version.patch
 
     echo "WINE: -HOTFIX- fix audio regression caused by 0e7fd41"
     patch -Np1 < ../patches/wine-hotfixes/upstream/Fix-regression-introduced-by-0e7fd41.patch
