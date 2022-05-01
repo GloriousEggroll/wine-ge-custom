@@ -1,0 +1,22 @@
+diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
+index 3d0c2deca35..b0c03d992d4 100644
+--- a/dlls/ws2_32/socket.c
++++ b/dlls/ws2_32/socket.c
+@@ -2516,6 +2516,17 @@ int WINAPI select( int count, fd_set *read_ptr, fd_set *write_ptr,
+ 
+     TRACE( "read %p, write %p, except %p, timeout %p\n", read_ptr, write_ptr, except_ptr, timeout );
+ 
++    static int is_RCS = -1;
++    if (is_RCS < 0) {
++        is_RCS = GetModuleHandleA(NULL) == GetModuleHandleA("RiotClientServices.exe");
++    }
++    const struct timeval zero_tv = { 0, 1000 };
++    if (is_RCS && read_ptr && write_ptr && except_ptr && timeout && timeout->tv_sec == 1 && timeout->tv_usec == 0) {
++        if (read_ptr->fd_count == 8 && write_ptr->fd_count == 0  && except_ptr->fd_count == 1) {
++            timeout = &zero_tv;
++        }
++    }
++
+     if (!(sync_event = get_sync_event())) return -1;
+ 
+     if (read_ptr) poll_count += read_ptr->fd_count;
