@@ -43,6 +43,7 @@
     -W server-Realtime_Priority \
     -W server-Signal_Thread \
     -W loader-KeyboardLayouts \
+    -W mshtml-HTMLLocation_put_hash \
     -W msxml3-FreeThreadedXMLHTTP60 \
     -W ntdll-ForceBottomUpAlloc \
     -W ntdll-WRITECOPY \
@@ -73,6 +74,7 @@
     -W packager-DllMain \
     -W winemenubuilder-Desktop_Icon_Path \
     -W wscript-support-d-u-switches \
+    -W sapi-ISpObjectToken-CreateInstance \
     -W sapi-iteration-tokens
 
     # NOTE: Some patches are applied manually because they -do- apply, just not cleanly, ie with patch fuzz.
@@ -103,6 +105,7 @@
     # Pipelight - for MS Silverlight, not needed
     # dinput-joy-mappings - disabled in favor of proton's gamepad patches
     # ** loader-KeyboardLayouts - applied manually -- needed to prevent Overwatch huge FPS drop
+    # mshtml-HTMLLocation_put_hash  - already applied
     # msxml3-FreeThreadedXMLHTTP60 - already applied
     # ntdll-ForceBottomUpAlloc - already applied
     # ntdll-WRITECOPY - already applied
@@ -134,7 +137,8 @@
     # ** packager-DllMain - applied manually
     # ** winemenubuilder-Desktop_Icon_Path - applied manually
     # ** wscript-support-d-u-switches - applied manually
-    # ** sapi-iteration-tokens - applied manually because upstream contains fix for bless unleashed launcher
+    # sapi-ISpObjectToken-CreateInstance - already applied
+    # sapi-iteration-tokens - already applied
 
     echo "WINE: -STAGING- applying staging Compiler_Warnings revert for steamclient compatibility"
     # revert this, it breaks lsteamclient compilation
@@ -290,9 +294,6 @@
 
     echo "WINE: -PROTON- fake current res patches"
     patch -Np1 < ../patches/proton/65-proton-fake_current_res_patches.patch
-
-    echo "WINE: -PROTON- add fsync patch to fix Elden Ring crashes"
-    patch -Np1 < ../patches/proton/0001-fsync-Reuse-shared-mem-indices.patch
 
 ### END PROTON PATCH SECTION ###
 
