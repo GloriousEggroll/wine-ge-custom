@@ -245,16 +245,6 @@
     # wscript-support-d-u-switches
     patch -Np1 < ../patches/wine-hotfixes/staging/wscript-support-d-u-switches/0001-wscript-return-TRUE-for-d-and-u-stub-switches.patch
 
-    # sapi-iteration-tokens
-    patch -Np1 < ../patches/wine-hotfixes/staging/sapi-iteration-tokens/0001-sapi-Implement-ISpRegDataKey-CreateKey.patch
-    patch -Np1 < ../patches/wine-hotfixes/staging/sapi-iteration-tokens/0003-sapi-Implement-ISpRegDataKey-GetStringValue.patch
-    patch -Np1 < ../patches/wine-hotfixes/staging/sapi-iteration-tokens/0004-sapi-EnumTokens-setup-enumeration-members.patch
-    patch -Np1 < ../patches/wine-hotfixes/staging/sapi-iteration-tokens/0005-sapi-Implement-ISpObjectTokenEnumBuilder-Item.patch
-    patch -Np1 < ../patches/wine-hotfixes/staging/sapi-iteration-tokens/0006-sapi-Implement-ISpObjectToken-GetId.patch
-    patch -Np1 < ../patches/wine-hotfixes/staging/sapi-iteration-tokens/0007-sapi-Implement-ISpObjectToken-OpenKey.patch
-    patch -Np1 < ../patches/wine-hotfixes/staging/sapi-iteration-tokens/0008-sapi-Add-default-voice-registry-key.patch
-    patch -Np1 < ../patches/wine-hotfixes/staging/sapi-iteration-tokens/0009-sapi-Return-dump-object-in-ISpObjectTokenEnumBuilder.patch
-
     # nvapi/nvcuda
     # this was added in 7.1, so it's not in the 7.0 tree
     patch -Np1 < ../patches/wine-hotfixes/staging/nvcuda/0016-nvcuda-Make-nvcuda-attempt-to-load-libcuda.so.1.patch
