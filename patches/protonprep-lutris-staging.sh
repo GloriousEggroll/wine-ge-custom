@@ -317,6 +317,10 @@
     echo "WINE: -HOTFIX- fix audio regression caused by 0e7fd41"
     patch -Np1 < ../patches/wine-hotfixes/upstream/Fix-regression-introduced-by-0e7fd41.patch
 
+    # https://bugs.winehq.org/show_bug.cgi?id=52956
+    echo "WINE: -HOTFIX- fix star citizen bug 52956"
+    patch -Np1 < ../patches/wine-hotfixes/upstream/15aa8c6-fix-star-citizen-bug-52956.patch
+
 #    disabled, not compatible with fshack, not compatible with fsr, missing dependencies inside proton.
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
 
