@@ -1,0 +1,35 @@
+From 091c2e2423bcdeb509bd64cabbfdc738a2b593e3 Mon Sep 17 00:00:00 2001
+From: Thomas Crider <gloriouseggroll@gmail.com>
+Date: Sat, 21 May 2022 18:23:54 -0600
+Subject: [PATCH] ws2_32: HACK Fail 'modules-cdn.eac-prod.on.epicgames.com' DNS
+ name  resolution.
+
+---
+ dlls/ws2_32/protocol.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ws2_32/protocol.c b/dlls/ws2_32/protocol.c
+index da43758876e..bdc4d94a7fd 100644
+--- a/dlls/ws2_32/protocol.c
++++ b/dlls/ws2_32/protocol.c
+@@ -169,7 +169,7 @@ int WINAPI getaddrinfo( const char *node, const char *service,
+ 
+     if (node)
+     {
+-        if (!strcmp(node, "download-alt.easyanticheat.net"))
++        if (!strcmp(node, "download-alt.easyanticheat.net") || !strcmp(node, "modules-cdn.eac-prod.on.epicgames.com"))
+         {
+             ERR("HACK: failing download-alt.easyanticheat.net resolution.\n");
+             SetLastError(WSAHOST_NOT_FOUND);
+@@ -933,7 +933,7 @@ struct hostent * WINAPI gethostbyname( const char *name )
+         return NULL;
+     }
+ 
+-    if (name && !strcmp(name, "download-alt.easyanticheat.net"))
++    if (name && (!strcmp(name, "download-alt.easyanticheat.net") || !strcmp(name, "modules-cdn.eac-prod.on.epicgames.com")))
+     {
+         ERR("HACK: failing download-alt.easyanticheat.net resolution.\n");
+         SetLastError( WSAHOST_NOT_FOUND );
+-- 
+2.36.1
+
