@@ -253,9 +253,6 @@
 
 ### (2-3) GAME PATCH SECTION ###
 
-    echo "WINE: -GAME FIXES- mech warrior online fix"
-    patch -Np1 < ../patches/game-patches/mwo.patch
-
     echo "WINE: -GAME FIXES- assetto corsa hud fix"
     patch -Np1 < ../patches/game-patches/assettocorsa-hud.patch
 
@@ -320,6 +317,9 @@
     # https://bugs.winehq.org/show_bug.cgi?id=52956
     echo "WINE: -HOTFIX- fix star citizen bug 52956"
     patch -Np1 < ../patches/wine-hotfixes/upstream/15aa8c6-fix-star-citizen-bug-52956.patch
+    patch -Np1 < ../patches/wine-hotfixes/pending/0001-winex11.drv-Define-ControlMask-when-not-available.patch
+    patch -Np1 < ../patches/wine-hotfixes/pending/0002-include-Add-THREAD_POWER_THROTTLING_STATE-type.patch
+    patch -Np1 < ../patches/wine-hotfixes/pending/0003-ntdll-Fake-success-for-ThreadPowerThrottlingState.patch
 
 #    disabled, not compatible with fshack, not compatible with fsr, missing dependencies inside proton.
 #    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
