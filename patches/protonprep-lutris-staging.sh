@@ -46,6 +46,7 @@
     -W mshtml-HTMLLocation_put_hash \
     -W msxml3-FreeThreadedXMLHTTP60 \
     -W ntdll-ForceBottomUpAlloc \
+    -W ntdll-ApiSetMap \
     -W ntdll-WRITECOPY \
     -W ntdll-Builtin_Prot \
     -W ntdll-CriticalSection \
@@ -61,6 +62,7 @@
     -W wineboot-ProxySettings \
     -W winex11-UpdateLayeredWindow \
     -W winex11-Vulkan_support \
+    -W winex11-wglShareLists \
     -W wintab32-improvements \
     -W xactengine3_7-PrepareWave \
     -W xactengine3_7-Notification \
@@ -74,6 +76,7 @@
     -W packager-DllMain \
     -W winemenubuilder-Desktop_Icon_Path \
     -W wscript-support-d-u-switches \
+    -W wininet-Cleanup \
     -W sapi-ISpObjectToken-CreateInstance \
     -W sapi-iteration-tokens
 
@@ -84,6 +87,7 @@
     # winex11-WM_WINDOWPOSCHANGING - Causes origin to freeze
     # winex11-MWM_Decorations - not compatible with fullscreen hack
     # winex11-key_translation - replaced by proton's keyboard patches
+    # winex11-wglShareLists - applied manually
     # ntdll-Syscall_Emulation - already applied
     # ntdll-Junction_Points - breaks CEG drm
     # server-File_Permissions - requires ntdll-Junction_Points
@@ -108,6 +112,7 @@
     # mshtml-HTMLLocation_put_hash  - already applied
     # msxml3-FreeThreadedXMLHTTP60 - already applied
     # ntdll-ForceBottomUpAlloc - already applied
+    # ntdll-ApiSetMap - applied manually
     # ntdll-WRITECOPY - already applied
     # ntdll-Builtin_Prot - already applied
     # ntdll-CriticalSection - breaks ffxiv and deep rock galactic
@@ -137,6 +142,7 @@
     # ** packager-DllMain - applied manually
     # ** winemenubuilder-Desktop_Icon_Path - applied manually
     # ** wscript-support-d-u-switches - applied manually
+    # ** wininet-Cleanup - applied manually
     # sapi-ISpObjectToken-CreateInstance - already applied
     # sapi-iteration-tokens - already applied
 
@@ -160,6 +166,9 @@
     # loader-KeyboardLayouts
     patch -Np1 < ../wine-staging/patches/loader-KeyboardLayouts/0001-loader-Add-Keyboard-Layouts-registry-enteries.patch
     patch -Np1 < ../wine-staging/patches/loader-KeyboardLayouts/0002-user32-Improve-GetKeyboardLayoutList.patch
+
+    # ntdll-ApiSetMap
+    patch -Np1 < ../wine-staging/patches/ntdll-ApiSetMap/0001-ntdll-Add-dummy-apiset-to-PEB.patch
 
     # ntdll-Exception
     patch -Np1 < ../wine-staging/patches/ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
@@ -242,6 +251,16 @@
     # wscript-support-d-u-switches
     patch -Np1 < ../patches/wine-hotfixes/staging/wscript-support-d-u-switches/0001-wscript-return-TRUE-for-d-and-u-stub-switches.patch
 
+    # wininet-Cleanup
+    patch -Np1 < ../patches/wine-hotfixes/staging/wininet-Cleanup/0001-wininet-tests-Add-more-tests-for-cookies.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/wininet-Cleanup/0002-wininet-tests-Test-auth-credential-reusage-with-host.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/wininet-Cleanup/0003-wininet-tests-Check-cookie-behaviour-when-overriding.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/wininet-Cleanup/0004-wininet-Strip-filename-if-no-path-is-set-in-cookie.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/wininet-Cleanup/0005-wininet-Replacing-header-fields-should-fail-if-they-.patch
+
+    # winex11-wglShareLists
+    patch -Np1 < ../patches/wine-hotfixes/staging/winex11-wglShareLists/0001-winex11.drv-Only-warn-about-used-contexts-in-wglShar.patch
+
     # nvapi/nvcuda
     # this was added in 7.1, so it's not in the 7.0 tree
     patch -Np1 < ../patches/wine-hotfixes/staging/nvcuda/0016-nvcuda-Make-nvcuda-attempt-to-load-libcuda.so.1.patch
@@ -281,19 +300,6 @@
 
 ### END PROTON PATCH SECTION ###
 
-### START MFPLAT PATCH SECTION ###
-
-    # missing http: scheme workaround see: https://github.com/ValveSoftware/Proton/issues/5195
-#    echo "WINE: -MFPLAT- The Good Life (1452500) workaround"
-#    patch -Np1 < ../patches/wine-hotfixes/mfplat/thegoodlife-mfplat-http-scheme-workaround.patch
-
-    # Needed for godfall intro
-#    echo "mfplat godfall fix"
-#    patch -Np1 < ../patches/wine-hotfixes/mfplat/mfplat-godfall-hotfix.patch
-
-
-### END MFPLAT PATCH SECTION ###
-
 
 ### (2-5) WINE HOTFIX SECTION ###
 
@@ -317,12 +323,6 @@
     patch -Np1 < ../patches/wine-hotfixes/pending/0001-winex11.drv-Define-ControlMask-when-not-available.patch
     patch -Np1 < ../patches/wine-hotfixes/pending/0002-include-Add-THREAD_POWER_THROTTLING_STATE-type.patch
     patch -Np1 < ../patches/wine-hotfixes/pending/0003-ntdll-Fake-success-for-ThreadPowerThrottlingState.patch
-
-#    disabled, not compatible with fshack, not compatible with fsr, missing dependencies inside proton.
-#    patch -Np1 < ../patches/wine-hotfixes/testing/wine_wayland_driver.patch
-
-#    # https://bugs.winehq.org/show_bug.cgi?id=51687
-#    patch -Np1 < ../patches/wine-hotfixes/pending/Return_nt_filename_and_resolve_DOS_drive_path.patch
 
 ### END WINE HOTFIX SECTION ###
 
