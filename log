@@ -1,0 +1,744 @@
+HEAD is now at 9e9d6abfbb6 user32: HACK: Do not reply to message sent from FFXIV Launcher via ReplyMessage.
+Auto-merging configure
+Auto-merging configure.ac
+WINE: -STAGING- applying staging patches
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0001-windowscodecs-Avoid-implicit-cast-of-interface-point.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0021-d2d1-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0022-d3d11-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0023-d3d8-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0024-d3d9-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0025-ddraw-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0026-dwrite-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0027-msxml3-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0028-oleaut32-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0029-rpcrt4-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0030-vbscript-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0031-include-Check-element-type-in-CONTAINING_RECORD-and-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0032-wsdapi-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0033-ntdll-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0034-bcrypt-Stop-compile-error-when-HAVE_GNUTLS_CIPHER_IN.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0035-d3d10-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0036-d2d1-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0037-dxgi-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0038-msctf-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0039-rpcrt4-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Compiler_Warnings/0040-wbemdisp-Avoid-implicit-cast-of-interface-pointer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Staging/0001-kernel32-Add-winediag-message-to-show-warning-that-t.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/Staging/0002-winelib-Append-Staging-at-the-end-of-the-version-s.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/advapi32-LsaLookupPrivilegeName/0001-advapi32-Fix-error-code-when-calling-LsaOpenPolicy-f.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/api-ms-win-Stub_DLLs/0006-iertutil-Add-dll-and-add-stub-for-ordinal-811.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/api-ms-win-Stub_DLLs/0009-ext-ms-win-xaml-pal-l1-1-0-Add-dll-and-add-stub-for-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/api-ms-win-Stub_DLLs/0010-ext-ms-win-appmodel-usercontext-l1-1-0-Add-dll-and-a.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/api-ms-win-Stub_DLLs/0012-ext-ms-win-xaml-pal-l1-1-0-Add-stub-for-GetThemeServ.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/cmd-launch-association/0001-cmd-Support-for-launching-programs-based-on-file-ass.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/cmd-launch-association/0002-cmd-ftype-failed-to-clear-file-associations.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/comctl32-rebar-capture/0001-comctl32-Fixed-rebar-behaviour-when-there-s-capture-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/comctl32-version_6/0001-comctl32-Bump-version-to-6.0.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/comdlg32-lpstrFileTitle/0001-comdlg32-Postpone-setting-ofn-lpstrFileTitle-to-work.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/crypt32-CMS_Certificates/0001-crypt32-Skip-unknown-item-when-decoding-a-CMS-certif.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/cryptext-CryptExtOpenCER/0001-cryptext-Implement-CryptExtOpenCER.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3drm-IDirect3D3-support/0001-d3drm-Support-IDirect3D3-when-creating-device.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-BumpLuminance/0002-d3dx9_36-Add-format-description-for-X8L8V8U8-for-for.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-CloneEffect/0001-d3dx9_36-Improve-stub-for-ID3DXEffectImpl_CloneEffec.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-D3DXDisassembleShader/0004-d3dx9_36-Implement-D3DXDisassembleShader.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-D3DXDisassembleShader/0005-d3dx9_36-tests-Add-initial-tests-for-D3DXDisassemble.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-D3DXDisassembleShader/0006-d3dx9_36-tests-Add-additional-tests-for-special-case.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-D3DXOptimizeVertices/0002-d3dx9_36-Add-semi-stub-for-D3DXOptimizeVertices.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-D3DXSHProjectCubeMap/0001-d3dx9_-Add-D3DXSHProjectCubeMap-stub.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-D3DXStubs/0003-d3dx9-Implement-D3DXComputeTangent.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-DDS/0001-d3dx9_36-Add-support-for-FOURCC-surface-to-save_dds_.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-DDS/0002-d3dx9_36-Improve-D3DXSaveTextureToFile-to-save-simpl.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-Filter_Warnings/0001-d3dx9_36-Filter-out-D3DCompile-warning-messages-that.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/d3dx9_36-UpdateSkinnedMesh/0001-d3dx9_36-Implement-ID3DXSkinInfoImpl_UpdateSkinnedMe.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ddraw-Device_Caps/0001-ddraw-Don-t-set-HWTRANSFORMANDLIGHT-flag-on-d3d7-RGB.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ddraw-Device_Caps/0002-ddraw-Set-dwZBufferBitDepth-in-ddraw7_GetCaps.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ddraw-IDirect3DTexture2_Load/0001-ddraw-Allow-size-and-format-conversions-in-IDirect3D.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ddraw-IDirect3DTexture2_Load/0002-ddraw-tests-Add-more-tests-for-IDirect3DTexture2-Loa.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ddraw-Silence_FIXMEs/0001-ddraw-Silence-noisy-FIXME-about-unimplemented-D3DPRO.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ddraw-version-check/0001-ddraw-Return-correct-devices-based-off-requested-Dir.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-Fast_Mixer/0001-dsound-Add-a-linear-resampler-for-use-with-a-large-n.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0001-dsound-Apply-filters-before-sound-is-multiplied-to-s.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0002-dsound-Add-EAX-v1-constants-and-structs.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0003-dsound-Report-that-we-support-EAX-v1.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0004-dsound-Add-EAX-propset-stubs.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0005-dsound-Add-EAX-presets.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0006-dsound-Support-getting-and-setting-EAX-properties.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0007-dsound-Support-getting-and-setting-EAX-buffer-proper.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0008-dsound-Add-EAX-init-and-free-stubs.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0009-dsound-Feed-data-through-EAX-function.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0010-dsound-Allocate-EAX-delay-lines.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0011-dsound-Add-EAX-VerbPass-stub.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0012-dsound-Implement-EAX-lowpass-filter.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0013-dsound-Add-delay-line-EAX-functions.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0014-dsound-Implement-EAX-early-reflections.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0015-dsound-Implement-EAX-decorrelator.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0016-dsound-Implement-EAX-late-reverb.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0017-dsound-Implement-EAX-late-all-pass-filter.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0018-dsound-Various-improvements-to-EAX-support.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0019-dsound-Allow-disabling-of-EAX-support-in-the-registr.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0020-dsound-Add-stub-support-for-DSPROPSETID_EAX20_Listen.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0021-dsound-Add-stub-support-for-DSPROPSETID_EAX20_Buffer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0022-dsound-Enable-EAX-by-default.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/dsound-EAX/0023-dsound-Fake-success-for-EAX-Set-Buffer-ListenerPrope.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-NtQueryEaFile/0001-ntdll-Improve-stub-of-NtQueryEaFile.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/explorer-Video_Registry_Key/0001-explorer-Create-CurrentControlSet-Control-Video-regi.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntoskrnl-Stubs/0009-ntoskrnl.exe-Implement-MmMapLockedPages-and-MmUnmapL.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntoskrnl-Stubs/0011-ntoskrnl.exe-Add-IoGetDeviceAttachmentBaseRef-stub.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winedevice-Default_Drivers/0001-win32k.sys-Add-stub-driver.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winedevice-Default_Drivers/0002-dxgkrnl.sys-Add-stub-driver.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winedevice-Default_Drivers/0003-dxgmms1.sys-Add-stub-driver.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winedevice-Default_Drivers/0004-programs-winedevice-Load-some-common-drivers-and-fix.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/fonts-Missing_Fonts/0001-fonts-Add-Liberation-Sans-as-an-Arial-replacement.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/fonts-Missing_Fonts/0002-fonts-Add-Liberation-Serif-as-an-Times-New-Roman-rep.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/fonts-Missing_Fonts/0003-fonts-Add-Liberation-Mono-as-an-Courier-New-replacem.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/fonts-Missing_Fonts/0004-fonts-Add-WenQuanYi-Micro-Hei-as-a-Microsoft-Yahei-r.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/fonts-Missing_Fonts/0005-Add-licenses-for-fonts-as-separate-files.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/gdi32-rotation/0001-gdi32-fix-for-rotated-Arc-ArcTo-Chord-and-Pie-drawin.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/gdi32-rotation/0002-gdi32-fix-for-rotated-ellipse.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/gdiplus-Performance-Improvements/0001-gdiplus-Change-the-order-of-x-y-loops-in-the-scaler.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/gdiplus-Performance-Improvements/0002-gdiplus-Change-multiplications-by-additions-in-the-x.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/gdiplus-Performance-Improvements/0003-gdiplus-Remove-ceilf-floorf-calls-from-bilinear-scal.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/gdiplus-Performance-Improvements/0004-gdiplus-Prefer-using-pre-multiplied-ARGB-data-in-the.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/include-winsock/0001-include-Always-define-hton-ntoh-macros.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/kernel32-Job_Tests/0001-kernel32-tests-Add-tests-for-job-object-accounting.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/kernel32-Processor_Group/0002-kernel32-Add-stub-for-SetThreadIdealProcessorEx.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/krnl386.exe16-GDT_LDT_Emulation/0001-krnl386.exe16-Emulate-GDT-and-LDT-access.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/krnl386.exe16-Invalid_Console_Handles/0001-krnl386.exe16-Really-translate-all-invalid-console-h.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/libs-Unicode_Collation/0001-kernelbase-Implement-sortkey-generation-on-official-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/libs-Unicode_Collation/0002-kernelbase-Implement-sortkey-punctuation.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/libs-Unicode_Collation/0003-kernelbase-Implement-sortkey-for-Japanese-characters.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/libs-Unicode_Collation/0004-kernelbase-Implement-sortkey-expansion.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/libs-Unicode_Collation/0005-kernelbase-Implement-sortkey-language-support.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/libs-Unicode_Collation/0006-kernelbase-Implement-CompareString-functions.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/mmsystem.dll16-MIDIHDR_Refcount/0001-mmsystem.dll16-Refcount-midihdr-to-work-around-buggy.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/mmsystem.dll16-MIDIHDR_Refcount/0002-mmsystem.dll16-Translate-MidiIn-messages.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/mountmgr-DosDevices/0001-mountmgr.sys-Write-usable-device-paths-into-HKLM-SYS.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/mscoree-CorValidateImage/0001-mscoree-Implement-_CorValidateImage.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/mshtml-TranslateAccelerator/0001-mshtml-Improve-IOleInPlaceActiveObject-TranslateAcce.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/msi-msi_vcl_get_cost/0001-msi-Do-not-sign-extend-after-multiplying.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-APC_Performance/0001-ntdll-Reuse-old-async-fileio-structures-if-possible.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-FileFsFullSizeInformation/0001-ntdll-Add-support-for-FileFsFullSizeInformation-clas.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-HashLinks/0001-ntdll-Implement-HashLinks-field-in-LDR-module-data.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-HashLinks/0002-ntdll-Use-HashLinks-when-searching-for-a-dll-using-t.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-Manifest_Range/0001-ntdll-Support-ISOLATIONAWARE_MANIFEST_RESOURCE_ID-ra.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-NtQuerySection/0002-kernel32-tests-Add-tests-for-NtQuerySection.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-NtSetLdtEntries/0001-ntdll-Implement-NtSetLdtEntries.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-NtSetLdtEntries/0002-libs-wine-Allow-to-modify-reserved-LDT-entries.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-ProcessQuotaLimits/0001-ntdll-Add-fake-data-implementation-for-ProcessQuotaL.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-RtlFirstFreeAce/0001-ntdll-Check-return-parameter-before-use.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-RtlFirstFreeAce/0002-ntdll-RtlFirstFreeAce-only-return-FALSE-on-error.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/ntdll-ext4-case-folder/0002-ntdll-server-Mark-drive_c-as-case-insensitive-when-c.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0001-include-Add-cuda.h.h.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0002-nvcuda-Add-stub-dll.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0003-nvcuda-First-implementation.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0004-nvcuda-Implement-new-functions-added-in-CUDA-6.5.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0005-nvcuda-Properly-wrap-undocumented-ContextStorage-int.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0006-nvcuda-Emulate-two-d3d9-initialization-functions.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0007-nvcuda-Properly-wrap-stream-callbacks-by-forwarding-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0008-nvcuda-Add-support-for-CUDA-7.0.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0009-nvcuda-Implement-cuModuleLoad-wrapper-function.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0010-nvcuda-Search-for-dylib-library-on-Mac-OS-X.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0011-nvcuda-Add-semi-stub-for-cuD3D10GetDevice.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0012-nvcuda-Add-semi-stub-for-cuD3D11GetDevice-and-cuGrap.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0013-nvcuda-Update-spec-file.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0014-nvcuda-Implement-cuDeviceGetUuid-and-cuDeviceGetLuid.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuda-CUDA_Support/0015-nvcuda-Expand-the-Unknown1-table.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0001-nvapi-First-implementation.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0002-nvapi-Add-stubs-for-NvAPI_EnumLogicalGPUs-and-undocu.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0003-nvapi-Add-NvAPI_GetPhysicalGPUsFromLogicalGPU.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0004-nvapi-Add-stub-for-NvAPI_EnumPhysicalGPUs.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0005-nvapi-Add-stubs-for-NvAPI_GPU_GetFullName.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0006-nvapi-Explicity-return-NULL-for-0x33c7358c-and-0x593.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0007-nvapi-Add-stub-for-NvAPI_DISP_GetGDIPrimaryDisplayId.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0008-nvapi-Add-stub-for-EnumNvidiaDisplayHandle.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0009-nvapi-Add-stub-for-NvAPI_SYS_GetDriverAndBranchVersi.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0010-nvapi-Add-stub-for-NvAPI_Unload.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0011-nvapi-Add-stub-for-NvAPI_D3D_GetCurrentSLIState.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0012-nvapi-tests-Use-structure-to-list-imports.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0013-nvapi-Add-stub-for-NvAPI_GetLogicalGPUFromDisplay.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0014-nvapi-Add-stub-for-NvAPI_D3D_GetObjectHandleForResou.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0015-nvapi-Add-stub-for-NvAPI_D3D9_RegisterResource.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0016-nvapi-Improve-NvAPI_D3D_GetCurrentSLIState.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0017-nvapi-Implement-NvAPI_GPU_Get-Physical-Virtual-Frame.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0018-nvapi-Add-stub-for-NvAPI_GPU_GetGpuCoreCount.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0019-wined3d-Make-depth-bounds-test-into-a-proper-state.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0020-d3d11-Introduce-a-COM-interface-to-retrieve-the-wine.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0021-nvapi-Implement-NvAPI_D3D11_SetDepthBoundsTest.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvapi-Stub_DLL/0022-nvapi-Implement-NvAPI_D3D11_CreateDevice-and-NvAPI_D.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvcuvid-CUDA_Video_Support/0001-nvcuvid-First-implementation.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvencodeapi-Video_Encoder/0001-nvencodeapi-First-implementation.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvencodeapi-Video_Encoder/0002-nvencodeapi-Add-debian-specific-paths-to-native-libr.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/nvencodeapi-Video_Encoder/0003-nvencodeapi-Add-support-for-version-6.0.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-CreateTypeLib/0001-oleaut32-Implement-semi-stub-for-CreateTypeLib.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-Load_Save_EMF/0001-oleaut32-tests-Add-some-tests-for-loading-and-saving.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-Load_Save_EMF/0002-oleaut32-Add-support-for-loading-and-saving-EMF-to-I.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-OLEPictureImpl_SaveAsFile/0002-oleaut32-Implement-a-better-stub-for-IPicture-SaveAs.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-OLEPictureImpl_SaveAsFile/0003-oleaut32-Implement-SaveAsFile-for-PICTYPE_ENHMETAFIL.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-OleLoadPicture/0001-oleaut32-OleLoadPicture-should-create-a-DIB-section-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-OleLoadPicture/0002-oleaut32-Make-OleLoadPicture-load-DIBs-using-WIC-dec.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-OleLoadPictureFile/0001-oleaut32-Do-not-reimplement-OleLoadPicture-in-OleLoa.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-OleLoadPictureFile/0002-oleaut32-Factor-out-stream-creation-from-OleLoadPict.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/oleaut32-OleLoadPictureFile/0003-oleaut32-Implement-OleLoadPictureFile.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/programs-findstr/0001-findstr-add-basic-functionality-also-support-literal.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/programs-systeminfo/0001-systeminfo-add-basic-functionality.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/riched20-Class_Tests/0001-riched20-tests-Add-a-test-to-see-what-richedit-class.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/riched20-IText_Interface/0003-riched20-Stub-for-ITextPara-interface-and-implement-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/riched20-IText_Interface/0010-riched20-Silence-repeated-FIXMEs-triggered-by-Adobe-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/setupapi-DiskSpaceList/0001-setupapi-Rewrite-DiskSpaceList-logic-using-lists.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/setupapi-DiskSpaceList/0002-setupapi-Implement-SetupAddToDiskSpaceList.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/setupapi-DiskSpaceList/0003-setupapi-Implement-SetupQueryDrivesInDiskSpaceList.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/setupapi-DiskSpaceList/0004-setupapi-Ignore-deletion-of-added-files-in-SetupAddT.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/setupapi-DiskSpaceList/0005-setupapi-ImplementSetupAddSectionToDiskSpaceList.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/setupapi-DiskSpaceList/0006-setupapi-Implement-SetupAddInstallSectionToDiskSpace.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shdocvw-ParseURLFromOutsideSource_Tests/0001-shdocvw-Check-precisely-ParseURLFromOutsideSourceX-r.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-SHFileOperation_Move/0001-shell32-Fix-SHFileOperation-FO_MOVE-for-creating-sub.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-Context_Menu/0003-shell32-Implement-insert-paste-for-item-context-menu.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-Context_Menu/0005-shell32-Add-support-for-setting-getting-PREFERREDDRO.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-Context_Menu/0006-shell32-Add-parameter-to-ISFHelper-DeleteItems-to-al.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-Context_Menu/0007-shell32-Remove-source-files-when-using-cut-in-the-co.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-Context_Menu/0008-shell32-Recognize-cut-copy-paste-string-verbs-in-ite.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-IconCache/0001-shell32-iconcache-Generate-icons-from-available-icons-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-NewMenu_Interface/0001-shell32-Implement-NewMenu-with-new-folder-item.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-SFGAO_HASSUBFOLDER/0002-shell32-Set-SFGAO_HASSUBFOLDER-correctly-for-normal-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-SHGetStockIconInfo/0001-shell32-Improve-semi-stub-SHGetStockIconInfo-try-fin.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-Toolbar_Bitmaps/0001-shell32-Add-toolbar-bitmaps-compatible-with-IE6.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-Toolbar_Bitmaps/0002-shell32-Add-more-Tango-icons-to-the-IE-toolbar.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shell32-registry-lookup-app/0001-shell32-Append-.exe-when-registry-lookup-fails-first.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shlwapi-AssocGetPerceivedType/0001-shlwapi-tests-Add-tests-for-AssocGetPerceivedType.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shlwapi-AssocGetPerceivedType/0002-shlwapi-Implement-AssocGetPerceivedType.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shlwapi-UrlCanonicalize/0001-shlwapi-Support-.-in-UrlCanonicalize.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shlwapi-UrlCombine/0001-shlwapi-tests-Add-additional-tests-for-UrlCombine-and-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/shlwapi-UrlCombine/0002-shlwapi-UrlCombineW-workaround-for-relative-paths.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/stdole32.idl-Typelib/0001-include-Make-stdole32.idl-a-public-component.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0001-widl-Add-initial-implementation-of-SLTG-typelib-gene.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0002-widl-Add-support-for-structures.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0003-widl-Properly-align-name-table-entries.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0004-widl-More-accurately-report-variable-descriptions-da.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0005-widl-Calculate-size-of-instance-for-structures.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0006-widl-Write-correct-typekind-to-the-SLTG-typeinfo-blo.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0007-widl-Write-SLTG-blocks-according-to-the-index-order.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0008-widl-Write-correct-syskind-by-SLTG-typelib-generator.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0009-widl-Add-support-for-VT_VOID-and-VT_VARIANT-to-SLTG-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0010-widl-Add-support-for-VT_USERDEFINED-to-SLTG-typelib-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0011-widl-Factor-out-SLTG-tail-initialization.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0012-widl-Add-support-for-recursive-type-references-to-SL.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0013-widl-Add-support-for-interfaces-to-SLTG-typelib-gene.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0014-widl-Add-support-for-inherited-interfaces-to-SLTG-ty.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0015-widl-Make-automatic-dispid-generation-scheme-better-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0016-widl-Create-library-block-index-right-after-the-Comp.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0017-widl-Fix-generation-of-resources-containing-an-old-t.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0018-widl-Add-oldtlb-switch-in-usage-message.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0019-widl-Avoid-relying-on-side-effects-when-marking-func.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0020-widl-Set-the-lowest-bit-in-the-param-name-to-indicat.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0021-oleaut32-Fix-logic-for-deciding-whether-type-descrip.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0022-widl-Add-support-for-function-parameter-flags-to-SLT.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0023-oleaut32-Implement-decoding-of-SLTG-help-strings.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0024-oleaut32-Add-support-for-decoding-SLTG-function-help.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0025-oleaut32-Add-support-for-decoding-SLTG-variable-help.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/widl-SLTG_Typelib_Support/0026-widl-Minor-cosmetic-clean-up.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/stdole32.tlb-SLTG_Typelib/0020-stdole32.tlb-Compile-typelib-with-oldtlb.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/tasklist-basics/0001-tasklist.exe-add-minimal-functionality.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-DM_SETDEFID/0001-user32-Do-not-initialize-dialog-info-for-every-windo.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-DM_SETDEFID/0002-user32-Use-root-dialog-for-DM_SETDEFID-DM_GETDEFID-i.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-DM_SETDEFID/0003-user32-tests-Add-a-bunch-of-tests-for-DM_SETDEFID-DM.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-Dialog_Paint_Event/0001-user32-Call-UpdateWindow-during-DIALOG_CreateIndirec.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-DrawTextExW/0001-user32-Fix-handling-of-invert_y-in-DrawTextExW.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-FlashWindowEx/0001-user32-Improve-FlashWindowEx-message-and-return-valu.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-Implement-CascadeWindows/0001-user32-Implement-CascadeWindows.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-Implement-CascadeWindows/0002-user32-Implement-TileWindows.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-LR_LOADFROMFILE/0001-user32-Add-a-workaround-for-Windows-3.1-apps-which-c.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-ListBox_Size/0001-user32-Fix-calculation-of-listbox-size-when-horizont.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-LoadKeyboardLayoutEx/0001-user32-Added-LoadKeyboardLayoutEx-stub.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-MessageBox_WS_EX_TOPMOST/0001-user32-tests-Add-some-tests-to-see-when-MessageBox-g.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-MessageBox_WS_EX_TOPMOST/0002-user32-MessageBox-should-be-topmost-when-MB_SYSTEMMO.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-Mouse_Message_Hwnd/0001-user32-Try-harder-to-find-a-target-for-mouse-message.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-Mouse_Message_Hwnd/0002-user32-tests-Add-tests-for-clicking-through-layered-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-Mouse_Message_Hwnd/0003-user32-tests-Add-tests-for-window-region-of-layered-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-Mouse_Message_Hwnd/0004-user32-tests-Add-tests-for-DC-region.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-Mouse_Message_Hwnd/0005-server-Add-support-for-a-layered-window-region.-v2.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-QueryDisplayConfig/0001-user32-Implement-QueryDisplayConfig.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-Refresh_MDI_Menus/0001-user32-Refresh-MDI-menus-when-DefMDIChildProcW-WM_SE.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-ScrollWindowEx/0001-user32-Fix-return-value-of-ScrollWindowEx-for-invisi.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-message-order/0001-user32-Fix-messages-sent-on-a-window-without-WS_CHIL.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-msgbox-Support-WM_COPY-mesg/0001-user32-msgbox-Support-WM_COPY-Message.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/user32-msgbox-Support-WM_COPY-mesg/0002-user32-msgbox-Use-a-windows-hook-to-trap-Ctrl-C.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/uxtheme-CloseThemeClass/0001-uxtheme-Protect-CloseThemeData-from-invalid-input.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/version-VerQueryValue/0001-version-Test-for-VerQueryValueA-try-2.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wbemdisp-ISWbemObject-Invoke/0001-wbemdisp-Support-DISPATCH_METHOD-in-ISWbemObject-Inv.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wbemdisp-ISWbemObject-Invoke/0002-vbscript-Support-VT_BSTR-VT_ARRAY-Iterator.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wbemdisp-ISWbemObject-Invoke/0003-wbemprox-Support-VT_BYREF-in-to_longlong.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wbemdisp-ISWbemObject-Invoke/0004-vbscript-Add-wmi-test.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/windowscodecs-GIF_Encoder/0007-windowscodecs-tests-Add-IWICBitmapEncoderInfo-test.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/windowscodecs-TIFF_Support/0015-windowscodecs-Tolerate-partial-reads-in-the-IFD-meta.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/windowscodecs-TIFF_Support/0016-gdiplus-Add-support-for-more-image-color-formats.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/windowscodecs-TIFF_Support/0017-gdiplus-tests-Add-some-tests-for-loading-TIFF-images.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wine.inf-Directory_ContextMenuHandlers/0001-wine.inf-Add-New-context-menu-handler-entry-for-dire.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wine.inf-Dummy_CA_Certificate/0001-wine.inf.in-Add-invalid-dummy-certificate-to-CA-cert.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wineboot-HKEY_DYN_DATA/0001-wineboot-Add-some-generic-hardware-in-HKEY_DYN_DATA-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winecfg-Libraries/0001-winecfg-Double-click-in-dlls-list-to-edit-item-s-ove.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winecfg-Staging/0001-winecfg-Add-staging-tab-for-CSMT.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winecfg-Staging/0002-winecfg-Add-checkbox-to-enable-disable-vaapi-GPU-dec.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winecfg-Staging/0003-winecfg-Add-checkbox-to-enable-disable-EAX-support.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winecfg-Staging/0004-winecfg-Add-checkbox-to-enable-disable-HideWineExpor.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winecfg-Staging/0005-winecfg-Add-option-to-enable-disable-GTK3-theming.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-Accounting/0001-wined3d-Use-real-values-for-memory-accounting-on-NVI.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-SWVP-shaders/0001-wined3d-Use-UBO-for-vertex-shader-float-constants-if.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-SWVP-shaders/0002-d3d9-Support-SWVP-vertex-shader-float-constants-limi.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-SWVP-shaders/0003-wined3d-Report-actual-vertex-shader-float-constants-.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-SWVP-shaders/0004-wined3d-Support-SWVP-vertex-shader-constants-limit-i.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-SWVP-shaders/0005-wined3d-Support-SWVP-mode-vertex-shaders.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-Indexed_Vertex_Blending/0001-d3d9-tests-Add-test-for-indexed-vertex-blending.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-Indexed_Vertex_Blending/0002-d3d9-tests-Test-normal-calculation-when-indexed-vert.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-Indexed_Vertex_Blending/0003-d3d9-tests-Check-MaxVertexBlendMatrixIndex-capabilit.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-Indexed_Vertex_Blending/0004-wined3d-Allow-higher-world-matrix-states.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-Indexed_Vertex_Blending/0005-wined3d-Support-indexed-vertex-blending.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-Silence_FIXMEs/0004-wined3d-Print-FIXME-only-once-in-surface_cpu_blt.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-WINED3DFMT_B8G8R8X8_UNORM/0001-wined3d-Implement-WINED3DFMT_B8G8R8X8_UNORM-to-WINED.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-mesa_texture_download/0001-wined3d-Use-glReadPixels-for-RT-texture-download.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-unset-flip-gdi/0001-wined3d-Dont-set-DDSCAPS_FLIP-for-gdi-renderer.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-wined3d_guess_gl_vendor/0001-wined3d-Also-check-for-Brian-Paul-to-detect-Mesa-gl_.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wined3d-zero-inf-shaders/0001-wined3d-Add-a-setting-to-workaround-0-inf-problem-in.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winedbg-Process_Arguments/0001-programs-winedbg-Print-process-arguments-in-info-thr.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winemac.drv-no-flicker-patch/0001-winemac.drv-No-Flicker-patch.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winemapi-user-xdg-mail/0001-winemapi-Directly-use-xdg-email-if-available-enablin.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winemenubuilder-integration/0001-winemenubuilder-Blacklist-desktop-integration-for-ce.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wineps.drv-PostScript_Fixes/0004-wineps.drv-Add-support-for-GETFACENAME-and-DOWNLOADF.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winex11-CandidateWindowPos/0001-winex11.drv-Update-a-candidate-window-s-position-wit.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winex11-Window_Style/0001-winex11-Fix-handling-of-window-attributes-for-WS_EX_.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winex11-ime-check-thread-data/0001-winex11.drv-handle-missing-thread-data-in-X11DRV_get_ic.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winex11.drv-Query_server_position/0001-winex11.drv-window-Query-the-X-server-for-the-actual.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/winmm-mciSendCommandA/0001-winmm-Do-not-crash-in-Win-9X-mode-when-an-invalid-de.patch
+Applying /mnt/Storage/Projects/Development/wine-ge-custom/wine-staging/patches/wintrust-WTHelperGetProvCertFromChain/0001-wintrust-Add-parameter-check-in-WTHelperGetProvCertF.patch
+include/wine/server_protocol.h updated
+include/wine/server_protocol.h updated
+server/trace.c updated
+server/request.h updated
+WINE: -STAGING- applying staging Compiler_Warnings revert for steamclient compatibility
+patching file include/wine/list.h
+patching file include/wine/rbtree.h
+patching file include/winnt.h
+Hunk #1 succeeded at 840 (offset 47 lines).
+patching file dlls/d3dx11_42/Makefile.in
+patching file dlls/d3dx11_43/Makefile.in
+patching file dlls/d3dx11_43/main.c
+patching file dlls/d3dx11_43/texture.c
+patching file dlls/d3dx11_43/texture.c
+patching file configure.ac
+Hunk #1 succeeded at 66 (offset 1 line).
+Hunk #2 succeeded at 652 (offset 9 lines).
+patching file dlls/ntdll/unix/file.c
+patching file dlls/ntdll/tests/file.c
+Hunk #1 succeeded at 1415 (offset 15 lines).
+Hunk #2 succeeded at 1428 (offset 15 lines).
+Hunk #3 succeeded at 1485 (offset 15 lines).
+Hunk #4 succeeded at 1498 (offset 15 lines).
+patching file dlls/ntdll/unix/file.c
+Hunk #1 succeeded at 362 (offset -12 lines).
+Hunk #2 succeeded at 1528 (offset -12 lines).
+Hunk #3 succeeded at 4584 (offset 175 lines).
+Hunk #4 succeeded at 4597 (offset -141 lines).
+patching file dlls/ntdll/tests/directory.c
+patching file dlls/ntdll/unix/file.c
+Hunk #1 succeeded at 392 (offset -12 lines).
+Hunk #2 succeeded at 3958 (offset 155 lines).
+Hunk #3 succeeded at 4057 (offset 155 lines).
+Hunk #4 succeeded at 4086 (offset 155 lines).
+Hunk #5 succeeded at 4099 (offset 155 lines).
+patching file configure.ac
+Hunk #1 succeeded at 655 (offset 9 lines).
+patching file dlls/ntdll/unix/file.c
+patching file configure.ac
+Hunk #1 succeeded at 654 (offset 9 lines).
+patching file dlls/ntdll/unix/file.c
+patching file dlls/ntdll/unix/file.c
+Hunk #1 succeeded at 1311 (offset -17 lines).
+Hunk #2 succeeded at 1662 (offset -17 lines).
+Hunk #3 succeeded at 2194 (offset 4 lines).
+Hunk #4 succeeded at 4306 (offset 201 lines).
+Hunk #5 succeeded at 4336 (offset 205 lines).
+patching file dlls/ntdll/unix/file.c
+Hunk #1 succeeded at 1662 (offset 95 lines).
+Hunk #2 succeeded at 4018 (offset 459 lines).
+patching file loader/wine.inf.in
+Hunk #1 succeeded at 63 (offset 24 lines).
+Hunk #2 succeeded at 88 (offset 24 lines).
+Hunk #3 succeeded at 119 (offset 27 lines).
+Hunk #4 succeeded at 172 with fuzz 1 (offset 31 lines).
+Hunk #5 succeeded at 1196 (offset 105 lines).
+patching file dlls/user32/input.c
+Hunk #1 succeeded at 820 (offset 11 lines).
+patching file dlls/user32/tests/input.c
+Hunk #1 succeeded at 4746 (offset 265 lines).
+Hunk #2 succeeded at 4822 (offset 265 lines).
+patching file dlls/win32u/input.c
+patching file dlls/ntdll/loader.c
+Hunk #1 succeeded at 181 (offset 17 lines).
+Hunk #2 succeeded at 4141 (offset 514 lines).
+patching file include/Makefile.in
+patching file include/apiset.h
+patching file include/winternl.h
+patching file dlls/kernelbase/debug.c
+Hunk #1 succeeded at 200 (offset -13 lines).
+patching file dlls/ntdll/tests/exception.c
+Hunk #1 succeeded at 8325 (offset 2307 lines).
+Hunk #2 succeeded at 8341 (offset 2307 lines).
+Hunk #3 succeeded at 10762 (offset 2512 lines).
+Hunk #4 succeeded at 10868 with fuzz 2 (offset 2520 lines).
+patching file dlls/ntdll/loader.c
+Hunk #1 succeeded at 87 with fuzz 2 (offset -2 lines).
+Hunk #2 succeeded at 109 (offset -1 lines).
+Hunk #3 succeeded at 1914 (offset 47 lines).
+Hunk #4 succeeded at 2023 (offset 47 lines).
+Hunk #5 succeeded at 2286 (offset 70 lines).
+patching file dlls/ntdll/ntdll_misc.h
+Hunk #1 succeeded at 143 (offset -6 lines).
+patching file dlls/mountmgr.sys/device.c
+Hunk #1 succeeded at 1834 (offset -34 lines).
+patching file dlls/mountmgr.sys/unixlib.c
+patching file dlls/mountmgr.sys/unixlib.h
+patching file dlls/secur32/schannel.c
+Hunk #1 succeeded at 787 with fuzz 1 (offset 63 lines).
+patching file dlls/secur32/tests/schannel.c
+Hunk #1 succeeded at 1406 (offset 87 lines).
+Hunk #2 succeeded at 1448 with fuzz 1 (offset 91 lines).
+Hunk #3 succeeded at 1458 (offset 91 lines).
+patching file dlls/winex11.drv/mouse.c
+Hunk #3 succeeded at 1975 (offset -54 lines).
+Hunk #4 succeeded at 1989 (offset -54 lines).
+Hunk #5 succeeded at 2175 (offset 1 line).
+patching file include/Makefile.in
+Hunk #1 succeeded at 797 (offset 7 lines).
+patching file include/windows.networking.connectivity.idl
+patching file include/Makefile.in
+Hunk #1 succeeded at 797 with fuzz 2 (offset 11 lines).
+patching file include/windows.networking.idl
+patching file configure.ac
+Hunk #1 succeeded at 3463 (offset -312 lines).
+patching file dlls/windows.networking.connectivity/Makefile.in
+patching file dlls/windows.networking.connectivity/windows.networking.connectivity.spec
+patching file dlls/windows.networking.connectivity/windows.networking.connectivity_main.c
+patching file dlls/windows.networking.connectivity/windows.networking.connectivity_main.c
+patching file dlls/windows.networking.connectivity/windows.networking.connectivity_main.c
+patching file dlls/windows.networking.connectivity/Makefile.in
+patching file dlls/windows.networking.connectivity/network.rgs
+patching file dlls/windows.networking.connectivity/rsrc.rc
+patching file dlls/windows.networking.connectivity/windows.networking.connectivity_main.c
+patching file dlls/windows.networking.connectivity/windows.networking.connectivity_main.c
+patching file programs/wineboot/Makefile.in
+Hunk #1 succeeded at 2 with fuzz 1 (offset 1 line).
+patching file programs/wineboot/wineboot.c
+Hunk #1 succeeded at 78 (offset 1 line).
+Hunk #2 succeeded at 1168 (offset 165 lines).
+Hunk #3 succeeded at 2038 with fuzz 2 (offset 218 lines).
+patching file dlls/winex11.drv/window.c
+Hunk #1 succeeded at 553 (offset 119 lines).
+Hunk #2 succeeded at 2016 (offset 411 lines).
+Hunk #3 succeeded at 2161 with fuzz 2 (offset 424 lines).
+Hunk #4 succeeded at 3212 (offset 547 lines).
+Hunk #5 succeeded at 3240 (offset 551 lines).
+Hunk #6 succeeded at 3256 (offset 551 lines).
+Hunk #7 succeeded at 3285 (offset 553 lines).
+Hunk #8 succeeded at 3324 (offset 555 lines).
+patching file dlls/winex11.drv/vulkan.c
+Hunk #1 succeeded at 41 (offset 1 line).
+Hunk #2 succeeded at 123 (offset 10 lines).
+Hunk #3 succeeded at 1067 (offset -11 lines).
+patching file dlls/x3daudio1_7/Makefile.in
+patching file dlls/xactengine3_7/xact_dll.c
+Hunk #1 succeeded at 964 (offset 81 lines).
+Hunk #2 succeeded at 1032 (offset 81 lines).
+Hunk #3 succeeded at 1082 (offset 81 lines).
+patching file dlls/xactengine3_7/xact_dll.c
+Hunk #2 succeeded at 995 (offset -5 lines).
+Hunk #3 succeeded at 1286 (offset 26 lines).
+Hunk #4 succeeded at 1304 (offset 26 lines).
+patching file dlls/xactengine3_7/xact_dll.c
+Hunk #1 succeeded at 1111 (offset 135 lines).
+patching file dlls/xactengine3_7/xact_dll.c
+Hunk #1 succeeded at 1100 (offset 135 lines).
+patching file libs/faudio/include/FACT.h
+patching file libs/faudio/src/FACT.c
+Hunk #4 succeeded at 3016 (offset -11 lines).
+patching file libs/faudio/src/FACT_internal.h
+patching file dlls/xactengine3_7/xact_dll.c
+patching file libs/faudio/src/FACT.c
+Hunk #1 succeeded at 2744 (offset 59 lines).
+patching file dlls/xactengine3_7/xact_dll.c
+patching file dlls/fltmgr.sys/Makefile.in
+patching file dlls/fltmgr.sys/fltmgr.sys.spec
+patching file dlls/fltmgr.sys/main.c
+patching file include/ddk/fltkernel.h
+patching file dlls/fltmgr.sys/Makefile.in
+patching file dlls/ntoskrnl.exe/tests/Makefile.in
+patching file dlls/ntoskrnl.exe/tests/driver.c
+patching file dlls/inseng/Makefile.in
+Hunk #1 succeeded at 2 with fuzz 1 (offset 1 line).
+patching file dlls/inseng/icif.c
+patching file dlls/inseng/inf.c
+patching file dlls/inseng/inseng.spec
+patching file dlls/inseng/inseng_main.c
+patching file dlls/inseng/inseng_private.h
+patching file include/inseng.idl
+patching file dlls/ntdll/tests/Makefile.in
+patching file dlls/ntdll/tests/rtl.c
+patching file dlls/packager/Makefile.in
+patching file programs/winemenubuilder/Makefile.in
+Hunk #1 succeeded at 2 with fuzz 1 (offset 1 line).
+patching file programs/winemenubuilder/winemenubuilder.c
+Hunk #3 succeeded at 2029 (offset 36 lines).
+patching file programs/wscript/main.c
+patching file dlls/wininet/tests/http.c
+Hunk #1 succeeded at 2105 (offset 37 lines).
+Hunk #2 succeeded at 2532 (offset 86 lines).
+Hunk #3 succeeded at 4071 (offset 221 lines).
+Hunk #4 succeeded at 4099 (offset 187 lines).
+Hunk #5 succeeded at 4110 (offset 221 lines).
+patching file dlls/wininet/tests/http.c
+Hunk #1 succeeded at 2589 (offset 93 lines).
+Hunk #2 succeeded at 3308 (offset 93 lines).
+patching file dlls/wininet/tests/http.c
+Hunk #1 succeeded at 2113 (offset 113 lines).
+Hunk #2 succeeded at 2566 (offset 167 lines).
+Hunk #3 succeeded at 3333 (offset 176 lines).
+patching file dlls/wininet/http.c
+Hunk #1 succeeded at 652 (offset -2 lines).
+Hunk #2 succeeded at 682 (offset -2 lines).
+patching file dlls/wininet/tests/http.c
+Hunk #1 succeeded at 2339 (offset -24 lines).
+Hunk #2 succeeded at 3367 (offset 16 lines).
+Hunk #3 succeeded at 3376 (offset 16 lines).
+patching file dlls/wininet/http.c
+Hunk #1 succeeded at 6117 (offset -3 lines).
+patching file dlls/opengl32/tests/opengl.c
+Hunk #1 succeeded at 536 (offset 171 lines).
+patching file dlls/winex11.drv/opengl.c
+Hunk #1 succeeded at 2695 (offset 736 lines).
+patching file dlls/nvcuda/nvcuda.c
+WINE: -GAME FIXES- assetto corsa hud fix
+patching file dlls/dwrite/font.c
+Hunk #1 succeeded at 4764 with fuzz 1 (offset 416 lines).
+WINE: -GAME FIXES- mk11 crash fix
+patching file dlls/ntdll/thread.c
+Reversed (or previously applied) patch detected!  Skipping patch.
+1 out of 1 hunk ignored -- saving rejects to file dlls/ntdll/thread.c.rej
+patching file include/wine/asm.h
+Reversed (or previously applied) patch detected!  Skipping patch.
+1 out of 1 hunk ignored -- saving rejects to file include/wine/asm.h.rej
+WINE: -GAME FIXES- killer instinct vulkan fix
+patching file dlls/winevulkan/vulkan.c
+Hunk #1 succeeded at 951 (offset 301 lines).
+Hunk #2 succeeded at 1009 (offset 314 lines).
+WINE: -GAME FIXES- add cities XXL patches
+patching file dlls/windowscodecs/converter.c
+Reversed (or previously applied) patch detected!  Skipping patch.
+6 out of 6 hunks ignored -- saving rejects to file dlls/windowscodecs/converter.c.rej
+patching file dlls/windowscodecs/tests/converter.c
+Reversed (or previously applied) patch detected!  Skipping patch.
+4 out of 4 hunks ignored -- saving rejects to file dlls/windowscodecs/tests/converter.c.rej
+WINE: -GAME FIXES- add powerprof patches for FFVII Remake and SpecialK
+patching file dlls/powrprof/powrprof.c
+patching file dlls/powrprof/powrprof.spec
+patching file include/powrprof.h
+patching file dlls/powrprof/powrprof.c
+patching file dlls/powrprof/powrprof.spec
+patching file include/powrprof.h
+patching file dlls/powrprof/powrprof.c
+patching file dlls/powrprof/powrprof.spec
+patching file include/powrprof.h
+WINE: -PROTON- Remove steamclient patches for normal WINE usage
+patching file configure
+Hunk #1 succeeded at 1946 (offset 22 lines).
+Hunk #2 succeeded at 23134 (offset 421 lines).
+patching file configure.ac
+Hunk #1 succeeded at 3718 (offset 42 lines).
+patching file dlls/advapi32/advapi.c
+patching file dlls/kernelbase/process.c
+Hunk #1 succeeded at 1213 (offset 4 lines).
+patching file dlls/ntdll/loader.c
+Hunk #1 succeeded at 85 with fuzz 2 (offset 1 line).
+Hunk #2 succeeded at 2169 (offset 132 lines).
+Hunk #3 succeeded at 2195 (offset 132 lines).
+patching file dlls/ntdll/unix/env.c
+patching file dlls/ntdll/unix/loader.c
+patching file dlls/ntdll/unix/signal_i386.c
+Hunk #1 succeeded at 1823 (offset -2 lines).
+Hunk #2 succeeded at 1870 (offset -2 lines).
+patching file dlls/ntdll/unix/signal_x86_64.c
+Hunk #1 succeeded at 2852 (offset -2 lines).
+Hunk #2 succeeded at 2894 (offset -2 lines).
+patching file dlls/ntdll/unix/unix_private.h
+Hunk #1 succeeded at 202 (offset 2 lines).
+patching file dlls/ntdll/unixlib.h
+patching file dlls/shell32/shellpath.c
+patching file dlls/winex11.drv/window.c
+Hunk #1 succeeded at 1078 (offset 49 lines).
+patching file loader/wine.inf.in
+Hunk #1 succeeded at 102 (offset 2 lines).
+Hunk #2 succeeded at 132 (offset 3 lines).
+Hunk #3 succeeded at 178 (offset 4 lines).
+Hunk #4 succeeded at 340 (offset 9 lines).
+Hunk #5 succeeded at 628 (offset 19 lines).
+Hunk #6 succeeded at 5905 (offset 283 lines).
+Hunk #7 succeeded at 6137 (offset 283 lines).
+patching file programs/wineboot/wineboot.c
+Hunk #1 succeeded at 1569 (offset 108 lines).
+Hunk #2 succeeded at 1787 (offset 108 lines).
+Hunk #3 succeeded at 1805 (offset 108 lines).
+patching file programs/winebrowser/main.c
+patching file programs/winedbg/debugger.h
+patching file programs/winedbg/tgt_active.c
+patching file programs/winedbg/winedbg.c
+patching file dlls/shell32/shellpath.c
+Hunk #1 succeeded at 3294 (offset 181 lines).
+WINE: -PROTON- fullscreen hack fsr patch
+patching file dlls/winevulkan/vulkan.c
+Hunk #1 succeeded at 835 with fuzz 2 (offset -44 lines).
+Hunk #2 succeeded at 870 (offset -46 lines).
+patching file dlls/winevulkan/make_vulkan
+Hunk #1 succeeded at 3255 with fuzz 2 (offset 48 lines).
+patching file dlls/winevulkan/vulkan.c
+Hunk #1 succeeded at 1826 (offset -180 lines).
+Hunk #2 succeeded at 1839 (offset 117 lines).
+Hunk #3 succeeded at 2725 (offset -180 lines).
+Hunk #4 succeeded at 2736 (offset -180 lines).
+Hunk #5 succeeded at 2756 (offset -180 lines).
+Hunk #6 succeeded at 2786 (offset -180 lines).
+Hunk #7 succeeded at 2819 (offset -180 lines).
+Hunk #8 succeeded at 2835 (offset -180 lines).
+Hunk #9 succeeded at 2866 (offset -180 lines).
+Hunk #10 succeeded at 3030 (offset -180 lines).
+Hunk #11 succeeded at 3050 (offset -180 lines).
+Hunk #12 succeeded at 3062 (offset -180 lines).
+Hunk #13 succeeded at 3296 (offset -176 lines).
+Hunk #14 succeeded at 3321 (offset -176 lines).
+Hunk #15 succeeded at 3461 (offset -175 lines).
+Hunk #16 succeeded at 3487 (offset -176 lines).
+Hunk #17 succeeded at 3672 (offset -350 lines).
+Hunk #18 succeeded at 3751 (offset -355 lines).
+Hunk #19 succeeded at 3807 (offset -355 lines).
+Hunk #20 succeeded at 3832 (offset -355 lines).
+Hunk #21 succeeded at 3839 (offset -355 lines).
+Hunk #22 succeeded at 3867 (offset -355 lines).
+Hunk #23 succeeded at 3896 (offset -355 lines).
+Hunk #24 succeeded at 3964 (offset -355 lines).
+Hunk #25 succeeded at 3996 (offset -355 lines).
+Hunk #26 succeeded at 4210 (offset -352 lines).
+patching file dlls/winevulkan/vulkan.c
+Hunk #1 succeeded at 3355 (offset 89 lines).
+patching file dlls/winevulkan/vulkan_private.h
+Hunk #1 succeeded at 73 (offset -29 lines).
+Hunk #2 succeeded at 98 (offset -29 lines).
+patching file dlls/winex11.drv/fs.c
+patching file dlls/winex11.drv/vulkan.c
+Hunk #1 succeeded at 916 (offset 90 lines).
+Hunk #2 succeeded at 967 (offset 90 lines).
+Hunk #3 succeeded at 1007 (offset 95 lines).
+patching file dlls/winex11.drv/x11drv.h
+Hunk #1 succeeded at 689 (offset 60 lines).
+patching file dlls/winex11.drv/fs.c
+patching file dlls/winevulkan/vulkan.c
+Hunk #1 succeeded at 2778 (offset -180 lines).
+Hunk #2 succeeded at 2915 (offset -180 lines).
+Hunk #3 succeeded at 3000 (offset -180 lines).
+Hunk #4 succeeded at 3024 (offset -180 lines).
+Hunk #5 succeeded at 3164 (offset -180 lines).
+Hunk #6 succeeded at 3236 (offset -180 lines).
+Hunk #7 succeeded at 3350 (offset -176 lines).
+Hunk #8 succeeded at 4240 (offset -354 lines).
+patching file dlls/winevulkan/Makefile.in
+patching file dlls/winex11.drv/fs.c
+WINE: -PROTON- fake current res patches
+patching file dlls/winex11.drv/fs.c
+Reversed (or previously applied) patch detected!  Skipping patch.
+4 out of 4 hunks ignored -- saving rejects to file dlls/winex11.drv/fs.c.rej
+WINE: -HOTFIX- unity crash hotfix
+patching file dlls/dxgi/dxgi_main.c
+Hunk #1 succeeded at 250 (offset -18 lines).
+WINE: -HOTFIX- 32 bit compilation crashes with newer libldap, upstream patch fixes it
+patching file dlls/wldap32/libldap.c
+WINE: -HOTFIX- fix audio regression caused by 0e7fd41
+patching file libs/gsm/Makefile.in
+WINE: -HOTFIX- fix star citizen bug 52956
+patching file dlls/kernel32/kernel32.spec
+Hunk #1 succeeded at 1473 (offset 3 lines).
+patching file dlls/kernelbase/kernelbase.spec
+Hunk #1 succeeded at 1490 (offset -30 lines).
+patching file dlls/kernelbase/thread.c
+Hunk #1 succeeded at 619 (offset 13 lines).
+patching file include/processthreadsapi.h
+patching file dlls/winex11.drv/keyboard.c
+Hunk #1 succeeded at 61 (offset -3 lines).
+patching file include/processthreadsapi.h
+patching file dlls/ntdll/unix/thread.c
+Hunk #1 succeeded at 2356 (offset 101 lines).
+Unhandled pNext chain alignment conversion for VkDedicatedAllocationMemoryAllocateInfoNV
+Unhandled pNext chain alignment conversion for VkMemoryDedicatedAllocateInfo
+Unhandled pNext chain alignment conversion for VkMemoryOpaqueCaptureAddressAllocateInfo
+Unhandled pNext chain alignment conversion for VkBindImageMemorySwapchainInfoKHR
+Unhandled pNext chain unwrapping conversion for VkBindImageMemorySwapchainInfoKHR
+Unhandled pNext chain alignment conversion for VkBindImageMemorySwapchainInfoKHR
+Unhandled pNext chain unwrapping conversion for VkBindImageMemorySwapchainInfoKHR
+Unhandled pNext chain alignment conversion for VkRenderingFragmentShadingRateAttachmentInfoKHR
+Unhandled pNext chain alignment conversion for VkRenderingFragmentDensityMapAttachmentInfoEXT
+Unhandled pNext chain alignment conversion for VkRenderingFragmentShadingRateAttachmentInfoKHR
+Unhandled pNext chain alignment conversion for VkRenderingFragmentDensityMapAttachmentInfoEXT
+Unhandled pNext chain alignment conversion for VkBufferOpaqueCaptureAddressCreateInfo
+Unhandled pNext chain alignment conversion for VkPipelineCreationFeedbackCreateInfo
+Unhandled pNext chain alignment conversion for VkSubpassShadingPipelineCreateInfoHUAWEI
+Unhandled pNext chain alignment conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain unwrapping conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain alignment conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain unwrapping conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain alignment conversion for VkGraphicsPipelineShaderGroupsCreateInfoNV
+Unhandled pNext chain alignment conversion for VkPipelineCreationFeedbackCreateInfo
+Unhandled pNext chain alignment conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain unwrapping conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain alignment conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain unwrapping conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain alignment conversion for VkSamplerYcbcrConversionInfo
+Unhandled pNext chain alignment conversion for VkPipelineCreationFeedbackCreateInfo
+Unhandled pNext chain alignment conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain unwrapping conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain alignment conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain unwrapping conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain alignment conversion for VkPipelineCreationFeedbackCreateInfo
+Unhandled pNext chain alignment conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain unwrapping conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain alignment conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain unwrapping conversion for VkDebugUtilsObjectNameInfoEXT
+Unhandled pNext chain alignment conversion for VkBufferOpaqueCaptureAddressCreateInfo
+Unhandled pNext chain alignment conversion for VkBufferOpaqueCaptureAddressCreateInfo
+Unhandled pNext chain alignment conversion for VkBufferOpaqueCaptureAddressCreateInfo
+Unhandled pNext chain alignment conversion for VkBufferOpaqueCaptureAddressCreateInfo
+Unhandled pNext chain alignment conversion for VkImageSwapchainCreateInfoKHR
+Unhandled pNext chain unwrapping conversion for VkImageSwapchainCreateInfoKHR
+Unhandled pNext chain alignment conversion for VkImageSwapchainCreateInfoKHR
+Unhandled pNext chain unwrapping conversion for VkImageSwapchainCreateInfoKHR
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceMemoryBudgetPropertiesEXT
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceMemoryBudgetPropertiesEXT
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceMaintenance3Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceMaintenance4Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceExternalMemoryHostPropertiesEXT
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceTimelineSemaphoreProperties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceTransformFeedbackPropertiesEXT
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceAccelerationStructurePropertiesKHR
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceRayTracingPropertiesNV
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceTexelBufferAlignmentProperties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceVulkan11Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceVulkan12Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceVulkan13Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceRobustness2PropertiesEXT
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceMaintenance3Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceMaintenance4Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceExternalMemoryHostPropertiesEXT
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceTimelineSemaphoreProperties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceTransformFeedbackPropertiesEXT
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceAccelerationStructurePropertiesKHR
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceRayTracingPropertiesNV
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceTexelBufferAlignmentProperties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceVulkan11Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceVulkan12Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceVulkan13Properties
+Unhandled pNext chain alignment conversion for VkPhysicalDeviceRobustness2PropertiesEXT
