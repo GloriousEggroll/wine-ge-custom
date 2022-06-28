@@ -323,6 +323,10 @@
     patch -Np1 < ../patches/wine-hotfixes/pending/0001-winex11.drv-Define-ControlMask-when-not-available.patch
     patch -Np1 < ../patches/wine-hotfixes/pending/0002-include-Add-THREAD_POWER_THROTTLING_STATE-type.patch
     patch -Np1 < ../patches/wine-hotfixes/pending/0003-ntdll-Fake-success-for-ThreadPowerThrottlingState.patch
+    
+    # pending upstream
+    patch -Np1 < ../patches/wine-hotfixes/pending/5a4a35389becdd9b0c17516888273f0ef41a5040.patch
+    patch -Np1 < ../patches/wine-hotfixes/pending/467625c6a3c879207f80bb579634e84f8754eb0f.patch
 
 ### END WINE HOTFIX SECTION ###
 
