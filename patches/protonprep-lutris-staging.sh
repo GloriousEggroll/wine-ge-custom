@@ -301,6 +301,10 @@
     echo "WINE: -PROTON- add 32:9 FSR resolutions"
     patch -Np1 < ../patches/proton/69-proton-fsr-add-329-res.patch
 
+    echo "WINE: -PROTON- add FSR resolutions by aspect ratio instead of current screen width"
+    patch -Np1 < ../patches/proton/70-proton-add_fsr_res_by_aspect_ratio.patch
+    
+
 ### END PROTON PATCH SECTION ###
 
 
@@ -326,7 +330,9 @@
     patch -Np1 < ../patches/wine-hotfixes/pending/0001-winex11.drv-Define-ControlMask-when-not-available.patch
     patch -Np1 < ../patches/wine-hotfixes/pending/0002-include-Add-THREAD_POWER_THROTTLING_STATE-type.patch
     patch -Np1 < ../patches/wine-hotfixes/pending/0003-ntdll-Fake-success-for-ThreadPowerThrottlingState.patch
-
+    
+    echo "WINE: -PROTON- apply revert to allow gallium nine functionality"
+    patch -Np1 < ../patches/wine-hotfixes/pending/0001-revert-96b82203f192eade6910f4ac2ecb188e27d22feb-to-k.patch
 ### END WINE HOTFIX SECTION ###
 
 ### (2-6) WINE PENDING UPSTREAM SECTION ###
