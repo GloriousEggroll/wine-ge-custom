@@ -40,6 +40,7 @@
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-launcher-client-connectivity-fix-0001-ws2_32-Return-a-valid-value-for-WSAIoctl-SIO_IDEAL_S.patch
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-garena-childwindow.patch
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-client-slow-start-fix.patch
+    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-abi-vsyscall-fix.patch
 
     echo "cleanup .orig files"
     find ./ -name '*.orig' -delete

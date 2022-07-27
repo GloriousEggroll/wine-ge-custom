@@ -1,0 +1,13 @@
+diff --git a/loader/preloader.c b/loader/preloader.c
+index d88964e9c4b..1ac8b9bd16b 100644
+--- a/loader/preloader.c
++++ b/loader/preloader.c
+@@ -1460,7 +1460,7 @@ void* wld_start( void **stack )
+ 
+     i = 0;
+     /* delete sysinfo values if addresses conflict */
+-    if (is_in_preload_range( av, AT_SYSINFO ) || is_in_preload_range( av, AT_SYSINFO_EHDR ))
++    if (1)
+     {
+         delete_av[i++].a_type = AT_SYSINFO;
+         delete_av[i++].a_type = AT_SYSINFO_EHDR;
