@@ -12,7 +12,7 @@ index 3d0c2deca35..b0c03d992d4 100644
 +    }
 +    const struct timeval zero_tv = { 0, 1000 };
 +    if (is_RCS && read_ptr && write_ptr && except_ptr && timeout && timeout->tv_sec == 1 && timeout->tv_usec == 0) {
-+        if (read_ptr->fd_count == 8 && write_ptr->fd_count == 0  && except_ptr->fd_count == 1) {
++        if (read_ptr->fd_count >= 4 && read_ptr->fd_count <= 8 && write_ptr->fd_count == 0  && except_ptr->fd_count == 1) {
 +            timeout = &zero_tv;
 +        }
 +    }
