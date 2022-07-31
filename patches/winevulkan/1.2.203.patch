@@ -1,0 +1,222 @@
+From b59335af2afe54bb2684d1b12c8e3606d7449346 Mon Sep 17 00:00:00 2001
+From: Georg Lehmann <dadschoorse@gmail.com>
+Date: Tue, 18 Jan 2022 22:19:36 +0100
+Subject: [PATCH] winevulkan: Update to VK spec version 1.2.203.
+
+Signed-off-by: Georg Lehmann <dadschoorse@gmail.com>
+Signed-off-by: Alexandre Julliard <julliard@winehq.org>
+---
+ dlls/winevulkan/make_vulkan     |  3 ++-
+ dlls/winevulkan/vulkan_thunks.c | 34 ++++++++++++++++++++++++++
+ dlls/winevulkan/winevulkan.json |  2 +-
+ include/wine/vulkan.h           | 42 ++++++++++++++++++++++++++++++++-
+ 4 files changed, 78 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/winevulkan/make_vulkan b/dlls/winevulkan/make_vulkan
+index e9b1b456584..e548025a6ad 100755
+--- a/dlls/winevulkan/make_vulkan
++++ b/dlls/winevulkan/make_vulkan
+@@ -64,7 +64,7 @@ from enum import Enum
+ LOGGER = logging.Logger("vulkan")
+ LOGGER.addHandler(logging.StreamHandler())
+ 
+-VK_XML_VERSION = "1.2.201"
++VK_XML_VERSION = "1.2.203"
+ WINE_VK_VERSION = (1, 2)
+ 
+ # Filenames to create.
+@@ -109,6 +109,7 @@ UNSUPPORTED_EXTENSIONS = [
+     "VK_EXT_external_memory_dma_buf",
+     "VK_EXT_image_drm_format_modifier",
+     "VK_EXT_physical_device_drm",
++    "VK_GOOGLE_surfaceless_query",
+     "VK_KHR_external_fence_fd",
+     "VK_KHR_external_memory_fd",
+     "VK_KHR_external_semaphore_fd",
+diff --git a/dlls/winevulkan/vulkan_thunks.c b/dlls/winevulkan/vulkan_thunks.c
+index 968699c2204..f41493381db 100644
+--- a/dlls/winevulkan/vulkan_thunks.c
++++ b/dlls/winevulkan/vulkan_thunks.c
+@@ -3632,6 +3632,22 @@ VkResult convert_VkDeviceCreateInfo_struct_chain(const void *pNext, VkDeviceCrea
+             break;
+         }
+ 
++        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_QCOM:
++        {
++            const VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM *in = (const VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM *)in_header;
++            VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM *out;
++
++            if (!(out = malloc(sizeof(*out)))) goto out_of_memory;
++
++            out->sType = in->sType;
++            out->pNext = NULL;
++            out->fragmentDensityMapOffset = in->fragmentDensityMapOffset;
++
++            out_header->pNext = (VkBaseOutStructure *)out;
++            out_header = out_header->pNext;
++            break;
++        }
++
+         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES:
+         {
+             const VkPhysicalDeviceScalarBlockLayoutFeatures *in = (const VkPhysicalDeviceScalarBlockLayoutFeatures *)in_header;
+@@ -4684,6 +4700,22 @@ VkResult convert_VkDeviceCreateInfo_struct_chain(const void *pNext, VkDeviceCrea
+             break;
+         }
+ 
++        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINEAR_COLOR_ATTACHMENT_FEATURES_NV:
++        {
++            const VkPhysicalDeviceLinearColorAttachmentFeaturesNV *in = (const VkPhysicalDeviceLinearColorAttachmentFeaturesNV *)in_header;
++            VkPhysicalDeviceLinearColorAttachmentFeaturesNV *out;
++
++            if (!(out = malloc(sizeof(*out)))) goto out_of_memory;
++
++            out->sType = in->sType;
++            out->pNext = NULL;
++            out->linearColorAttachment = in->linearColorAttachment;
++
++            out_header->pNext = (VkBaseOutStructure *)out;
++            out_header = out_header->pNext;
++            break;
++        }
++
+         default:
+             FIXME("Application requested a linked structure of type %u.\n", in_header->sType);
+         }
+@@ -9240,6 +9272,7 @@ static const char * const vk_device_extensions[] =
+     "VK_NV_geometry_shader_passthrough",
+     "VK_NV_glsl_shader",
+     "VK_NV_inherited_viewport_scissor",
++    "VK_NV_linear_color_attachment",
+     "VK_NV_mesh_shader",
+     "VK_NV_ray_tracing",
+     "VK_NV_ray_tracing_motion_blur",
+@@ -9252,6 +9285,7 @@ static const char * const vk_device_extensions[] =
+     "VK_NV_shading_rate_image",
+     "VK_NV_viewport_array2",
+     "VK_NV_viewport_swizzle",
++    "VK_QCOM_fragment_density_map_offset",
+     "VK_QCOM_render_pass_shader_resolve",
+     "VK_QCOM_render_pass_store_ops",
+     "VK_QCOM_render_pass_transform",
+diff --git a/dlls/winevulkan/winevulkan.json b/dlls/winevulkan/winevulkan.json
+index 0ef3a8057ad..d8cf4b3415e 100644
+--- a/dlls/winevulkan/winevulkan.json
++++ b/dlls/winevulkan/winevulkan.json
+@@ -2,6 +2,6 @@
+     "file_format_version": "1.0.0",
+     "ICD": {
+         "library_path": ".\\winevulkan.dll",
+-        "api_version": "1.2.201"
++        "api_version": "1.2.203"
+     }
+ }
+diff --git a/include/wine/vulkan.h b/include/wine/vulkan.h
+index 674f5b417ad..6e9d8e73727 100644
+--- a/include/wine/vulkan.h
++++ b/include/wine/vulkan.h
+@@ -486,6 +486,10 @@
+ #define VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME "VK_EXT_pageable_device_local_memory"
+ #define VK_KHR_MAINTENANCE_4_SPEC_VERSION 2
+ #define VK_KHR_MAINTENANCE_4_EXTENSION_NAME "VK_KHR_maintenance4"
++#define VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_SPEC_VERSION 1
++#define VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_EXTENSION_NAME "VK_QCOM_fragment_density_map_offset"
++#define VK_NV_LINEAR_COLOR_ATTACHMENT_SPEC_VERSION 1
++#define VK_NV_LINEAR_COLOR_ATTACHMENT_EXTENSION_NAME "VK_NV_linear_color_attachment"
+ #define VK_KHR_ACCELERATION_STRUCTURE_SPEC_VERSION 13
+ #define VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME "VK_KHR_acceleration_structure"
+ #define VK_KHR_RAY_TRACING_PIPELINE_SPEC_VERSION 1
+@@ -507,7 +511,7 @@
+ #define VK_API_VERSION_1_0 VK_MAKE_API_VERSION(0, 1, 0, 0)
+ #define VK_API_VERSION_1_1 VK_MAKE_API_VERSION(0, 1, 1, 0)
+ #define VK_API_VERSION_1_2 VK_MAKE_API_VERSION(0, 1, 2, 0)
+-#define VK_HEADER_VERSION 201
++#define VK_HEADER_VERSION 203
+ #define VK_HEADER_VERSION_COMPLETE VK_MAKE_API_VERSION(0, 1, 2, VK_HEADER_VERSION)
+ #define VK_DEFINE_HANDLE(object) typedef struct object##_T* object;
+ #define VK_USE_64_BIT_PTR_DEFINES 0
+@@ -2005,6 +2009,7 @@ static const VkFormatFeatureFlagBits2KHR VK_FORMAT_FEATURE_2_FRAGMENT_SHADING_RA
+ static const VkFormatFeatureFlagBits2KHR VK_FORMAT_FEATURE_2_STORAGE_READ_WITHOUT_FORMAT_BIT_KHR = 0x80000000ull;
+ static const VkFormatFeatureFlagBits2KHR VK_FORMAT_FEATURE_2_STORAGE_WRITE_WITHOUT_FORMAT_BIT_KHR = 0x100000000ull;
+ static const VkFormatFeatureFlagBits2KHR VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_DEPTH_COMPARISON_BIT_KHR = 0x200000000ull;
++static const VkFormatFeatureFlagBits2KHR VK_FORMAT_FEATURE_2_LINEAR_COLOR_ATTACHMENT_BIT_NV = 0x4000000000ull;
+ 
+ typedef enum VkFragmentShadingRateCombinerOpKHR
+ {
+@@ -2092,6 +2097,7 @@ typedef VkGeometryTypeKHR VkGeometryTypeNV;
+ 
+ typedef enum VkImageAspectFlagBits
+ {
++    VK_IMAGE_ASPECT_NONE_KHR = 0,
+     VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
+     VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
+     VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
+@@ -2122,6 +2128,7 @@ typedef enum VkImageCreateFlagBits
+     VK_IMAGE_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_EXT = 0x00001000,
+     VK_IMAGE_CREATE_CORNER_SAMPLED_BIT_NV = 0x00002000,
+     VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT = 0x00004000,
++    VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM = 0x00008000,
+     VK_IMAGE_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT_KHR = VK_IMAGE_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT,
+     VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR = VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT,
+     VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR = VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT,
+@@ -3566,6 +3573,10 @@ typedef enum VkStructureType
+     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES_KHR = 1000413001,
+     VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS_KHR = 1000413002,
+     VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS_KHR = 1000413003,
++    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_QCOM = 1000425000,
++    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_QCOM = 1000425001,
++    VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM = 1000425002,
++    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINEAR_COLOR_ATTACHMENT_FEATURES_NV = 1000430000,
+     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTERS_FEATURES,
+     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES,
+     VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+@@ -6097,6 +6108,20 @@ typedef struct VkPhysicalDeviceFragmentDensityMapFeaturesEXT
+     VkBool32 fragmentDensityMapNonSubsampledImages;
+ } VkPhysicalDeviceFragmentDensityMapFeaturesEXT;
+ 
++typedef struct VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM
++{
++    VkStructureType sType;
++    void *pNext;
++    VkBool32 fragmentDensityMapOffset;
++} VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM;
++
++typedef struct VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM
++{
++    VkStructureType sType;
++    void *pNext;
++    VkExtent2D fragmentDensityOffsetGranularity;
++} VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM;
++
+ typedef struct VkPhysicalDeviceFragmentDensityMapPropertiesEXT
+ {
+     VkStructureType sType;
+@@ -6425,6 +6450,13 @@ typedef struct VkPhysicalDeviceLineRasterizationPropertiesEXT
+     uint32_t lineSubPixelPrecisionBits;
+ } VkPhysicalDeviceLineRasterizationPropertiesEXT;
+ 
++typedef struct VkPhysicalDeviceLinearColorAttachmentFeaturesNV
++{
++    VkStructureType sType;
++    void *pNext;
++    VkBool32 linearColorAttachment;
++} VkPhysicalDeviceLinearColorAttachmentFeaturesNV;
++
+ typedef struct VkPhysicalDeviceMaintenance3Properties
+ {
+     VkStructureType sType;
+@@ -8381,6 +8413,14 @@ typedef struct VkSubpassEndInfo
+ } VkSubpassEndInfo;
+ typedef VkSubpassEndInfo VkSubpassEndInfoKHR;
+ 
++typedef struct VkSubpassFragmentDensityMapOffsetEndInfoQCOM
++{
++    VkStructureType sType;
++    const void *pNext;
++    uint32_t fragmentDensityOffsetCount;
++    const VkOffset2D *pFragmentDensityOffsets;
++} VkSubpassFragmentDensityMapOffsetEndInfoQCOM;
++
+ typedef struct VkSubpassSampleLocationsEXT
+ {
+     uint32_t subpassIndex;
