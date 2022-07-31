@@ -32,6 +32,13 @@
     echo "proton LFH performance patch"
     patch -Np1 < ../patches/wine-hotfixes/LoL/lfh-non-proton-pre-needed.patch
     patch -Np1 < ../patches/proton/50-proton_LFH.patch
+    
+    echo "update vulkan to 1.3 for dxvk-master support"
+    patch -Np1 < ../patches/winevulkan/1.2.203.patch
+    patch -Np1 < ../patches/winevulkan/1.3.204.patch
+    patch -Np1 < ../patches/winevulkan/1.3-support.patch
+    patch -Np1 < ../patches/winevulkan/1.3-fix-prototype-mismatch.patch
+    patch -Np1 < ../patches/winevulkan/1.3-add-support-win32-long-types.patch
 
     echo "LoL fixes"
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-6.17+-syscall-fix.patch
