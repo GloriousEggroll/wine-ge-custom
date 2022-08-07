@@ -292,17 +292,23 @@
     echo "WINE: -PROTON- Remove steamclient patches for normal WINE usage"
     patch -Np1 < ../patches/proton/0001-De-steamify-proton-s-WINE-so-it-can-be-used-as-a-sta.patch
 
-    echo "WINE: -PROTON- fullscreen hack fsr patch"
+    echo "WINE: -FSR- fullscreen hack fsr patch"
     patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
 
-    echo "WINE: -PROTON- fake current res patches"
+    echo "WINE: -FSR- fake current res patches"
     patch -Np1 < ../patches/proton/65-proton-fake_current_res_patches.patch
 
-    echo "WINE: -PROTON- add 32:9 FSR resolutions"
+    echo "WINE: -FSR- add 32:9 FSR resolutions"
     patch -Np1 < ../patches/proton/69-proton-fsr-add-329-res.patch
 
-    echo "WINE: -PROTON- add FSR resolutions by aspect ratio instead of current screen width"
+    echo "WINE: -FSR- add FSR resolutions by aspect ratio instead of current screen width"
     patch -Np1 < ../patches/proton/70-proton-add_fsr_res_by_aspect_ratio.patch
+    
+    echo "WINE: -FSR- enable FSR flag by default (fixes broken fs hack scaling in some games like Apex and FFXIV)"
+    patch -Np1 < ../patches/proton/71-invert-fsr-logic.patch
+    
+    echo "WINE: -FSR- set 'balanced' default mode if no mode is set, and dont set any default mode if a custom mode is set"
+    patch -Np1 < ../patches/proton/72-fsr-use-balanced-default-mode.patch
     
 
 ### END PROTON PATCH SECTION ###
@@ -333,9 +339,14 @@
     
     echo "WINE: -PROTON- apply revert to allow gallium nine functionality"
     patch -Np1 < ../patches/wine-hotfixes/pending/0001-revert-96b82203f192eade6910f4ac2ecb188e27d22feb-to-k.patch
+    
+    # https://bugs.winehq.org/show_bug.cgi?id=51683
+    echo "WINE: -HOTFIX- Guild Wars 2 patch"
+    patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-guild_wars_2.patch
+    
+    echo "WINE: -HOTFIX- fix upside down videos"
+    patch -Np1 < ../patches/wine-hotfixes/pending/157.patch
 
-#    echo "WINE: -PROTON- pending Halo Infinite patches"
-#    patch -Np1 < ../patches/wine-hotfixes/pending/halo-infinite-fixes-1.patch
 ### END WINE HOTFIX SECTION ###
 
 ### (2-6) WINE PENDING UPSTREAM SECTION ###
