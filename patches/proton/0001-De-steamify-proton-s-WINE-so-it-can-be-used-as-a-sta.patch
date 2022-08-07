@@ -343,9 +343,9 @@ index badc36c3147..3a1dde17bcb 100644
 -    else steamclient_count++;
 -}
 -
- /***********************************************************************
-  *           unix_funcs
-  */
+ static BOOL report_native_pc_as_ntdll;
+ 
+ static BOOL CDECL is_pc_in_native_so(void *pc)
 @@ -2231,7 +2113,6 @@ static struct unix_funcs unix_funcs =
  #ifdef __aarch64__
      NtCurrentTeb,
