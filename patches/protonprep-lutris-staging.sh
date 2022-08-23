@@ -34,6 +34,8 @@
     -W eventfd_synchronization \
     -W d3dx11_43-D3DX11CreateTextureFromMemory \
     -W dbghelp-Debug_Symbols \
+    -W ddraw-Device_Caps \
+    -W ddraw-version-check \
     -W dwrite-FontFallback \
     -W ntdll-DOS_Attributes \
     -W Pipelight \
@@ -94,6 +96,8 @@
     # server-Stored_ACLs - requires ntdll-Junction_Points
     # eventfd_synchronization - already applied
     # d3dx11_43-D3DX11CreateTextureFromMemory - manually applied
+    # ddraw-Device_Caps - conflicts with proton's changes
+    # ddraw-version-check - conflicts with proton's changes
 
     # dbghelp-Debug_Symbols - see below:
     # Sancreed — 11/21/2021
@@ -346,7 +350,10 @@
     
     echo "WINE: -HOTFIX- fix upside down videos"
     patch -Np1 < ../patches/wine-hotfixes/pending/157.patch
-
+    
+    echo "WINE: -HOTFIX- fix Amazon Games launcher"
+    patch -Np1 < ../patches/wine-hotfixes/upstream/481.patch
+    
 ### END WINE HOTFIX SECTION ###
 
 ### (2-6) WINE PENDING UPSTREAM SECTION ###
