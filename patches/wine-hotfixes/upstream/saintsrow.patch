@@ -1,0 +1,59 @@
+From a9ed113347eea3ad60f95b4c1fe16a9254192384 Mon Sep 17 00:00:00 2001
+From: Gijs Vermeulen <gijsvrm@gmail.com>
+Date: Thu, 25 Aug 2022 14:45:13 +0200
+Subject: [PATCH] kernel32: Add SetProcessDefaultCpuSets stub.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=53589
+---
+ dlls/kernel32/kernel32.spec     |  1 +
+ dlls/kernelbase/kernelbase.spec |  2 +-
+ dlls/kernelbase/memory.c        | 11 +++++++++++
+ 3 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index a5fa757da9f..7c5fb8ed74f 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -1444,6 +1444,7 @@
+ @ stdcall -import SetPriorityClass(long long)
+ @ stdcall SetProcessAffinityMask(long long)
+ @ stdcall -import SetProcessAffinityUpdateMode(long long)
++@ stdcall -import SetProcessDefaultCpuSets(ptr ptr long)
+ @ stdcall SetProcessDEPPolicy(long)
+ @ stdcall -import SetProcessMitigationPolicy(long ptr long)
+ @ stdcall -import SetProcessPreferredUILanguages(long ptr ptr)
+diff --git a/dlls/kernelbase/kernelbase.spec b/dlls/kernelbase/kernelbase.spec
+index 1296757b29a..feb1fce8f7a 100644
+--- a/dlls/kernelbase/kernelbase.spec
++++ b/dlls/kernelbase/kernelbase.spec
+@@ -1490,7 +1490,7 @@
+ @ stdcall SetPrivateObjectSecurity(long ptr ptr ptr long)
+ @ stdcall SetPrivateObjectSecurityEx(long ptr ptr long ptr long)
+ @ stdcall SetProcessAffinityUpdateMode(long long)
+-# @ stub SetProcessDefaultCpuSets
++@ stdcall SetProcessDefaultCpuSets(ptr ptr long)
+ @ stdcall SetProcessGroupAffinity(long ptr ptr)
+ # @ stub SetProcessInformation
+ @ stdcall SetProcessMitigationPolicy(long ptr long)
+diff --git a/dlls/kernelbase/memory.c b/dlls/kernelbase/memory.c
+index 2418c670557..14d8c4817a5 100644
+--- a/dlls/kernelbase/memory.c
++++ b/dlls/kernelbase/memory.c
+@@ -1336,6 +1336,17 @@ BOOL WINAPI SetThreadSelectedCpuSets(HANDLE thread, const ULONG *cpu_set_ids, UL
+ }
+
+
++/***********************************************************************
++ *           SetProcessDefaultCpuSets   (kernelbase.@)
++ */
++BOOL WINAPI SetProcessDefaultCpuSets(HANDLE process, const ULONG *cpu_set_ids, ULONG count)
++{
++    FIXME( "process %p, cpu_set_ids %p, count %lu stub.\n", process, cpu_set_ids, count );
++
++    return TRUE;
++}
++
++
+ /**********************************************************************
+  *             GetNumaHighestNodeNumber   (kernelbase.@)
+  */

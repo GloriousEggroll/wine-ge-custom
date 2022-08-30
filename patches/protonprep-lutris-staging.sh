@@ -353,7 +353,12 @@
     
     echo "WINE: -HOTFIX- fix Amazon Games launcher"
     patch -Np1 < ../patches/wine-hotfixes/upstream/481.patch
-    
+ 
+    echo "WINE: -HOTFIX- fix Visual Novel Doukyuusei"
+    patch -Np1 < ../patches/wine-hotfixes/upstream/visual-novel-doukyuusei.patch
+
+    echo "WINE: -HOTFIX- fix Saints Row 2022"
+    patch -Np1 < ../patches/wine-hotfixes/upstream/saintsrow.patch
 ### END WINE HOTFIX SECTION ###
 
 ### (2-6) WINE PENDING UPSTREAM SECTION ###
