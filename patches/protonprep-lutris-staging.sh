@@ -276,10 +276,6 @@
     echo "WINE: -GAME FIXES- assetto corsa hud fix"
     patch -Np1 < ../patches/game-patches/assettocorsa-hud.patch
 
-    echo "WINE: -GAME FIXES- mk11 crash fix"
-    # this is needed so that online multi-player does not crash
-    patch -Np1 < ../patches/game-patches/mk11.patch
-
     echo "WINE: -GAME FIXES- killer instinct vulkan fix"
     patch -Np1 < ../patches/game-patches/killer-instinct-winevulkan_fix.patch
 
@@ -288,6 +284,9 @@
 
     echo "WINE: -GAME FIXES- add powerprof patches for FFVII Remake and SpecialK"
     patch -Np1 < ../patches/game-patches/FFVII-and-SpecialK-powerprof.patch
+
+    echo "WINE: -GAME FIXES- add file search workaround hack for Phantasy Star Online 2"
+    patch -Np1 < ../patches/game-patches/pso2_hack.patch
 
 ### END GAME PATCH SECTION ###
 
@@ -359,6 +358,10 @@
 
     echo "WINE: -HOTFIX- fix Saints Row 2022"
     patch -Np1 < ../patches/wine-hotfixes/upstream/saintsrow.patch
+
+    echo "WINE: -HOTFIX- fix Persona 4 Golden"
+    patch -Np1 < ../patches/wine-hotfixes/upstream/381c2a9ae151f676a009e89b4b101679fd90b9ae.patch
+
 ### END WINE HOTFIX SECTION ###
 
 ### (2-6) WINE PENDING UPSTREAM SECTION ###
