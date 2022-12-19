@@ -83,7 +83,9 @@
     -W sapi-iteration-tokens \
     -W cryptext-CryptExtOpenCER \
     -W shell32-NewMenu_Interface \
-    -W wintrust-WTHelperGetProvCertFromChain
+    -W wintrust-WTHelperGetProvCertFromChain \
+    -W user32-FlashWindowEx \
+    -W user32-MessageBox_WS_EX_TOPMOST
 
     # NOTE: Some patches are applied manually because they -do- apply, just not cleanly, ie with patch fuzz.
     # A detailed list of why the above patches are disabled is listed below:
@@ -155,6 +157,8 @@
     # cryptext-CryptExtOpenCER - applied manually
     # ** wintrust-WTHelperGetProvCertFromChain - applied manually
     # ** shell32-NewMenu_Interface - applied manually
+    # ** user32-FlashWindowEx - applied manually
+    # user32-MessageBox_WS_EX_TOPMOST - already applied
 
     echo "WINE: -STAGING- applying staging Compiler_Warnings revert for steamclient compatibility"
     # revert this, it breaks lsteamclient compilation
@@ -174,8 +178,8 @@
     patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-DOS_Attributes/0008-ntdll-Always-store-SAMBA_XATTR_DOS_ATTRIB-when-path-.patch
 
     # loader-KeyboardLayouts
-    patch -Np1 < ../patches/wine-hotfixes/staging/loader-KeyboardLayouts/0001-loader-Add-Keyboard-Layouts-registry-enteries.patch
-    patch -Np1 < ../patches/wine-hotfixes/staging/loader-KeyboardLayouts/0002-user32-Improve-GetKeyboardLayoutList.patch
+    patch -Np1 < ../wine-staging/patches/loader-KeyboardLayouts/0001-loader-Add-Keyboard-Layouts-registry-enteries.patch
+    patch -Np1 < ../wine-staging/patches/loader-KeyboardLayouts/0002-user32-Improve-GetKeyboardLayoutList.patch
 
     # ntdll-ApiSetMap
     patch -Np1 < ../wine-staging/patches/ntdll-ApiSetMap/0001-ntdll-Add-dummy-apiset-to-PEB.patch
@@ -276,10 +280,13 @@
 
     # wintrust-WTHelperGetProvCertFromChain
     patch -Np1 < ../patches/wine-hotfixes/staging/wintrust-WTHelperGetProvCertFromChain/0001-wintrust-Add-parameter-check-in-WTHelperGetProvCertF.patch
-    
+
     # shell32-NewMenu_Interface
     patch -Np1 < ../patches/wine-hotfixes/staging/shell32-NewMenu_Interface/0001-shell32-Implement-NewMenu-with-new-folder-item.patch
     
+    # user32-FlashWindowEx
+    patch -Np1 < ../patches/wine-hotfixes/staging/user32-FlashWindowEx/0001-user32-Improve-FlashWindowEx-message-and-return-valu.patch
+
     # nvapi/nvcuda
     # this was added in 7.1, so it's not in the 7.0 tree
     patch -Np1 < ../patches/wine-hotfixes/staging/nvcuda/0016-nvcuda-Make-nvcuda-attempt-to-load-libcuda.so.1.patch
@@ -373,18 +380,17 @@
     echo "WINE: -HOTFIX- fix Persona 4 Golden"
     patch -Np1 < ../patches/wine-hotfixes/upstream/381c2a9ae151f676a009e89b4b101679fd90b9ae.patch
 
-    echo "WINE: -HOTFIX- fix Uncharted: The Lost Legacy"
-    patch -Np1 < ../patches/wine-hotfixes/pending/uncharted-the-lost-legacy-fix.patch
-    
     echo "WINE: -HOTFIX- fix Overwatch 2 shader compilation issue"
     # https://gitlab.winehq.org/wine/wine/-/merge_requests/1152
     patch -Np1 < ../patches/wine-hotfixes/pending/1152.patch
-    
+
     echo "WINE: -HOTFIX- fix Overwatch 2 from freezing on wine 7.12 and older"
     # https://gitlab.winehq.org/wine/wine/-/merge_requests/1152
     patch -Np1 < ../patches/wine-hotfixes/pending/4bf9d2403f269e7f3595ad075a4afee9adbda51f.patch
-
-
+    
+    echo "WINE: -HOTFIX- temp fix for Gears5 hang after logo"
+    patch -Np1 < ../patches/wine-hotfixes/pending/secur32-change.diff
+    
 ### END WINE HOTFIX SECTION ###
 
 ### (2-6) WINE PENDING UPSTREAM SECTION ###
