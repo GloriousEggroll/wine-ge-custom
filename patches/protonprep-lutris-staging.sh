@@ -388,7 +388,11 @@
     echo "WINE: -HOTFIX- fix Overwatch 2 from freezing on wine 7.12 and older"
     # https://gitlab.winehq.org/wine/wine/-/merge_requests/1152
     patch -Np1 < ../patches/wine-hotfixes/pending/4bf9d2403f269e7f3595ad075a4afee9adbda51f.patch
-    
+
+    echo "WINE: -HOTFIX- fix Anno 1800 multiplayer"
+    # https://gitlab.winehq.org/wine/wine/-/merge_requests/1152
+    patch -Np1 < ../patches/wine-hotfixes/pending/181.patch
+
 ### END WINE HOTFIX SECTION ###
 
 ### (2-6) WINE PENDING UPSTREAM SECTION ###
