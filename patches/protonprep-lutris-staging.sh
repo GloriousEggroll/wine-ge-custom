@@ -394,7 +394,7 @@
     patch -Np1 < ../patches/wine-hotfixes/pending/181.patch
 
     echo "WINE: -HOTFIX- Add Star Citizen EAC patch and wrap it around SteamGameId=starcitizen envvar"
-    patch -Np1 < ..patches/game-patches/star-citizen-eac.patch
+    patch -Np1 < ../patches/game-patches/star-citizen-eac.patch
 
 
 ### END WINE HOTFIX SECTION ###
