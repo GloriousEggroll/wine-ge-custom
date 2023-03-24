@@ -7,18 +7,18 @@ index 84047e1f28c..c0adab72f37 100644
      if (node)
      {
 -        if (eac_download_hack() && !strcmp(node, "download-alt.easyanticheat.net"))
-+        if (eac_download_hack() && name && !strcmp(name, "download-alt.easyanticheat.net") || !strcmp(name, "modules-cdn.eac-prod.on.epicgames.com"))
++        if (eac_download_hack() && !strcmp(node, "download-alt.easyanticheat.net") || !strcmp(node, "modules-cdn.eac-prod.on.epicgames.com"))
          {
 -            SetLastError(WSAHOST_NOT_FOUND);
 -            return WSAHOST_NOT_FOUND;
 +            const char *sgi = getenv("SteamGameId");
 +            /* default -- if not star citizen and url is download-alt.easyanticheat.net, follow normal proton code */
-+            if (sgi && (strcmp(sgi, "starcitizen")) && !strcmp(name, "download-alt.easyanticheat.net"))
++            if (sgi && (strcmp(sgi, "starcitizen")) && !strcmp(node, "download-alt.easyanticheat.net"))
 +            {
 +            	SetLastError(WSAHOST_NOT_FOUND);
 +            	return WSAHOST_NOT_FOUND;
 +            /* if it is star citizen -- check for either download-alt.easyanticheat.net and/or modules-cdn.eac-prod.on.epicgames.com and follow normal proton code */
-+            } else if (!strcmp(name, "download-alt.easyanticheat.net") || !strcmp(name, "modules-cdn.eac-prod.on.epicgames.com")) {
++            } else if (!strcmp(node, "download-alt.easyanticheat.net") || !strcmp(node, "modules-cdn.eac-prod.on.epicgames.com")) {
 +            	SetLastError(WSAHOST_NOT_FOUND);
 +            	return WSAHOST_NOT_FOUND;
 +            }
