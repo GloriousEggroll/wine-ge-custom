@@ -48,6 +48,9 @@
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-garena-childwindow.patch
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-client-slow-start-fix.patch
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-abi-vsyscall-fix.patch
+    
+    echo "Custom"
+    patch -Np1 < ../patches/custom/hide_prefix_update_window.patch
 
     echo "cleanup .orig files"
     find ./ -name '*.orig' -delete
