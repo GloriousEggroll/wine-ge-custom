@@ -23,7 +23,7 @@ index 84047e1f28c..c0adab72f37 100644
 +            	return WSAHOST_NOT_FOUND;
 +            }
          }
-+    }
++ 
  
          if (!node[0])
          {
