@@ -46,9 +46,9 @@ index db7baff269f..f869b8a4e89 100644
 --- a/programs/wineboot/wineboot.c
 +++ b/programs/wineboot/wineboot.c
 @@ -82,6 +82,8 @@
- 
+
  WINE_DEFAULT_DEBUG_CHANNEL(wineboot);
- 
+
 +#define TICKSPERSEC        10000000
 +
  extern BOOL shutdown_close_windows( BOOL force );
@@ -57,7 +57,7 @@ index db7baff269f..f869b8a4e89 100644
 @@ -241,15 +243,173 @@ static void initialize_xstate_features(struct _KUSER_SHARED_DATA *data)
      TRACE("XSAVE feature 2 %#x, %#x, %#x, %#x.\n", regs[0], regs[1], regs[2], regs[3]);
  }
- 
+
 +static UINT64 read_tsc_frequency( BOOL has_rdtscp )
 +{
 +    UINT64 freq = 0;
@@ -208,11 +208,11 @@ index db7baff269f..f869b8a4e89 100644
 +}
 +
  #else
- 
+
  static void initialize_xstate_features(struct _KUSER_SHARED_DATA *data)
  {
  }
- 
+
 +static void initialize_qpc_features( struct _KUSER_SHARED_DATA *data, UINT64 *tsc_frequency )
 +{
 +    data->QpcBypassEnabled = 0;
@@ -223,7 +223,7 @@ index db7baff269f..f869b8a4e89 100644
 +}
 +
  #endif
- 
+
 -static void create_user_shared_data(void)
 +static void create_user_shared_data( UINT64 *tsc_frequency )
  {
@@ -231,22 +231,22 @@ index db7baff269f..f869b8a4e89 100644
      RTL_OSVERSIONINFOEXW version;
 @@ -336,6 +496,7 @@ static void create_user_shared_data(void)
      data->ActiveGroupCount = 1;
- 
+
      initialize_xstate_features( data );
 +    initialize_qpc_features( data, tsc_frequency );
- 
+
      UnmapViewOfFile( data );
  }
 @@ -647,7 +808,7 @@ static void create_bios_key( HKEY system_key )
  }
- 
+
  /* create the volatile hardware registry keys */
 -static void create_hardware_registry_keys(void)
 +static void create_hardware_registry_keys( UINT64 tsc_frequency )
  {
      unsigned int i;
      HKEY hkey, system_key, cpu_key, fpu_key;
-@@ -884,12 +884,15 @@ static void create_hardware_registry_keys( UINT64 tsc_frequency )
+@@ -738,13 +899,16 @@ static void create_hardware_registry_keys(void)
          if (!RegCreateKeyExW( cpu_key, numW, 0, NULL, REG_OPTION_VOLATILE,
                                KEY_ALL_ACCESS, NULL, &hkey, NULL ))
          {
@@ -256,25 +256,26 @@ index db7baff269f..f869b8a4e89 100644
              RegSetValueExW( hkey, L"FeatureSet", 0, REG_DWORD, (BYTE *)&sci.ProcessorFeatureBits, sizeof(DWORD) );
              set_reg_value( hkey, L"Identifier", id );
              /* TODO: report ARM properly */
-             set_reg_value( hkey, L"ProcessorNameString", namestr );
+             RegSetValueExA( hkey, "ProcessorNameString", 0, REG_SZ, (const BYTE *)name_buffer,
+                             strlen( (char *)name_buffer ) + 1 );
              set_reg_value( hkey, L"VendorIdentifier", vendorid );
 -            RegSetValueExW( hkey, L"~MHz", 0, REG_DWORD, (BYTE *)&power_info[i].MaxMhz, sizeof(DWORD) );
 +            RegSetValueExW( hkey, L"~MHz", 0, REG_DWORD, (BYTE *)&tsc_freq_mhz, sizeof(DWORD) );
              RegCloseKey( hkey );
          }
          if (sci.ProcessorArchitecture != PROCESSOR_ARCHITECTURE_ARM &&
-@@ -1680,6 +1844,7 @@ int __cdecl main( int argc, char *argv[] )
+@@ -1733,6 +1897,7 @@ int __cdecl main( int argc, char *argv[] )
      BOOL end_session, force, init, kill, restart, shutdown, update;
      HANDLE event;
      OBJECT_ATTRIBUTES attr;
 +    UINT64 tsc_frequency = 0;
-     UNICODE_STRING nameW;
+     UNICODE_STRING nameW = RTL_CONSTANT_STRING( L"\\KernelObjects\\__wineboot_event" );
      BOOL is_wow64;
- 
+
 @@ -1765,8 +1930,8 @@ int __cdecl main( int argc, char *argv[] )
- 
+
      ResetEvent( event );  /* in case this is a restart */
- 
+
 -    create_user_shared_data();
 -    create_hardware_registry_keys();
 +    create_user_shared_data( &tsc_frequency );

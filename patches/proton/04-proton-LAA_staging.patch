@@ -6,27 +6,20 @@ Subject: [PATCH] ntdll/loader: add support for overriding
 
 Signed-off-by: Steven Noonan <steven@valvesoftware.com>
 ---
- dlls/kernel32/heap.c           |  9 ++++++++-
- dlls/ntdll/ntdll.spec          |  1 +
- dlls/ntdll/unix/server.c       |  3 ++-
+ dlls/kernel32/heap.c           |  7 ++++++-
+ dlls/ntdll/ntdll.spec          |  3 +++
+ dlls/ntdll/unix/loader.c       |  1 +
+ dlls/ntdll/unix/server.c       |  4 ++--
  dlls/ntdll/unix/unix_private.h |  2 ++
- dlls/ntdll/unix/virtual.c      | 13 +++++++++++++
- 5 files changed, 26 insertions(+), 2 deletions(-)
+ dlls/ntdll/unix/virtual.c      | 12 ++++++++++++
+ include/winternl.h             |  3 ++-
+ 7 files changed, 28 insertions(+), 4 deletions(-)
 
 diff --git a/dlls/kernel32/heap.c b/dlls/kernel32/heap.c
-index b7bd6f5f91d..fef060e9c22 100644
+index 1ec2f5cce0d..f3e10460e7a 100644
 --- a/dlls/kernel32/heap.c
 +++ b/dlls/kernel32/heap.c
-@@ -44,6 +44,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(globalmem);
-
- static HANDLE systemHeap;   /* globally shared heap */
-
-+extern BOOL CDECL __wine_needs_override_large_address_aware(void);
-+
-
- /***********************************************************************
-  *           HEAP_CreateSystemHeap
-@@ -544,6 +546,10 @@ VOID WINAPI GlobalMemoryStatus( LPMEMORYSTATUS lpBuffer )
+@@ -425,6 +425,10 @@ VOID WINAPI GlobalMemoryStatus( LPMEMORYSTATUS lpBuffer )
  #ifndef _WIN64
      IMAGE_NT_HEADERS *nt = RtlImageNtHeader( GetModuleHandleW(0) );
  #endif
@@ -37,7 +30,7 @@ index b7bd6f5f91d..fef060e9c22 100644
 
      /* Because GlobalMemoryStatus is identical to GlobalMemoryStatusEX save
         for one extra field in the struct, and the lack of a bug, we simply
-@@ -584,7 +590,8 @@ VOID WINAPI GlobalMemoryStatus( LPMEMORYSTATUS lpBuffer )
+@@ -463,7 +467,8 @@ VOID WINAPI GlobalMemoryStatus( LPMEMORYSTATUS lpBuffer )
 
      /* values are limited to 2Gb unless the app has the IMAGE_FILE_LARGE_ADDRESS_AWARE flag */
      /* page file sizes are not limited (Adobe Illustrator 8 depends on this) */
@@ -48,24 +41,36 @@ index b7bd6f5f91d..fef060e9c22 100644
          if (lpBuffer->dwTotalPhys > MAXLONG) lpBuffer->dwTotalPhys = MAXLONG;
          if (lpBuffer->dwAvailPhys > MAXLONG) lpBuffer->dwAvailPhys = MAXLONG;
 diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
-index ca427c46c04..10327373959 100644
+index d5f6737e1aa..c9af898afb5 100644
 --- a/dlls/ntdll/ntdll.spec
 +++ b/dlls/ntdll/ntdll.spec
-@@ -1625,6 +1625,9 @@
+@@ -1711,6 +1711,9 @@
  @ cdecl -norelay __wine_dbg_output(str)
  @ cdecl -norelay __wine_dbg_strdup(str)
 
 +# Virtual memory
-+@ cdecl -syscall __wine_needs_override_large_address_aware()
++@ stdcall -syscall __wine_needs_override_large_address_aware()
 +
  # Version
  @ cdecl wine_get_version()
  @ cdecl wine_get_build_id()
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index 50446fddbbc..bbbb7baacde 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -359,6 +359,7 @@ static void * const syscalls[] =
+     NtWriteFileGather,
+     NtWriteVirtualMemory,
+     NtYieldExecution,
++    __wine_needs_override_large_address_aware,
+     wine_nt_to_unix_file_name,
+     wine_unix_to_nt_file_name,
+ };
 diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
-index 7236f0acb83..e34abd88093 100644
+index 97be02fbc1d..91f442a2078 100644
 --- a/dlls/ntdll/unix/server.c
 +++ b/dlls/ntdll/unix/server.c
-@@ -1471,8 +1471,8 @@ void server_init_process_done(void)
+@@ -1665,8 +1665,8 @@ void server_init_process_done(void)
  #ifdef __APPLE__
      send_server_task_port();
  #endif
@@ -77,32 +82,31 @@ index 7236f0acb83..e34abd88093 100644
      /* Install signal handlers; this cannot be done earlier, since we cannot
       * send exceptions to the debugger before the create process event that
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index c3ad0a41098..e0326f88a21 100644
+index 326c9c8f9eb..b629a9abda2 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -470,4 +470,6 @@ static inline int ntdll_wcsnicmp( const WCHAR *str1, const WCHAR *str2, int n )
- #define towupper(c)        ntdll_towupper(c)
- #define towlower(c)        ntdll_towlower(c)
+@@ -505,4 +505,6 @@ static inline NTSTATUS map_section( HANDLE mapping, void **ptr, SIZE_T *size, UL
+                                0, NULL, size, ViewShare, 0, protect );
+ }
 
-+BOOL CDECL __wine_needs_override_large_address_aware(void);
++BOOL WINAPI __wine_needs_override_large_address_aware(void);
 +
  #endif /* __NTDLL_UNIX_PRIVATE_H */
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index 1337e2de861..200a777eb5c 100644
+index e393f313a8c..d14ade38406 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -3420,6 +3420,19 @@ void CDECL virtual_release_address_space(void)
-     server_leave_uninterrupted_section( &virtual_mutex, &sigset );
+@@ -3442,6 +3442,18 @@ static BOOL is_inside_thread_stack( void *ptr, struct thread_stack_info *stack )
+     return ((char *)ptr > stack->start && (char *)ptr <= stack->end);
  }
 
-+BOOL CDECL __wine_needs_override_large_address_aware(void)
++BOOL WINAPI __wine_needs_override_large_address_aware(void)
 +{
 +    static int needs_override = -1;
 +
 +    if (needs_override == -1)
 +    {
 +        const char *str = getenv( "WINE_LARGE_ADDRESS_AWARE" );
-+
 +        needs_override = !str || atoi(str) == 1;
 +    }
 +    return needs_override;
@@ -110,25 +114,16 @@ index 1337e2de861..200a777eb5c 100644
 +
 
  /***********************************************************************
-  *           virtual_set_large_address_space
---
-2.26.2
+  *           grow_thread_stack
+diff --git a/include/winternl.h b/include/winternl.h
+index ed0e51bae24..de31c8b5c4d 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -4756,6 +4756,7 @@ NTSYSAPI NTSTATUS  WINAPI RtlLargeIntegerToChar(const ULONGLONG *,ULONG,ULONG,PC
 
-From 67150fb21e93e2a1d40047355de3c8c7ff2d73ca Mon Sep 17 00:00:00 2001
-From: Tk-Glitch <ti3nou@gmail.com>
-Date: Wed, 1 Sep 2021 15:58:29 +0200
-Subject: Add LAA syscall to ntdll loader array following ea6308e364b669adfcb8b1e448c8b08d715bcf6d
+ /* Wine internal functions */
 
-
-diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
-index 75266672f0b..428e13fea1f 100644
---- a/dlls/ntdll/unix/loader.c
-+++ b/dlls/ntdll/unix/loader.c
-@@ -347,6 +349,7 @@ static void * const syscalls[] =
-     NtWriteVirtualMemory,
-     NtYieldExecution,
-     __wine_dbg_write,
-+    __wine_needs_override_large_address_aware,
-     __wine_unix_call,
-     wine_nt_to_unix_file_name,
-     wine_server_call,
++NTSYSAPI BOOL WINAPI __wine_needs_override_large_address_aware(void);
+ NTSYSAPI NTSTATUS WINAPI wine_nt_to_unix_file_name( const OBJECT_ATTRIBUTES *attr, char *nameA, ULONG *size,
+                                                     UINT disposition );
+ NTSYSAPI NTSTATUS WINAPI wine_unix_to_nt_file_name( const char *name, WCHAR *buffer, ULONG *size );

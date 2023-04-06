@@ -1,0 +1,18 @@
+diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
+index d56962e1721..87fdf2634b9 100644
+--- a/dlls/ntdll/unix/thread.c
++++ b/dlls/ntdll/unix/thread.c
+@@ -2402,9 +2402,12 @@ NTSTATUS WINAPI NtSetInformationThread( HANDLE handle, THREADINFOCLASS class,
+         WARN("Unimplemented class ThreadPriorityBoost.\n");
+         return STATUS_SUCCESS;
+
++    case ThreadPriority:
++        WARN("Unimplemented ThreadPriority\n");
++        return STATUS_SUCCESS;
++
+     case ThreadBasicInformation:
+     case ThreadTimes:
+-    case ThreadPriority:
+     case ThreadDescriptorTableEntry:
+     case ThreadEventPair_Reusable:
+     case ThreadPerformanceCount:
