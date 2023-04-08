@@ -1,0 +1,13 @@
+diff --git a/dlls/ntdll/path.c b/dlls/ntdll/path.c
+index cccd000a6c6..0f022cc0d94 100644
+--- a/dlls/ntdll/path.c
++++ b/dlls/ntdll/path.c
+@@ -519,7 +519,7 @@ static ULONG get_full_path_helper(LPCWSTR name, LPWSTR buffer, ULONG size)
+
+     RtlAcquirePebLock();
+
+-    if (NtCurrentTeb()->Tib.SubSystemTib)  /* FIXME: hack */
++    if (0 && NtCurrentTeb()->Tib.SubSystemTib)  /* FIXME: hack */
+         cd = &((WIN16_SUBSYSTEM_TIB *)NtCurrentTeb()->Tib.SubSystemTib)->curdir.DosPath;
+     else
+         cd = &NtCurrentTeb()->Peb->ProcessParameters->CurrentDirectory.DosPath;
