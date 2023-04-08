@@ -1,8 +1,8 @@
 diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
-index 7e77329363c..0046ffa6e50 100644
+index 7e77329363c..e47b7fd94ca 100644
 --- a/dlls/ntdll/signal_x86_64.c
 +++ b/dlls/ntdll/signal_x86_64.c
-@@ -655,13 +655,23 @@ __ASM_GLOBAL_FUNC( KiUserApcDispatcher,
+@@ -655,13 +655,22 @@ __ASM_GLOBAL_FUNC( KiUserApcDispatcher,
   *
   * FIXME: not binary compatible
   */
@@ -10,10 +10,10 @@ index 7e77329363c..0046ffa6e50 100644
 +void WINAPI user_callback_dispatcher( ULONG id, void *args, ULONG len )
  {
      NTSTATUS (WINAPI *func)(void *, ULONG) = ((void **)NtCurrentTeb()->Peb->KernelCallbackTable)[id];
-
+ 
      RtlRaiseStatus( NtCallbackReturn( NULL, 0, func( args, len )));
  }
-
+ 
 +__ASM_GLOBAL_FUNC( KiUserCallbackDispatcher,
 +                  "movq 0x28(%rsp), %rdx\n\t"
 +                  "movl 0x30(%rsp), %ecx\n\t"
@@ -23,7 +23,7 @@ index 7e77329363c..0046ffa6e50 100644
 +                  "call "
 +                  __ASM_NAME("user_callback_dispatcher") "\n\t"
 +                  "int3")
-
+ 
  static ULONG64 get_int_reg( CONTEXT *context, int reg )
  {
 diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
@@ -40,12 +40,12 @@ index 9a46b4a50b0..b91b986d94c 100644
 +            ULONG len;
 +        } *params = (void *)((ULONG_PTR)args_data - 0x18);
 +
-
+ 
          memcpy( args_data, args, len );
 +        params->args = args_data;
 +        params->id = id;
 +        params->len = len;
-
+ 
          callback_frame.frame.rcx           = id;
          callback_frame.frame.rdx           = (ULONG_PTR)args;
 @@ -2328,7 +2337,7 @@ NTSTATUS WINAPI KeUserModeCallback( ULONG id, const void *args, ULONG len, void
