@@ -32,7 +32,7 @@
     echo "proton LFH performance patch"
     patch -Np1 < ../patches/wine-hotfixes/LoL/lfh-non-proton-pre-needed.patch
     patch -Np1 < ../patches/proton/50-proton_LFH.patch
-    
+
     echo "update vulkan to 1.3 for dxvk-master support"
     patch -Np1 < ../patches/winevulkan/1.2.203.patch
     patch -Np1 < ../patches/winevulkan/1.3.204.patch
@@ -48,7 +48,9 @@
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-garena-childwindow.patch
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-client-slow-start-fix.patch
     patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-abi-vsyscall-fix.patch
-    
+    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-critical-error.patch
+    patch -Np1 < ../patches/wine-hotfixes/LoL/LoL-seh-assertion-failure.patch
+
     echo "Custom"
     patch -Np1 < ../patches/custom/hide_prefix_update_window.patch
 

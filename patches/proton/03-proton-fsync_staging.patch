@@ -60,7 +60,7 @@ new file mode 100644
 index 00000000000..5012425b95a
 --- /dev/null
 +++ b/dlls/ntdll/unix/fsync.c
-@@ -0,0 +1,1267 @@
+@@ -0,0 +1,1268 @@
 +/*
 + * futex-based synchronization objects
 + *
@@ -113,6 +113,7 @@ index 00000000000..5012425b95a
 +
 +#include "unix_private.h"
 +#include "fsync.h"
++#include <linux/futex.h>
 +
 +WINE_DEFAULT_DEBUG_CHANNEL(fsync);
 +
