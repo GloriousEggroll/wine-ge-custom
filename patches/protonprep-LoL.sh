@@ -17,11 +17,11 @@
     echo "clock monotonic"
     patch -Np1 < ../patches/proton/01-proton-use_clock_monotonic.patch
 
-    # Client won't launch with fsync patches
-    # echo "applying fsync patches"
-    # patch -Np1 < ../patches/proton/03-proton-fsync_staging.patch
-    # echo "proton futex waitv patches"
-    # patch -Np1 < ../patches/proton/57-fsync_futex_waitv.patch
+    echo "applying fsync patches"
+    patch -Np1 < ../patches/proton/03-proton-fsync_staging.patch
+
+    echo "proton futex waitv patches"
+    patch -Np1 < ../patches/proton/57-fsync_futex_waitv.patch
 
     echo "LAA"
     patch -Np1 < ../patches/proton/04-proton-LAA_staging.patch
