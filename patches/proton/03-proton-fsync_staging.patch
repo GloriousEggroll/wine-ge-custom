@@ -1427,10 +1427,10 @@ index 34d4c80eee5..c48a6339fee 100644
          esync_close( handle );
 
 diff --git a/dlls/ntdll/unix/sync.c b/dlls/ntdll/unix/sync.c
-index 051c672bd12..d8a8eb526a1 100644
+index 4025a7a3a2f..b7d0d68e159 100644
 --- a/dlls/ntdll/unix/sync.c
 +++ b/dlls/ntdll/unix/sync.c
-@@ -73,6 +73,7 @@
+@@ -65,6 +65,7 @@
  #include "wine/debug.h"
  #include "unix_private.h"
  #include "esync.h"
@@ -1448,9 +1448,9 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_create_semaphore( handle, access, attr, initial, max );
 
-@@ -297,6 +297,9 @@ NTSTATUS WINAPI NtOpenSemaphore( HANDLE *handle, ACCESS_MASK access, const OBJEC
- {
-     NTSTATUS ret;
+@@ -302,6 +346,9 @@ NTSTATUS WINAPI NtOpenSemaphore( HANDLE *handle, ACCESS_MASK access, const OBJEC
+
+     *handle = 0;
 
 +    if (do_fsync())
 +        return fsync_open_semaphore( handle, access, attr );
@@ -1458,7 +1458,7 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_open_semaphore( handle, access, attr );
 
-@@ -327,6 +327,9 @@ NTSTATUS WINAPI NtQuerySemaphore( HANDLE handle, SEMAPHORE_INFORMATION_CLASS cla
+@@ -341,6 +388,9 @@ NTSTATUS WINAPI NtQuerySemaphore( HANDLE handle, SEMAPHORE_INFORMATION_CLASS cla
 
      if (len != sizeof(SEMAPHORE_BASIC_INFORMATION)) return STATUS_INFO_LENGTH_MISMATCH;
 
@@ -1468,9 +1468,9 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_query_semaphore( handle, info, ret_len );
 
-@@ -367,6 +367,9 @@ NTSTATUS WINAPI NtReleaseSemaphore( HANDLE handle, ULONG count, ULONG *previous
+@@ -366,6 +416,9 @@ NTSTATUS WINAPI NtReleaseSemaphore( HANDLE handle, ULONG count, ULONG *previous
  {
-     NTSTATUS ret;
+     unsigned int ret;
 
 +    if (do_fsync())
 +        return fsync_release_semaphore( handle, count, previous );
@@ -1478,9 +1478,9 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_release_semaphore( handle, count, previous );
 
-@@ -394,6 +394,9 @@ NTSTATUS WINAPI NtCreateEvent( HANDLE *handle, ACCESS_MASK access, const OBJECT_
-     data_size_t len;
-     struct object_attributes *objattr;
+@@ -396,6 +449,9 @@ NTSTATUS WINAPI NtCreateEvent( HANDLE *handle, ACCESS_MASK access, const OBJECT_
+     *handle = 0;
+     if (type != NotificationEvent && type != SynchronizationEvent) return STATUS_INVALID_PARAMETER;
 
 +    if (do_fsync())
 +        return fsync_create_event( handle, access, attr, type, state );
@@ -1488,8 +1488,8 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_create_event( handle, access, attr, type, state );
 
-@@ -428,6 +428,9 @@ NTSTATUS WINAPI NtOpenEvent( HANDLE *handle, ACCESS_MASK access, const OBJECT_AT
-
+@@ -427,6 +483,9 @@ NTSTATUS WINAPI NtOpenEvent( HANDLE *handle, ACCESS_MASK access, const OBJECT_AT
+     *handle = 0;
      if ((ret = validate_open_object_attributes( attr ))) return ret;
 
 +    if (do_fsync())
@@ -1498,9 +1498,9 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_open_event( handle, access, attr );
 
-@@ -458,6 +458,9 @@ NTSTATUS WINAPI NtSetEvent( HANDLE handle, LONG *prev_state )
- {
-     NTSTATUS ret;
+@@ -453,6 +512,9 @@ NTSTATUS WINAPI NtSetEvent( HANDLE handle, LONG *prev_state )
+     /* This comment is a dummy to make sure this patch applies in the right place. */
+     unsigned int ret;
 
 +    if (do_fsync())
 +        return fsync_set_event( handle, prev_state );
@@ -1508,9 +1508,9 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_set_event( handle );
 
-@@ -480,6 +480,9 @@ NTSTATUS WINAPI NtResetEvent( HANDLE handle, LONG *prev_state )
- {
-     NTSTATUS ret;
+@@ -476,6 +538,9 @@ NTSTATUS WINAPI NtResetEvent( HANDLE handle, LONG *prev_state )
+     /* This comment is a dummy to make sure this patch applies in the right place. */
+     unsigned int ret;
 
 +    if (do_fsync())
 +        return fsync_reset_event( handle, prev_state );
@@ -1518,9 +1518,9 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_reset_event( handle );
 
-@@ -512,6 +512,9 @@ NTSTATUS WINAPI NtPulseEvent( HANDLE handle, LONG *prev_state )
+@@ -509,6 +574,9 @@ NTSTATUS WINAPI NtPulseEvent( HANDLE handle, LONG *prev_state )
  {
-     NTSTATUS ret;
+     unsigned int ret;
 
 +    if (do_fsync())
 +        return fsync_pulse_event( handle, prev_state );
@@ -1528,7 +1528,7 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_pulse_event( handle );
 
-@@ -537,6 +537,9 @@ NTSTATUS WINAPI NtQueryEvent( HANDLE handle, EVENT_INFORMATION_CLASS class,
+@@ -543,6 +611,9 @@ NTSTATUS WINAPI NtQueryEvent( HANDLE handle, EVENT_INFORMATION_CLASS class,
 
      if (len != sizeof(EVENT_BASIC_INFORMATION)) return STATUS_INFO_LENGTH_MISMATCH;
 
@@ -1538,9 +1538,9 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_query_event( handle, info, ret_len );
 
-@@ -578,6 +578,9 @@ NTSTATUS WINAPI NtCreateMutant( HANDLE *handle, ACCESS_MASK access, const OBJECT
-     data_size_t len;
-     struct object_attributes *objattr;
+@@ -573,6 +644,9 @@ NTSTATUS WINAPI NtCreateMutant( HANDLE *handle, ACCESS_MASK access, const OBJECT
+
+     *handle = 0;
 
 +    if (do_fsync())
 +        return fsync_create_mutex( handle, access, attr, owned );
@@ -1548,8 +1548,8 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_create_mutex( handle, access, attr, owned );
 
-@@ -611,6 +611,9 @@ NTSTATUS WINAPI NtOpenMutant( HANDLE *handle, ACCESS_MASK access, const OBJECT_A
-
+@@ -603,6 +677,9 @@ NTSTATUS WINAPI NtOpenMutant( HANDLE *handle, ACCESS_MASK access, const OBJECT_A
+     *handle = 0;
      if ((ret = validate_open_object_attributes( attr ))) return ret;
 
 +    if (do_fsync())
@@ -1558,9 +1558,9 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_open_mutex( handle, access, attr );
 
-@@ -641,6 +641,9 @@ NTSTATUS WINAPI NtReleaseMutant( HANDLE handle, LONG *prev_count )
+@@ -628,6 +705,9 @@ NTSTATUS WINAPI NtReleaseMutant( HANDLE handle, LONG *prev_count )
  {
-     NTSTATUS ret;
+     unsigned int ret;
 
 +    if (do_fsync())
 +        return fsync_release_mutex( handle, prev_count );
@@ -1568,7 +1568,7 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_release_mutex( handle, prev_count );
 
-@@ -665,6 +665,9 @@ NTSTATUS WINAPI NtQueryMutant( HANDLE handle, MUTANT_INFORMATION_CLASS class,
+@@ -661,6 +741,9 @@ NTSTATUS WINAPI NtQueryMutant( HANDLE handle, MUTANT_INFORMATION_CLASS class,
 
      if (len != sizeof(MUTANT_BASIC_INFORMATION)) return STATUS_INFO_LENGTH_MISMATCH;
 
@@ -1578,7 +1578,7 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_query_mutex( handle, info, ret_len );
 
-@@ -1286,6 +1286,13 @@ NTSTATUS WINAPI NtWaitForMultipleObjects( DWORD count, const HANDLE *handles, BO
+@@ -1470,6 +1553,13 @@ NTSTATUS WINAPI NtWaitForMultipleObjects( DWORD count, const HANDLE *handles, BO
 
      if (!count || count > MAXIMUM_WAIT_OBJECTS) return STATUS_INVALID_PARAMETER_1;
 
@@ -1592,7 +1592,7 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
      {
          NTSTATUS ret = esync_wait_objects( count, handles, wait_any, alertable, timeout );
-@@ -1323,6 +1323,9 @@ NTSTATUS WINAPI NtSignalAndWaitForSingleObject( HANDLE signal, HANDLE wait,
+@@ -1502,6 +1592,9 @@ NTSTATUS WINAPI NtSignalAndWaitForSingleObject( HANDLE signal, HANDLE wait,
      select_op_t select_op;
      UINT flags = SELECT_INTERRUPTIBLE;
 
@@ -1602,7 +1602,7 @@ index 051c672bd12..d8a8eb526a1 100644
      if (do_esync())
          return esync_signal_and_wait( signal, wait, alertable, timeout );
 
-@@ -1348,7 +1348,24 @@ NTSTATUS WINAPI NtYieldExecution(void)
+@@ -1535,7 +1628,24 @@ NTSTATUS WINAPI NtYieldExecution(void)
  NTSTATUS WINAPI NtDelayExecution( BOOLEAN alertable, const LARGE_INTEGER *timeout )
  {
      /* if alertable, we need to query the server */

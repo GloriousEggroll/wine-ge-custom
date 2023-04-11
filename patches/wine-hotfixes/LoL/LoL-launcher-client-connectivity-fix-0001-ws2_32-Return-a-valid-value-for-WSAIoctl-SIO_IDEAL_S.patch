@@ -13,13 +13,13 @@ Signed-off-by: Alistair Leslie-Hughes <leslie_alistair@hotmail.com>
  4 files changed, 61 insertions(+), 1 deletion(-)
 
 diff --git a/dlls/ntdll/unix/socket.c b/dlls/ntdll/unix/socket.c
-index 2e79b9baa0f..6d92a087850 100644
+index ac351a17a70..8adf2256337 100644
 --- a/dlls/ntdll/unix/socket.c
 +++ b/dlls/ntdll/unix/socket.c
-@@ -1424,6 +1424,37 @@ NTSTATUS sock_ioctl( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc, void *apc
-             break;
+@@ -1728,6 +1728,37 @@ NTSTATUS sock_ioctl( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc, void *apc
+             return STATUS_SUCCESS;
          }
- 
+
 +        case IOCTL_AFD_WINE_SEND_BACKLOG_QUERY:
 +        {
 +            int proto;
@@ -55,13 +55,13 @@ index 2e79b9baa0f..6d92a087850 100644
          {
              int value, ret;
 diff --git a/dlls/ws2_32/socket.c b/dlls/ws2_32/socket.c
-index 2db441bee3c..dd9759c5580 100644
+index e8a04e2e714..e3175327fe9 100644
 --- a/dlls/ws2_32/socket.c
 +++ b/dlls/ws2_32/socket.c
-@@ -1997,6 +1997,23 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
-         return ret ? -1 : 0;
+@@ -2370,6 +2370,23 @@ INT WINAPI WSAIoctl(SOCKET s, DWORD code, LPVOID in_buff, DWORD in_size, LPVOID
+         return 0;
      }
- 
+
 +    case SIO_IDEAL_SEND_BACKLOG_QUERY:
 +    {
 +        DWORD ret;
@@ -83,10 +83,10 @@ index 2db441bee3c..dd9759c5580 100644
      {
          DWORD ret;
 diff --git a/dlls/ws2_32/tests/sock.c b/dlls/ws2_32/tests/sock.c
-index 02713a7c625..b87aef07b52 100644
+index bcccaef9bc6..16bb4042705 100644
 --- a/dlls/ws2_32/tests/sock.c
 +++ b/dlls/ws2_32/tests/sock.c
-@@ -5962,8 +5962,9 @@ static void test_WSASendTo(void)
+@@ -7188,8 +7188,9 @@ static void test_WSASendTo(void)
      struct sockaddr_in addr, ret_addr;
      char buf[12] = "hello world";
      WSABUF data_buf;
@@ -94,10 +94,10 @@ index 02713a7c625..b87aef07b52 100644
 +    DWORD bytesSent, size;
      int ret, len;
 +    ULONG backlog = 0;
- 
+
      addr.sin_family = AF_INET;
      addr.sin_port = htons(139);
-@@ -5999,6 +6000,11 @@ static void test_WSASendTo(void)
+@@ -7225,6 +7226,11 @@ static void test_WSASendTo(void)
      ok(!ret, "got error %u\n", WSAGetLastError());
      ok(ret_addr.sin_family == AF_INET, "got family %u\n", ret_addr.sin_family);
      ok(ret_addr.sin_port, "expected nonzero port\n");
@@ -107,20 +107,20 @@ index 02713a7c625..b87aef07b52 100644
 +       "WSAIoctl() failed: %d/%d\n", ret, WSAGetLastError());
 +    closesocket(s);
  }
- 
- static DWORD WINAPI recv_thread(LPVOID arg)
-@@ -6039,6 +6045,7 @@ static void test_WSARecv(void)
+
+ struct recv_thread_apc_param
+@@ -7304,6 +7310,7 @@ static void test_WSARecv(void)
      DWORD dwret;
      BOOL bret;
      HANDLE thread, event = NULL, io_port;
 +    ULONG backlog = 0, size;
- 
+
      tcp_socketpair(&src, &dest);
- 
-@@ -6187,6 +6194,10 @@ static void test_WSARecv(void)
- 
+
+@@ -7469,6 +7476,10 @@ static void test_WSARecv(void)
+
      CloseHandle(io_port);
- 
+
 +    iret = WSAIoctl(src, SIO_IDEAL_SEND_BACKLOG_QUERY, NULL, 0, &backlog, sizeof(backlog), &size, NULL, NULL);
 +    ok(!iret, "WSAIoctl() failed: %d/%d\n", iret, WSAGetLastError());
 +    ok(backlog == 0x10000, "got %08x\n", backlog);
@@ -129,17 +129,17 @@ index 02713a7c625..b87aef07b52 100644
      if (server != INVALID_SOCKET)
          closesocket(server);
 diff --git a/include/wine/afd.h b/include/wine/afd.h
-index 3b8bdcb9e5d..ef4bfa97897 100644
+index 788adb4a495..a9f8644870b 100644
 --- a/include/wine/afd.h
 +++ b/include/wine/afd.h
-@@ -238,6 +238,7 @@ struct afd_get_events_params
- #define IOCTL_AFD_WINE_SET_IP_RECVTTL                   WINE_AFD_IOC(294)
- #define IOCTL_AFD_WINE_GET_IP_RECVTOS                   WINE_AFD_IOC(295)
+@@ -285,6 +285,7 @@ C_ASSERT( sizeof(struct afd_get_events_params) == 56 );
  #define IOCTL_AFD_WINE_SET_IP_RECVTOS                   WINE_AFD_IOC(296)
-+#define IOCTL_AFD_WINE_SEND_BACKLOG_QUERY               WINE_AFD_IOC(297)
- 
- struct afd_create_params
+ #define IOCTL_AFD_WINE_GET_SO_EXCLUSIVEADDRUSE          WINE_AFD_IOC(297)
+ #define IOCTL_AFD_WINE_SET_SO_EXCLUSIVEADDRUSE          WINE_AFD_IOC(298)
++#define IOCTL_AFD_WINE_SEND_BACKLOG_QUERY               WINE_AFD_IOC(299)
+
+ struct afd_iovec
  {
--- 
+--
 2.33.0
 

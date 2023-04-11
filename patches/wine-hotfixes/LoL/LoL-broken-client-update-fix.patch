@@ -5,17 +5,17 @@
  dlls/psapi/tests/psapi_main.c |  5 +--
  2 files changed, 71 insertions(+), 10 deletions(-)
 --- a/dlls/ntdll/unix/virtual.c
-+++ a/dlls/ntdll/unix/virtual.c
-@@ -133,6 +133,8 @@ struct file_view
-          } \
-     } while (0);
++++ b/dlls/ntdll/unix/virtual.c
+@@ -112,6 +112,8 @@ struct file_view
+     unsigned int  protect;       /* protection for all pages at allocation time and SEC_* flags */
+ };
 
 +#define SYMBOLIC_LINK_QUERY 0x0001
 +
  /* per-page protection flags */
  #define VPROT_READ       0x01
  #define VPROT_WRITE      0x02
-@@ -4273,34 +4275,96 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
+@@ -4466,34 +4468,96 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
      return STATUS_SUCCESS;
  }
 
@@ -70,12 +70,12 @@
 +    return status;
 +}
 +
- static NTSTATUS get_memory_section_name( HANDLE process, LPCVOID addr,
-                                          MEMORY_SECTION_NAME *info, SIZE_T len, SIZE_T *ret_len )
+ static unsigned int get_memory_section_name( HANDLE process, LPCVOID addr,
+                                              MEMORY_SECTION_NAME *info, SIZE_T len, SIZE_T *ret_len )
  {
 +    SIZE_T current_path_len, max_path_len;
 +    WCHAR *name;
-     NTSTATUS status;
+     unsigned int status;
 
      if (!info) return STATUS_ACCESS_VIOLATION;
 +    max_path_len = len - sizeof(*info) - sizeof(WCHAR); // dont count null char
@@ -119,10 +119,10 @@
  }
 
 --- a/dlls/psapi/tests/psapi_main.c
-+++ a/dlls/psapi/tests/psapi_main.c
++++ b/dlls/psapi/tests/psapi_main.c
 @@ -471,7 +471,6 @@ static void test_GetMappedFileName(void)
      ret = GetMappedFileNameA(GetCurrentProcess(), base, map_name, sizeof(map_name));
-     ok(ret, "GetMappedFileName error %d\n", GetLastError());
+     ok(ret, "GetMappedFileName error %ld\n", GetLastError());
      ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
 -    todo_wine
      ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
@@ -138,7 +138,7 @@
 
 @@ -490,7 +488,6 @@ static void test_GetMappedFileName(void)
      ret = GetMappedFileNameA(GetCurrentProcess(), base + 0x2000, map_name, sizeof(map_name));
-     ok(ret, "GetMappedFileName error %d\n", GetLastError());
+     ok(ret, "GetMappedFileName error %ld\n", GetLastError());
      ok(ret > strlen(device_name), "map_name should be longer than device_name\n");
 -    todo_wine
      ok(memcmp(map_name, device_name, strlen(device_name)) == 0, "map name does not start with a device name: %s\n", map_name);
@@ -147,11 +147,10 @@
 @@ -566,7 +563,7 @@ static void test_GetProcessImageFileName(void)
      {
          /* Windows returns 2*strlen-1 */
-         ok(ret >= strlen(szImgPath), "szImgPath=\"%s\" ret=%d\n", szImgPath, ret);
+         ok(ret >= strlen(szImgPath), "szImgPath=\"%s\" ret=%ld\n", szImgPath, ret);
 -        todo_wine ok(!strcmp(szImgPath, szMapPath), "szImgPath=\"%s\" szMapPath=\"%s\"\n", szImgPath, szMapPath);
 +        ok(!strcmp(szImgPath, szMapPath), "szImgPath=\"%s\" szMapPath=\"%s\"\n", szImgPath, szMapPath);
      }
 
      SetLastError(0xdeadbeef);
 --
-

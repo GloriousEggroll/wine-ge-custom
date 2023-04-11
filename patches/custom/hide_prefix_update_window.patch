@@ -8,13 +8,13 @@ Subject: [PATCH] HACK: proton: wineboot: Don't show "updating prefix" window.
  1 file changed, 33 deletions(-)
 
 diff --git a/programs/wineboot/wineboot.c b/programs/wineboot/wineboot.c
-index 4a18265c1de..e7575b491b5 100644
+index 4de20705224..fd232f0199d 100644
 --- a/programs/wineboot/wineboot.c
 +++ b/programs/wineboot/wineboot.c
-@@ -1296,37 +1296,6 @@ static BOOL start_services_process(void)
+@@ -1298,37 +1298,6 @@ static BOOL start_services_process(void)
      return TRUE;
  }
- 
+
 -static INT_PTR CALLBACK wait_dlgproc( HWND hwnd, UINT msg, WPARAM wp, LPARAM lp )
 -{
 -    switch (msg)
@@ -49,15 +49,15 @@ index 4a18265c1de..e7575b491b5 100644
  static HANDLE start_rundll32( const WCHAR *inf_path, const WCHAR *install, WORD machine )
  {
      WCHAR app[MAX_PATH + ARRAY_SIZE(L"\\rundll32.exe" )];
-@@ -1477,7 +1446,6 @@ static void update_wineprefix( BOOL force )
- 
+@@ -1479,7 +1448,6 @@ static void update_wineprefix( BOOL force )
+
          if ((process = start_rundll32( inf_path, L"PreInstall", IMAGE_FILE_MACHINE_TARGET_HOST )))
          {
 -            HWND hwnd = show_wait_window();
              for (;;)
              {
                  MSG msg;
-@@ -1495,7 +1463,6 @@ static void update_wineprefix( BOOL force )
+@@ -1497,7 +1465,6 @@ static void update_wineprefix( BOOL force )
                  }
                  else while (PeekMessageW( &msg, 0, 0, 0, PM_REMOVE )) DispatchMessageW( &msg );
              }

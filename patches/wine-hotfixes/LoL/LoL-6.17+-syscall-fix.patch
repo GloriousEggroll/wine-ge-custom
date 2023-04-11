@@ -2,7 +2,7 @@ diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
 index c876d51f8e6..654c84de587 100644
 --- a/tools/winebuild/import.c
 +++ b/tools/winebuild/import.c
-@@ -1401,19 +1401,9 @@ void output_syscalls( DLLSPEC *spec )
+@@ -1424,19 +1424,9 @@ void output_syscalls( DLLSPEC *spec )
          switch (target.cpu)
          {
          case CPU_i386:
@@ -22,6 +22,6 @@ index c876d51f8e6..654c84de587 100644
 +            output( "\t.byte 0xb8\n" );                               /* mov eax, SYSCALL */
 +            output( "\t.long %d\n", id );
 +            output( "\t.byte 0x64,0xff,0x15,0xc0,0x00,0x00,0x00\n" ); /* call dword ptr fs:[0C0h] */
-             output( "\tret $%u\n", odp->type == TYPE_STDCALL ? get_args_size( odp ) : 0 );
+             output( "\tret $%u\n", get_args_size( odp ));
              break;
          case CPU_x86_64:
