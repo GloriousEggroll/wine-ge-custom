@@ -20,3 +20,6 @@ vagrant ssh -c 'scp ubuntu@buildbot-bionic-amd64:/home/ubuntu/wine-*.tar.xz /vag
 vagrant ssh -c 'ssh ubuntu@buildbot-bionic-amd64 "rm ~/wine-*.tar.xz"'
 
 vagrant halt
+
+cd vagrant_share
+export SHA512NAME=$(ls | grep tar.xz | sed -r 's/tar.xz/sha512sum/g'); sha512sum $(ls | grep tar.xz) > $SHA512NAME
