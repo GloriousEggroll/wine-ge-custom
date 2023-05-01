@@ -4,11 +4,11 @@ index c3714e8369b..ee00d97d5aa 100644
 +++ b/dlls/ntdll/exception.c
 @@ -168,7 +168,9 @@ LONG call_vectored_handlers( EXCEPTION_RECORD *rec, CONTEXT *context )
  
-         TRACE( "calling handler at %p code=%x flags=%x\n",
+         TRACE( "calling handler at %p code=%lx flags=%lx\n",
                 func, rec->ExceptionCode, rec->ExceptionFlags );
 +        __asm__ __volatile__(".rept 16 ; nop ; .endr");
          ret = func( &except_ptrs );
 +        __asm__ __volatile__(".rept 16 ; nop ; .endr");
-         TRACE( "handler at %p returned %x\n", func, ret );
+         TRACE( "handler at %p returned %lx\n", func, ret );
  
          RtlEnterCriticalSection( &vectored_handlers_section );

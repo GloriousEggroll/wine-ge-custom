@@ -1,0 +1,88 @@
+From 141ed0b88576ec40a495a672ae1b7aa487bc5591 Mon Sep 17 00:00:00 2001
+From: GloriousEggroll <gloriouseggroll@gmail.com>
+Date: Sun, 16 Apr 2023 19:02:52 -0600
+Subject: [PATCH] revert commits that cause LoL client post-match hang
+
+This reverts the following commits because they cause the League of Legends to hang indefinitely after exiting a match and the client attempts to come back up:
+
+e62dd2a5b62a6a75d9bcaec29e80b31eb257c41d
+b6ad9e57a90a189f2806273feb8fffac6c9c8264
+---
+ dlls/shell32/pidl.c     |  2 +-
+ dlls/shell32/shellord.c | 16 ++++++++--------
+ 2 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/shell32/pidl.c b/dlls/shell32/pidl.c
+index f9c91a79132..4c66a14c700 100644
+--- a/dlls/shell32/pidl.c
++++ b/dlls/shell32/pidl.c
+@@ -1574,7 +1574,7 @@ LPITEMIDLIST _ILCreateDesktop(void)
+     LPITEMIDLIST ret;
+ 
+     TRACE("()\n");
+-    ret = SHAlloc(sizeof(*ret));
++    ret = SHAlloc(2);
+     if (ret)
+         ret->mkid.cb = 0;
+     return ret;
+diff --git a/dlls/shell32/shellord.c b/dlls/shell32/shellord.c
+index 66e5caf08da..55b02d4188f 100644
+--- a/dlls/shell32/shellord.c
++++ b/dlls/shell32/shellord.c
+@@ -1674,7 +1674,7 @@ UINT WINAPI SHAddFromPropSheetExtArray(HPSXA hpsxa, LPFNADDPROPSHEETPAGE lpfnAdd
+         /* Call the AddPage method of all registered IShellPropSheetExt interfaces */
+         for (i = 0; i != psxa->uiCount; i++)
+         {
+-            IShellPropSheetExt_AddPages(psxa->pspsx[i], PsxaCall, (LPARAM)&Call);
++            psxa->pspsx[i]->lpVtbl->AddPages(psxa->pspsx[i], PsxaCall, (LPARAM)&Call);
+         }
+ 
+         return Call.uiCount;
+@@ -1764,21 +1764,21 @@ HPSXA WINAPI SHCreatePropSheetExtArrayEx(HKEY hKey, LPCWSTR pszSubKey, UINT max_
+                        Then call IShellExtInit's Initialize method. */
+                     if (SUCCEEDED(CoCreateInstance(&clsid, NULL, CLSCTX_INPROC_SERVER/* | CLSCTX_NO_CODE_DOWNLOAD */, &IID_IShellPropSheetExt, (LPVOID *)&pspsx)))
+                     {
+-                        if (SUCCEEDED(IShellPropSheetExt_QueryInterface(pspsx, &IID_IShellExtInit, (PVOID *)&psxi)))
++                        if (SUCCEEDED(pspsx->lpVtbl->QueryInterface(pspsx, &IID_IShellExtInit, (PVOID *)&psxi)))
+                         {
+-                            if (SUCCEEDED(IShellExtInit_Initialize(psxi, NULL, pDataObj, hKey)))
++                            if (SUCCEEDED(psxi->lpVtbl->Initialize(psxi, NULL, pDataObj, hKey)))
+                             {
+                                 /* Add the IShellPropSheetExt instance to the array */
+                                 psxa->pspsx[psxa->uiCount++] = pspsx;
+                             }
+                             else
+                             {
+-                                IShellExtInit_Release(psxi);
+-                                IShellPropSheetExt_Release(pspsx);
++                                psxi->lpVtbl->Release(psxi);
++                                pspsx->lpVtbl->Release(pspsx);
+                             }
+                         }
+                         else
+-                            IShellPropSheetExt_Release(pspsx);
++                            pspsx->lpVtbl->Release(pspsx);
+                     }
+                 }
+ 
+@@ -1821,7 +1821,7 @@ UINT WINAPI SHReplaceFromPropSheetExtArray(HPSXA hpsxa, UINT uPageID, LPFNADDPRO
+         for (i = 0; i != psxa->uiCount; i++)
+         {
+             Call.bCalled = FALSE;
+-            IShellPropSheetExt_ReplacePage(psxa->pspsx[i], uPageID, PsxaCall, (LPARAM)&Call);
++            psxa->pspsx[i]->lpVtbl->ReplacePage(psxa->pspsx[i], uPageID, PsxaCall, (LPARAM)&Call);
+         }
+ 
+         return Call.uiCount;
+@@ -1844,7 +1844,7 @@ void WINAPI SHDestroyPropSheetExtArray(HPSXA hpsxa)
+     {
+         for (i = 0; i != psxa->uiCount; i++)
+         {
+-            IShellPropSheetExt_Release(psxa->pspsx[i]);
++            psxa->pspsx[i]->lpVtbl->Release(psxa->pspsx[i]);
+         }
+ 
+         LocalFree(psxa);
+-- 
+2.39.2
+
