@@ -1,0 +1,21 @@
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index e0e5006f498..a3e885aef7c 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -2287,6 +2287,7 @@ BOOL simulate_writecopy;
+ static void hacks_init(void)
+ {
+     static const char upc_exe[] = "Ubisoft Game Launcher\\upc.exe";
++    static const char upc2_exe[] = "upc.exe";
+     const char *env_str, *sgi;
+
+
+@@ -2305,6 +2306,7 @@ static void hacks_init(void)
+     else if (main_argc > 1)
+     {
+         fsync_simulate_sched_quantum = !!strstr(main_argv[1], upc_exe);
++        fsync_simulate_sched_quantum = !!strstr(main_argv[1], upc2_exe);
+         fsync_simulate_sched_quantum = fsync_simulate_sched_quantum || !!strstr(main_argv[1], "PlanetZoo.exe");
+         fsync_simulate_sched_quantum = fsync_simulate_sched_quantum || !!strstr(main_argv[1], "GTA5.exe");
+     }
+

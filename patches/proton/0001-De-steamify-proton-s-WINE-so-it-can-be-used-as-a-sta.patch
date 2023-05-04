@@ -1125,3 +1125,48 @@ index 9bd32a6f0e4..25353635e73 100644
 -- 
 2.40.0
 
+From 1b809b41a0577c0cc6bd3555b477e5d87a3c05df Mon Sep 17 00:00:00 2001
+From: GloriousEggroll <gloriouseggroll@gmail.com>
+Date: Tue, 2 May 2023 19:09:52 -0600
+Subject: [PATCH] loader fixup
+
+---
+ dlls/ntdll/loader.c | 15 +--------------
+ 1 file changed, 1 insertion(+), 14 deletions(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index c4008b93357..e8c819e6e73 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -87,7 +87,7 @@ const WCHAR windows_dir[] = L"C:\\windows";
+ const WCHAR system_dir[] = L"C:\\windows\\system32\\";
+
+ /* system search path */
+-static const WCHAR system_path[] = L"C:\\windows\\system32;C:\\windows\\system;C:\\windows;C:\\Program Files (x86)\\Steam";
++static const WCHAR system_path[] = L"C:\\windows\\system32;C:\\windows\\system;C:\\windows";
+
+ static BOOL is_prefix_bootstrap;  /* are we bootstrapping the prefix? */
+ static BOOL imports_fixup_done = FALSE;  /* set once the imports have been fixed up, before attaching them */
+@@ -2126,19 +2126,6 @@ static NTSTATUS perform_relocations( void *module, IMAGE_NT_HEADERS *nt, SIZE_T
+     return STATUS_SUCCESS;
+ }
+
+-static int use_lsteamclient(void)
+-{
+-    WCHAR env[32];
+-    static int use = -1;
+-
+-    if (use != -1) return use;
+-
+-    use = !get_env( L"PROTON_DISABLE_LSTEAMCLIENT", env, sizeof(env) ) || *env == '0';
+-    if (!use)
+-        ERR("lsteamclient disabled.\n");
+-    return use;
+-}
+-
+ /*************************************************************************
+  *		build_module
+  *
+--
+2.40.0
+

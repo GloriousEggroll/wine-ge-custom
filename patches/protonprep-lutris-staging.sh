@@ -14,8 +14,10 @@
 
 # Bring back configure files. Staging uses them to regenerate fresh ones
 # https://github.com/ValveSoftware/wine/commit/e813ca5771658b00875924ab88d525322e50d39f
+# https://github.com/ValveSoftware/wine/commit/82fa1cf334159d5c4261f8f1ff345165e7942ec0
 
     git revert --no-commit e813ca5771658b00875924ab88d525322e50d39f
+    git revert --no-commit 82fa1cf334159d5c4261f8f1ff345165e7942ec0
 
 ### END PROBLEMATIC COMMIT REVERT SECTION ###
 
@@ -290,6 +292,9 @@
     echo "WINE: -GAME FIXES- Add Star Citizen EAC patch and wrap it around SteamGameId=starcitizen envvar"
     patch -Np1 < ../patches/game-patches/star-citizen-eac.patch
 
+    echo "WINE: -GAME FIXES- Fix Uplay not launching with fsync enabled after converting proton-wine to wine-ge"
+    patch -Np1 < ../patches/game-patches/uplay-fsync-proton-wine-hotfix.patch
+
 ### END GAME PATCH SECTION ###
 
 ### (2-4) WINE HOTFIX/BACKPORT SECTION ###
@@ -305,16 +310,6 @@
     # https://bugs.winehq.org/show_bug.cgi?id=51683
     echo "WINE: -PENDING- Guild Wars 2 patch"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-guild_wars_2.patch
-
-    echo "WINE: -PENDING- fix Battlenet qt platform bug"
-    # https://gitlab.winehq.org/wine/wine/-/merge_requests/1148
-    # added to staging in 8.5
-    patch -Np1 < ../patches/wine-hotfixes/pending/ntdll-hidden_file_attr/0001-ntdll-tests-Add-test-for-file-attributes-of-files-wi.patch
-    patch -Np1 < ../patches/wine-hotfixes/pending/ntdll-hidden_file_attr/0002-ntdll-Do-not-open-code-hidden-file-handling-in-get_d.patch
-    patch -Np1 < ../patches/wine-hotfixes/pending/ntdll-hidden_file_attr/0003-ntdll-Handle-hidden-file-names-inside-get_file_info-.patch
-    patch -Np1 < ../patches/wine-hotfixes/pending/ntdll-hidden_file_attr/0004-ntdll-Only-infer-hidden-attribute-from-file-name-if-.patch
-    patch -Np1 < ../patches/wine-hotfixes/pending/ntdll-hidden_file_attr/0005-ntdll-Set-xattr-in-NtCreateFile-if-inferred-and-requ.patch
-    patch -Np1 < ../patches/wine-hotfixes/pending/ntdll-hidden_file_attr/0006-ntdll-tests-Increase-margins-in-timer-merging-tests.patch
 
 ### END WINE PENDING UPSTREAM SECTION ###
 
