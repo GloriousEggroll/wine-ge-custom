@@ -174,6 +174,12 @@
     # winspool.drv-ClosePrinter - not required, only adds trace lines, for printers.
     # winmm-mciSendCommandA - not needed, only applies to win 9x mode
     # ** winex11-XEMBED - applied manually
+    #
+    # Paul Gofman — Yesterday at 3:49 PM
+    # that’s only for desktop integration, spamming native menu’s with wine apps which won’t probably start from there anyway
+    # winemenubuilder-integration -- winemenubuilder is disabled in proton and is not needed
+    # winemenubuilder-Desktop_Icon_Path -- winemenubuilder is disabled in proton and is not needed
+    # winemenubuilder-integration -- winemenubuilder is disabled in proton and is not needed
 
     echo "WINE: -STAGING- applying staging Compiler_Warnings revert for steamclient compatibility"
     # revert this, it breaks lsteamclient compilation
@@ -279,9 +285,6 @@
     
     # kernel32-Debugger
     patch -Np1 < ../wine-staging/patches/kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch
-    
-    # winemenubuilder-integration
-    patch -Np1 < ../wine-staging/patches/winemenubuilder-integration/0001-winemenubuilder-Blacklist-desktop-integration-for-ce.patch
 
     # winex11-XEMBED
     patch -Np1 < ../patches/wine-hotfixes/staging/winex11-XEMBED/0001-winex11-Enable-disable-windows-when-they-are-un-mapped.patch
@@ -320,6 +323,10 @@
     # https://bugs.winehq.org/show_bug.cgi?id=51683
     echo "WINE: -PENDING- Guild Wars 2 patch"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-guild_wars_2.patch
+
+    echo "WINE: -PENDING- Add Star Citizen GameGlass stub"
+    # added in 8.5 -- backporting
+    patch -Np1 < ../patches/wine-hotfixes/upstream/2326.patch
 
 ### END WINE PENDING UPSTREAM SECTION ###
 
