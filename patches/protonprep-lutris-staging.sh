@@ -13,11 +13,19 @@
 ### (2-1) PROBLEMATIC COMMIT REVERT SECTION ###
 
 # Bring back configure files. Staging uses them to regenerate fresh ones
-# https://github.com/ValveSoftware/wine/commit/e813ca5771658b00875924ab88d525322e50d39f
-# https://github.com/ValveSoftware/wine/commit/82fa1cf334159d5c4261f8f1ff345165e7942ec0
 
     git revert --no-commit e813ca5771658b00875924ab88d525322e50d39f
     git revert --no-commit 82fa1cf334159d5c4261f8f1ff345165e7942ec0
+
+# Revert proton font changes, Using them as non-proton wine build breaks Uplay
+
+    git revert --no-commit fe7901be6de96a7572fff977dd34584d96b5ec29
+    git revert --no-commit ba3c43eb34cd10b7cf1c8e76319a2eef86f31f8b
+    git revert --no-commit 72508b7d4110b76f90320ff009df1141f6e07901
+    git revert --no-commit 4e3daedef09a18911e86ad986cf95b54f998c023
+    git revert --no-commit c67c0e18365ac88fd2441ac25e8facd846e86e9d
+    git revert --no-commit deb9b261c45adf2b44de7c19237d9c2fe758620d
+    git revert --no-commit 31e0395950217576ee0fae2d6e84b83db1ab6c52
 
 ### END PROBLEMATIC COMMIT REVERT SECTION ###
 
@@ -88,6 +96,8 @@
     -W winemenubuilder-integration \
     -W winspool.drv-ClosePrinter \
     -W winmm-mciSendCommandA \
+    -W winemenubuilder-Desktop_Icon_Path \
+    -W winemenubuilder-integration \
     -W winex11-XEMBED
 
     # NOTE: Some patches are applied manually because they -do- apply, just not cleanly, ie with patch fuzz.
@@ -317,7 +327,7 @@
 ### (2-6) PROTON-GE ADDITIONAL CUSTOM PATCHES ###
 
     echo "WINE: -PROTON- Remove steamclient patches for normal WINE usage"
-    patch -Np1 < ../patches/proton/0001-De-steamify-proton-s-WINE-so-it-can-be-used-as-a-sta.patch
+#    patch -Np1 < ../patches/proton/0001-De-steamify-proton-s-WINE-so-it-can-be-used-as-a-sta.patch
 
 #    echo "WINE: -FSR- fullscreen hack fsr patch"
 #    patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
