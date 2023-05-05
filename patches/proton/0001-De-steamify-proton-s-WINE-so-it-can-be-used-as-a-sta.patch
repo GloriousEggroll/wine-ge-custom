@@ -817,22 +817,9 @@ Date: Mon, 1 May 2023 17:09:21 -0600
 Subject: [PATCH 09/12] 9
 
 ---
- configure.ac       |  1 +
  loader/wine.inf.in | 19 ++-----------------
  2 files changed, 3 insertions(+), 17 deletions(-)
 
-diff --git a/configure.ac b/configure.ac
-index b9cce2f0625..8e80ddac53c 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -3454,6 +3454,7 @@ WINE_CONFIG_MAKEFILE(programs/wineconsole)
- WINE_CONFIG_MAKEFILE(programs/winedbg)
- WINE_CONFIG_MAKEFILE(programs/winedevice)
- WINE_CONFIG_MAKEFILE(programs/winefile)
-+WINE_CONFIG_MAKEFILE(programs/winemenubuilder)
- WINE_CONFIG_MAKEFILE(programs/winemine)
- WINE_CONFIG_MAKEFILE(programs/winemsibuilder)
- WINE_CONFIG_MAKEFILE(programs/winepath)
 diff --git a/loader/wine.inf.in b/loader/wine.inf.in
 index 92a1874a8d5..2f19d867193 100644
 --- a/loader/wine.inf.in
@@ -846,14 +833,6 @@ index 92a1874a8d5..2f19d867193 100644
  
  [Wow64Install.ntarm64]
  WineFakeDlls=FakeDllsWin32
-@@ -2811,6 +2811,7 @@ StartType=3
- ErrorControl=1
- 
- [Services]
-+HKLM,%CurrentVersion%\RunServices,"winemenubuilder",2,"%11%\winemenubuilder.exe -a -r"
- HKLM,"System\CurrentControlSet\Services\Eventlog\Application",,16
- HKLM,"System\CurrentControlSet\Services\Eventlog\System","Sources",0x10000,""
- HKLM,"System\CurrentControlSet\Services\Tcpip\Parameters","DataBasePath",,"%12%\etc"
 @@ -3043,22 +3044,6 @@ InfFiles  = 17
  NlsFiles  = 11
  SortFiles = 10,globalization\sorting
