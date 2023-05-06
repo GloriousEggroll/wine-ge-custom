@@ -255,9 +255,6 @@
     # packager-DllMain
     patch -Np1 < ../patches/wine-hotfixes/staging/packager-DllMain/0001-packager-Prefer-native-version.patch
 
-    # winemenubuilder-Desktop_Icon_Path
-    patch -Np1 < ../patches/wine-hotfixes/staging/winemenubuilder-Desktop_Icon_Path/0001-winemenubuilder-Create-desktop-shortcuts-with-absolu.patch
-
     # wscript-support-d-u-switches
     patch -Np1 < ../patches/wine-hotfixes/staging/wscript-support-d-u-switches/0001-wscript-return-TRUE-for-d-and-u-stub-switches.patch
 
@@ -334,7 +331,7 @@
 ### (2-6) PROTON-GE ADDITIONAL CUSTOM PATCHES ###
 
     echo "WINE: -PROTON- Remove steamclient patches for normal WINE usage"
-#    patch -Np1 < ../patches/proton/0001-De-steamify-proton-s-WINE-so-it-can-be-used-as-a-sta.patch
+    patch -Np1 < ../patches/proton/0001-De-steamify-proton-s-WINE-so-it-can-be-used-as-a-sta.patch
 
 #    echo "WINE: -FSR- fullscreen hack fsr patch"
 #    patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
