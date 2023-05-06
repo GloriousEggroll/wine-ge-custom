@@ -502,216 +502,6 @@ index 08bb870baae..50bff4d744e 100644
 -- 
 2.40.0
 
-From 3c92c72c5fb4c83fbd4ef88a2827fc6a83be6dd0 Mon Sep 17 00:00:00 2001
-From: GloriousEggroll <gloriouseggroll@gmail.com>
-Date: Mon, 1 May 2023 16:59:18 -0600
-Subject: [PATCH 06/12] 6
-
----
- dlls/shell32/shellpath.c | 181 +++++++++++++++++++++++++++++++++++++++
- 1 file changed, 181 insertions(+)
-
-diff --git a/dlls/shell32/shellpath.c b/dlls/shell32/shellpath.c
-index 36083e575d2..9bd32a6f0e4 100644
---- a/dlls/shell32/shellpath.c
-+++ b/dlls/shell32/shellpath.c
-@@ -2639,6 +2639,183 @@ end:
-     return hr;
- }
- 
-+static char *xdg_config;
-+static DWORD xdg_config_len;
-+
-+static BOOL WINAPI init_xdg_dirs( INIT_ONCE *once, void *param, void **context )
-+{
-+    const WCHAR *var, *fmt = L"\\??\\unix%s/user-dirs.dirs";
-+    char *p;
-+    WCHAR *name, *ptr;
-+    HANDLE file;
-+    DWORD len;
-+
-+    if (!(var = _wgetenv( L"XDG_CONFIG_HOME" )) || var[0] != '/')
-+    {
-+        if (!(var = _wgetenv( L"WINEHOMEDIR" ))) return TRUE;
-+        fmt = L"%s/.config/user-dirs.dirs";
-+    }
-+    len = lstrlenW(var) + lstrlenW(fmt);
-+    name = heap_alloc( len * sizeof(WCHAR) );
-+    swprintf( name, len, fmt, var );
-+    name[1] = '\\';  /* change \??\ to \\?\ */
-+    for (ptr = name; *ptr; ptr++) if (*ptr == '/') *ptr = '\\';
-+
-+    file = CreateFileW( name, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, 0 );
-+    heap_free( name );
-+    if (file != INVALID_HANDLE_VALUE)
-+    {
-+        len = GetFileSize( file, NULL );
-+        if (!(xdg_config = heap_alloc( len + 1 ))) return TRUE;
-+        if (!ReadFile( file, xdg_config, len, &xdg_config_len, NULL ))
-+        {
-+            heap_free( xdg_config );
-+            xdg_config = NULL;
-+        }
-+        else
-+        {
-+            for (p = xdg_config; p < xdg_config + xdg_config_len; p++) if (*p == '\n') *p = 0;
-+            *p = 0;  /* append null to simplify string parsing */
-+        }
-+        CloseHandle( file );
-+    }
-+    return TRUE;
-+}
-+
-+static char *get_xdg_path( const char *var )
-+{
-+    static INIT_ONCE once;
-+    char *p, *ret = NULL;
-+    int i;
-+
-+    InitOnceExecuteOnce( &once, init_xdg_dirs, NULL, NULL );
-+    if (!xdg_config) return NULL;
-+
-+    for (p = xdg_config; p < xdg_config + xdg_config_len; p += strlen(p) + 1)
-+    {
-+        while (*p == ' ' || *p == '\t') p++;
-+        if (strncmp( p, var, strlen(var) )) continue;
-+        p += strlen(var);
-+        while (*p == ' ' || *p == '\t') p++;
-+        if (*p != '=') continue;
-+        p++;
-+        while (*p == ' ' || *p == '\t') p++;
-+        if (*p != '"') continue;
-+        p++;
-+        if (*p != '/' && strncmp( p, "$HOME/", 6 )) continue;
-+
-+        if (!(ret = heap_alloc( strlen(p) + 1 ))) break;
-+        for (i = 0; *p && *p != '"'; i++, p++)
-+        {
-+            if (*p == '\\' && p[1]) p++;
-+            ret[i] = *p;
-+        }
-+        ret[i] = 0;
-+        if (*p != '"')
-+        {
-+            heap_free( ret );
-+            ret = NULL;
-+        }
-+        break;
-+    }
-+    return ret;
-+}
-+
-+static BOOL link_folder( HANDLE mgr, const UNICODE_STRING *path, const char *link )
-+{
-+    struct mountmgr_shell_folder *ioctl;
-+    DWORD len = sizeof(*ioctl) + path->Length + strlen(link) + 1;
-+    BOOL ret;
-+
-+    if (!(ioctl = heap_alloc( len ))) return FALSE;
-+    ioctl->create_backup = FALSE;
-+    ioctl->folder_offset = sizeof(*ioctl);
-+    ioctl->folder_size = path->Length;
-+    memcpy( (char *)ioctl + ioctl->folder_offset, path->Buffer, ioctl->folder_size );
-+    ioctl->symlink_offset = ioctl->folder_offset + ioctl->folder_size;
-+    strcpy( (char *)ioctl + ioctl->symlink_offset, link );
-+
-+    ret = DeviceIoControl( mgr, IOCTL_MOUNTMGR_DEFINE_SHELL_FOLDER, ioctl, len, NULL, 0, NULL, NULL );
-+    heap_free( ioctl );
-+    return ret;
-+}
-+
-+/******************************************************************************
-+ * create_link
-+ *
-+ * Sets up a symbolic link for one of the 'My Whatever' shell folders to point
-+ * into the corresponding XDG directory.
-+ */
-+static void create_link( const WCHAR *path, const char *xdg_name, const char *default_name )
-+{
-+    UNICODE_STRING nt_name;
-+    char *target = NULL;
-+    HANDLE mgr;
-+
-+    if ((mgr = CreateFileW( MOUNTMGR_DOS_DEVICE_NAME, GENERIC_READ | GENERIC_WRITE,
-+                            FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
-+                            0, 0 )) == INVALID_HANDLE_VALUE)
-+    {
-+        FIXME( "failed to connect to mount manager\n" );
-+        return;
-+    }
-+
-+    nt_name.Buffer = NULL;
-+    if (!RtlDosPathNameToNtPathName_U( path, &nt_name, NULL, NULL )) goto done;
-+
-+    if ((target = get_xdg_path( xdg_name )))
-+    {
-+        if (link_folder( mgr, &nt_name, target )) goto done;
-+    }
-+    if (link_folder( mgr, &nt_name, default_name )) goto done;
-+
-+    /* fall back to HOME */
-+    link_folder( mgr, &nt_name, "$HOME" );
-+
-+done:
-+    RtlFreeUnicodeString( &nt_name );
-+    heap_free( target );
-+    CloseHandle( mgr );
-+}
-+
-+/******************************************************************************
-+ * _SHCreateSymbolicLink  [Internal]
-+ *
-+ * Sets up a symbolic link for one of the special shell folders to point into
-+ * the users home directory.
-+ *
-+ * PARAMS
-+ *  nFolder [I] CSIDL identifying the folder.
-+ */
-+static void _SHCreateSymbolicLink(int nFolder, const WCHAR *path)
-+{
-+    DWORD folder = nFolder & CSIDL_FOLDER_MASK;
-+
-+    switch (folder) {
-+        case CSIDL_PERSONAL:
-+            create_link( path, "XDG_DOCUMENTS_DIR", "$HOME/Documents" );
-+            break;
-+        case CSIDL_DESKTOPDIRECTORY:
-+            create_link( path, "XDG_DESKTOP_DIR", "$HOME/Desktop" );
-+            break;
-+        case CSIDL_MYPICTURES:
-+            create_link( path, "XDG_PICTURES_DIR", "$HOME/Pictures" );
-+            break;
-+        case CSIDL_MYVIDEO:
-+            create_link( path, "XDG_VIDEOS_DIR", "$HOME/Movies" );
-+            break;
-+        case CSIDL_MYMUSIC:
-+            create_link( path, "XDG_MUSIC_DIR", "$HOME/Music" );
-+            break;
-+        case CSIDL_DOWNLOADS:
-+            create_link( path, "XDG_DOWNLOAD_DIR", "$HOME/Downloads" );
-+            break;
-+        case CSIDL_TEMPLATES:
-+            create_link( path, "XDG_TEMPLATES_DIR", "$HOME/Templates" );
-+            break;
-+    }
-+}
-+
- /******************************************************************************
-  * SHGetFolderPathW			[SHELL32.@]
-  *
-@@ -2827,6 +3004,10 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
-         goto end;
-     }
- 
-+    /* create symbolic links rather than directories for specific
-+     * user shell folders */
-+    _SHCreateSymbolicLink(folder, szBuildPath);
-+
-     /* create directory/directories */
-     ret = SHCreateDirectoryExW(hwndOwner, szBuildPath, NULL);
-     if (ret && ret != ERROR_ALREADY_EXISTS)
--- 
-2.40.0
 
 From 5df6ecc5371068fda54353b2f528bf462e2b0694 Mon Sep 17 00:00:00 2001
 From: GloriousEggroll <gloriouseggroll@gmail.com>
@@ -1064,20 +854,271 @@ index 8cccf30fa09..9815ed4a046 100644
 -- 
 2.40.0
 
-From 445e046259b38162961240e6079adcba24824f22 Mon Sep 17 00:00:00 2001
+From e0304a2c64e5f354bbe832277853907a9ea05442 Mon Sep 17 00:00:00 2001
 From: GloriousEggroll <gloriouseggroll@gmail.com>
-Date: Mon, 1 May 2023 17:14:36 -0600
-Subject: [PATCH 12/12] 13
+Date: Sat, 6 May 2023 02:08:53 -0600
+Subject: [PATCH] revert document folder symlink steam changes
 
 ---
- dlls/shell32/shellpath.c | 17 -----------------
- 1 file changed, 17 deletions(-)
+ dlls/shell32/shellpath.c | 219 ++++++++++++++++++++++++++++++++-------
+ 1 file changed, 184 insertions(+), 35 deletions(-)
 
 diff --git a/dlls/shell32/shellpath.c b/dlls/shell32/shellpath.c
-index 9bd32a6f0e4..25353635e73 100644
+index 36083e575d2..5dd9f4b6310 100644
 --- a/dlls/shell32/shellpath.c
 +++ b/dlls/shell32/shellpath.c
-@@ -3293,23 +3293,6 @@ static HRESULT create_extra_folders(void)
+@@ -2639,6 +2639,183 @@ end:
+     return hr;
+ }
+
++static char *xdg_config;
++static DWORD xdg_config_len;
++
++static BOOL WINAPI init_xdg_dirs( INIT_ONCE *once, void *param, void **context )
++{
++    const WCHAR *var, *fmt = L"\\??\\unix%s/user-dirs.dirs";
++    char *p;
++    WCHAR *name, *ptr;
++    HANDLE file;
++    DWORD len;
++
++    if (!(var = _wgetenv( L"XDG_CONFIG_HOME" )) || var[0] != '/')
++    {
++        if (!(var = _wgetenv( L"WINEHOMEDIR" ))) return TRUE;
++        fmt = L"%s/.config/user-dirs.dirs";
++    }
++    len = lstrlenW(var) + lstrlenW(fmt);
++    name = heap_alloc( len * sizeof(WCHAR) );
++    swprintf( name, len, fmt, var );
++    name[1] = '\\';  /* change \??\ to \\?\ */
++    for (ptr = name; *ptr; ptr++) if (*ptr == '/') *ptr = '\\';
++
++    file = CreateFileW( name, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, 0 );
++    heap_free( name );
++    if (file != INVALID_HANDLE_VALUE)
++    {
++        len = GetFileSize( file, NULL );
++        if (!(xdg_config = heap_alloc( len + 1 ))) return TRUE;
++        if (!ReadFile( file, xdg_config, len, &xdg_config_len, NULL ))
++        {
++            heap_free( xdg_config );
++            xdg_config = NULL;
++        }
++        else
++        {
++            for (p = xdg_config; p < xdg_config + xdg_config_len; p++) if (*p == '\n') *p = 0;
++            *p = 0;  /* append null to simplify string parsing */
++        }
++        CloseHandle( file );
++    }
++    return TRUE;
++}
++
++static char *get_xdg_path( const char *var )
++{
++    static INIT_ONCE once;
++    char *p, *ret = NULL;
++    int i;
++
++    InitOnceExecuteOnce( &once, init_xdg_dirs, NULL, NULL );
++    if (!xdg_config) return NULL;
++
++    for (p = xdg_config; p < xdg_config + xdg_config_len; p += strlen(p) + 1)
++    {
++        while (*p == ' ' || *p == '\t') p++;
++        if (strncmp( p, var, strlen(var) )) continue;
++        p += strlen(var);
++        while (*p == ' ' || *p == '\t') p++;
++        if (*p != '=') continue;
++        p++;
++        while (*p == ' ' || *p == '\t') p++;
++        if (*p != '"') continue;
++        p++;
++        if (*p != '/' && strncmp( p, "$HOME/", 6 )) continue;
++
++        if (!(ret = heap_alloc( strlen(p) + 1 ))) break;
++        for (i = 0; *p && *p != '"'; i++, p++)
++        {
++            if (*p == '\\' && p[1]) p++;
++            ret[i] = *p;
++        }
++        ret[i] = 0;
++        if (*p != '"')
++        {
++            heap_free( ret );
++            ret = NULL;
++        }
++        break;
++    }
++    return ret;
++}
++
++static BOOL link_folder( HANDLE mgr, const UNICODE_STRING *path, const char *link )
++{
++    struct mountmgr_shell_folder *ioctl;
++    DWORD len = sizeof(*ioctl) + path->Length + strlen(link) + 1;
++    BOOL ret;
++
++    if (!(ioctl = heap_alloc( len ))) return FALSE;
++    ioctl->create_backup = FALSE;
++    ioctl->folder_offset = sizeof(*ioctl);
++    ioctl->folder_size = path->Length;
++    memcpy( (char *)ioctl + ioctl->folder_offset, path->Buffer, ioctl->folder_size );
++    ioctl->symlink_offset = ioctl->folder_offset + ioctl->folder_size;
++    strcpy( (char *)ioctl + ioctl->symlink_offset, link );
++
++    ret = DeviceIoControl( mgr, IOCTL_MOUNTMGR_DEFINE_SHELL_FOLDER, ioctl, len, NULL, 0, NULL, NULL );
++    heap_free( ioctl );
++    return ret;
++}
++
++/******************************************************************************
++ * create_link
++ *
++ * Sets up a symbolic link for one of the 'My Whatever' shell folders to point
++ * into the corresponding XDG directory.
++ */
++static void create_link( const WCHAR *path, const char *xdg_name, const char *default_name )
++{
++    UNICODE_STRING nt_name;
++    char *target = NULL;
++    HANDLE mgr;
++
++    if ((mgr = CreateFileW( MOUNTMGR_DOS_DEVICE_NAME, GENERIC_READ | GENERIC_WRITE,
++                            FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
++                            0, 0 )) == INVALID_HANDLE_VALUE)
++    {
++        FIXME( "failed to connect to mount manager\n" );
++        return;
++    }
++
++    nt_name.Buffer = NULL;
++    if (!RtlDosPathNameToNtPathName_U( path, &nt_name, NULL, NULL )) goto done;
++
++    if ((target = get_xdg_path( xdg_name )))
++    {
++        if (link_folder( mgr, &nt_name, target )) goto done;
++    }
++    if (link_folder( mgr, &nt_name, default_name )) goto done;
++
++    /* fall back to HOME */
++    link_folder( mgr, &nt_name, "$HOME" );
++
++done:
++    RtlFreeUnicodeString( &nt_name );
++    heap_free( target );
++    CloseHandle( mgr );
++}
++
++/******************************************************************************
++ * _SHCreateSymbolicLink  [Internal]
++ *
++ * Sets up a symbolic link for one of the special shell folders to point into
++ * the users home directory.
++ *
++ * PARAMS
++ *  nFolder [I] CSIDL identifying the folder.
++ */
++static void _SHCreateSymbolicLink(int nFolder, const WCHAR *path)
++{
++    DWORD folder = nFolder & CSIDL_FOLDER_MASK;
++
++    switch (folder) {
++        case CSIDL_PERSONAL:
++            create_link( path, "XDG_DOCUMENTS_DIR", "$HOME/Documents" );
++            break;
++        case CSIDL_DESKTOPDIRECTORY:
++            create_link( path, "XDG_DESKTOP_DIR", "$HOME/Desktop" );
++            break;
++        case CSIDL_MYPICTURES:
++            create_link( path, "XDG_PICTURES_DIR", "$HOME/Pictures" );
++            break;
++        case CSIDL_MYVIDEO:
++            create_link( path, "XDG_VIDEOS_DIR", "$HOME/Movies" );
++            break;
++        case CSIDL_MYMUSIC:
++            create_link( path, "XDG_MUSIC_DIR", "$HOME/Music" );
++            break;
++        case CSIDL_DOWNLOADS:
++            create_link( path, "XDG_DOWNLOAD_DIR", "$HOME/Downloads" );
++            break;
++        case CSIDL_TEMPLATES:
++            create_link( path, "XDG_TEMPLATES_DIR", "$HOME/Templates" );
++            break;
++    }
++}
++
+ /******************************************************************************
+  * SHGetFolderPathW			[SHELL32.@]
+  *
+@@ -2827,6 +3004,10 @@ HRESULT WINAPI SHGetFolderPathAndSubDirW(
+         goto end;
+     }
+
++    /* create symbolic links rather than directories for specific
++     * user shell folders */
++    _SHCreateSymbolicLink(folder, szBuildPath);
++
+     /* create directory/directories */
+     ret = SHCreateDirectoryExW(hwndOwner, szBuildPath, NULL);
+     if (ret && ret != ERROR_ALREADY_EXISTS)
+@@ -2881,8 +3062,6 @@ static HRESULT _SHRegisterFolders(HKEY hRootKey, HANDLE hToken,
+  LPCWSTR szUserShellFolderPath, LPCWSTR szShellFolderPath, const UINT folders[],
+  UINT foldersLen)
+ {
+-    static const WCHAR WineVistaPathsW[] = {'_','_','W','i','n','e','V','i','s','t','a','P','a','t','h','s',0};
+-
+     const WCHAR *szValueName;
+     WCHAR buffer[40];
+     UINT i;
+@@ -2891,7 +3070,6 @@ static HRESULT _SHRegisterFolders(HKEY hRootKey, HANDLE hToken,
+     HKEY hUserKey = NULL, hKey = NULL;
+     DWORD dwType, dwPathLen;
+     LONG ret;
+-    DWORD already_vista_paths = 0;
+
+     TRACE("%p,%p,%s,%p,%u\n", hRootKey, hToken,
+      debugstr_w(szUserShellFolderPath), folders, foldersLen);
+@@ -2905,12 +3083,6 @@ static HRESULT _SHRegisterFolders(HKEY hRootKey, HANDLE hToken,
+         if (ret)
+             hr = HRESULT_FROM_WIN32(ret);
+     }
+-
+-    /* check if the registry has already been updated to the vista+ style paths */
+-    dwPathLen = sizeof(already_vista_paths);
+-    RegQueryValueExW(hUserKey, WineVistaPathsW, NULL, &dwType,
+-            (LPBYTE)&already_vista_paths, &dwPathLen);
+-
+     for (i = 0; SUCCEEDED(hr) && i < foldersLen; i++)
+     {
+         dwPathLen = MAX_PATH * sizeof(WCHAR);
+@@ -2923,10 +3095,9 @@ static HRESULT _SHRegisterFolders(HKEY hRootKey, HANDLE hToken,
+             szValueName = &buffer[0];
+         }
+
+-        if (!already_vista_paths ||
+-                RegQueryValueExW(hUserKey, szValueName, NULL, &dwType,
+-                    (LPBYTE)path, &dwPathLen) ||
+-                (dwType != REG_SZ && dwType != REG_EXPAND_SZ))
++        if (RegQueryValueExW(hUserKey, szValueName, NULL,
++         &dwType, (LPBYTE)path, &dwPathLen) || (dwType != REG_SZ &&
++         dwType != REG_EXPAND_SZ))
+         {
+             *path = '\0';
+             if (CSIDL_Data[folders[i]].type == CSIDL_Type_User)
+@@ -2967,11 +3138,6 @@ static HRESULT _SHRegisterFolders(HKEY hRootKey, HANDLE hToken,
+              hToken, SHGFP_TYPE_DEFAULT, path);
+         }
+     }
+-
+-    already_vista_paths = 1;
+-    RegSetValueExW(hUserKey, WineVistaPathsW, 0, REG_DWORD,
+-            (LPBYTE)&already_vista_paths, sizeof(already_vista_paths));
+-
+     if (hUserKey)
+         RegCloseKey(hUserKey);
+     if (hKey)
+@@ -3112,23 +3278,6 @@ static HRESULT create_extra_folders(void)
          hr = SHGetFolderPathAndSubDirW(0, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL,
                                         SHGFP_TYPE_DEFAULT, L"Microsoft\\Windows\\Themes", path);
      }
@@ -1100,9 +1141,10 @@ index 9bd32a6f0e4..25353635e73 100644
 -
      return hr;
  }
- 
--- 
+
+--
 2.40.0
+
 
 From 1b809b41a0577c0cc6bd3555b477e5d87a3c05df Mon Sep 17 00:00:00 2001
 From: GloriousEggroll <gloriouseggroll@gmail.com>
