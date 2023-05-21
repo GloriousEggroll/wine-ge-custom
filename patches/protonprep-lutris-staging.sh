@@ -102,7 +102,9 @@
     -W winex11-CandidateWindowPos \
     -W winex11-Window_Style \
     -W winex11-ime-check-thread-data \
-    -W winex11.drv-Query_server_position
+    -W winex11.drv-Query_server_position \
+    -W wined3d-SWVP-shaders \
+    -W wined3d-Indexed_Vertex_Blending
 
     # NOTE: Some patches are applied manually because they -do- apply, just not cleanly, ie with patch fuzz.
     # A detailed list of why the above patches are disabled is listed below:
@@ -184,6 +186,8 @@
     # winemenubuilder-integration -- winemenubuilder is disabled in proton and is not needed
     # winemenubuilder-Desktop_Icon_Path -- winemenubuilder is disabled in proton and is not needed
     # winemenubuilder-integration -- winemenubuilder is disabled in proton and is not needed
+    # wined3d-SWVP-shaders -- interferes with proton's wined3d
+    # wined3d-Indexed_Vertex_Blending -- interferes with proton's wined3d
 
     echo "WINE: -STAGING- applying staging Compiler_Warnings revert for steamclient compatibility"
     # revert this, it breaks lsteamclient compilation
