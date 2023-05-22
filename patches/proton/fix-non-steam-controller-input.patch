@@ -1,0 +1,39 @@
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 138ad2a90ad..2151487cfe8 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -100,6 +100,7 @@ AddReg=\
+     VersionInfo,\
+     LicenseInformation, \
+     NVIDIANGX, \
++    WineGEOverrides, \
+     ProtonOverrides
+ 
+ [DefaultInstall.ntamd64]
+@@ -129,6 +130,7 @@ AddReg=\
+     VersionInfo.ntamd64,\
+     LicenseInformation, \
+     NVIDIANGX, \
++    WineGEOverrides, \
+     ProtonOverrides
+ 
+ [DefaultInstall.ntarm64]
+@@ -174,6 +176,7 @@ AddReg=\
+     VersionInfo.ntamd64,\
+     LicenseInformation, \
+     NVIDIANGX, \
++    WineGEOverrides, \
+     ProtonOverrides
+ 
+ [Wow64Install.ntarm64]
+@@ -3014,6 +3017,10 @@ SortFiles = 10,globalization\sorting
+ [NVIDIANGX]
+ HKLM,Software\NVIDIA Corporation\Global\NGXCore,"FullPath",,"C:\Windows\System32"
+ 
++[WineGEOverrides]
++HKLM,System\CurrentControlSet\Services\winebus,"DisableHidraw",0x10001,"1"
++HKLM,System\CurrentControlSet\Services\winebus,"Enable SDL",0x10001,"1"
++
+ [ProtonOverrides]
+ HKLM,Software\Khronos\OpenXR\1,"ActiveRuntime",,"C:\openxr\wineopenxr64.json"
+ ;;Likely want *80 and *90 too, but those require removing Wine's manifest files.

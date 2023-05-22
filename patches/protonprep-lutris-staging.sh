@@ -327,6 +327,9 @@
 
     echo "WINE: -PROTON- Remove steamclient patches for normal WINE usage"
     patch -Np1 < ../patches/proton/0001-De-steamify-proton-s-WINE-so-it-can-be-used-as-a-sta.patch
+    
+    echo "WINE: -PROTON- Fix non-steam controller input"
+    patch -Np1 < ../patches/proton/fix-non-steam-controller-input.patch
 
 #    echo "WINE: -FSR- fullscreen hack fsr patch"
 #    patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
