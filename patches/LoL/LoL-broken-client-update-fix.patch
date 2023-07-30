@@ -14,53 +14,73 @@ Signed-off-by: Matias Zuniga <matias.nicolas.zc@gmail.com>
  2 files changed, 82 insertions(+), 12 deletions(-)
 
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index c5fef657cd0..ec036ebc6f9 100644
+index b62968cb26d..ff554e274c6 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
-@@ -5018,6 +5018,64 @@ static NTSTATUS read_nt_symlink( UNICODE_STRING *name, WCHAR *target, DWORD size
+@@ -4993,9 +4993,9 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
+     return STATUS_SUCCESS;
+ }
+ 
+-static NTSTATUS read_nt_symlink( UNICODE_STRING *name, WCHAR *target, DWORD size )
++static unsigned int read_nt_symlink( UNICODE_STRING *name, UNICODE_STRING *targetW )
+ {
+-    NTSTATUS status;
++    unsigned int status;
+     OBJECT_ATTRIBUTES attr;
+     HANDLE handle;
+ 
+@@ -5008,101 +5008,93 @@ static NTSTATUS read_nt_symlink( UNICODE_STRING *name, WCHAR *target, DWORD size
+ 
+     if (!(status = NtOpenSymbolicLinkObject( &handle, SYMBOLIC_LINK_QUERY, &attr )))
+     {
+-        UNICODE_STRING targetW;
+-        targetW.Buffer = target;
+-        targetW.MaximumLength = (size - 1) * sizeof(WCHAR);
+-        status = NtQuerySymbolicLinkObject( handle, &targetW, NULL );
+-        if (!status) target[targetW.Length / sizeof(WCHAR)] = 0;
++        status = NtQuerySymbolicLinkObject( handle, targetW, NULL );
+         NtClose( handle );
+     }
      return status;
  }
  
-+static unsigned int read_nt_symlink( UNICODE_STRING *name, UNICODE_STRING *targetW )
-+{
-+    unsigned int status;
-+    OBJECT_ATTRIBUTES attr;
-+    HANDLE handle;
-+
-+    attr.Length = sizeof(attr);
-+    attr.RootDirectory = 0;
-+    attr.Attributes = OBJ_CASE_INSENSITIVE;
-+    attr.ObjectName = name;
-+    attr.SecurityDescriptor = NULL;
-+    attr.SecurityQualityOfService = NULL;
-+
-+    if (!(status = NtOpenSymbolicLinkObject( &handle, SYMBOLIC_LINK_QUERY, &attr )))
-+    {
-+        status = NtQuerySymbolicLinkObject( handle, targetW, NULL );
-+        NtClose( handle );
-+    }
-+    return status;
-+}
-+
+-static NTSTATUS resolve_drive_symlink( UNICODE_STRING *name, SIZE_T max_name_len, SIZE_T *ret_len, NTSTATUS status )
 +static unsigned int follow_device_symlink( WCHAR *name_ret, SIZE_T max_ret_len,
 +                                       WCHAR *buffer, SIZE_T buffer_len,
 +                                       SIZE_T *current_path_len )
-+{
+ {
+-    static int enabled = -1;
 +    unsigned int status = STATUS_SUCCESS;
 +    SIZE_T devname_len = 6 * sizeof(WCHAR); /* e.g. \??\C: */
 +    UNICODE_STRING devname, targetW;
-+
+ 
+-    static const WCHAR dosprefixW[] = {'\\','?','?','\\'};
+-    UNICODE_STRING device_name;
+-    SIZE_T required_length, symlink_len;
+-    WCHAR symlink[256];
+-    size_t offset = 0;
 +    if (*current_path_len >= devname_len && buffer[devname_len / sizeof(WCHAR) - 1] == ':') {
 +        devname.Buffer = buffer;
 +        devname.Length = devname_len;
-+
+ 
+-    if (enabled == -1)
+-    {
+-        const char *sgi = getenv("SteamGameId");
 +        targetW.Buffer = buffer + (*current_path_len / sizeof(WCHAR));
 +        targetW.MaximumLength = buffer_len - *current_path_len - sizeof(WCHAR);
 +        if (!(status = read_nt_symlink( &devname, &targetW )))
 +        {
 +            *current_path_len -= devname_len; /* skip the device name */
 +            *current_path_len += targetW.Length;
-+
+ 
+-        enabled = sgi && !strcmp(sgi, "284160");
+-    }
+-    if (!enabled) return status;
+-    if (status == STATUS_INFO_LENGTH_MISMATCH)
+-    {
+-        /* FIXME */
+-        *ret_len += 64;
+-        return status;
 +            if (*current_path_len <= max_ret_len)
 +            {
 +                memcpy( name_ret, targetW.Buffer, targetW.Length ); /* Copy the drive path */
@@ -70,19 +90,43 @@ index c5fef657cd0..ec036ebc6f9 100644
 +            }
 +            else status = STATUS_BUFFER_OVERFLOW;
 +        }
-+    }
+     }
+-    if (status) return status;
+-
+-    if (name->Length < sizeof(dosprefixW) ||
+-            memcmp( name->Buffer, dosprefixW, sizeof(dosprefixW) ))
+-        return STATUS_SUCCESS;
+-
+-    offset = ARRAY_SIZE(dosprefixW);
+-    while (offset * sizeof(WCHAR) < name->Length && name->Buffer[ offset ] != '\\') offset++;
+-
+-    device_name = *name;
+-    device_name.Length = offset * sizeof(WCHAR);
+-    if ((status = read_nt_symlink( &device_name, symlink, ARRAY_SIZE( symlink ))))
+-    {
+-        ERR("read_nt_symlink failed, status %#x.\n", (int)status);
+-        return status;
 +    else if (*current_path_len <= max_ret_len) {
 +        memcpy( name_ret, buffer, *current_path_len );
-+    }
+     }
+-    symlink_len = wcslen( symlink );
+-    required_length = symlink_len * sizeof(WCHAR) +
+-           name->Length - offset * sizeof(WCHAR) + sizeof(WCHAR);
+-    if (ret_len)
+-        *ret_len = sizeof(MEMORY_SECTION_NAME) + required_length;
+-    if (required_length > max_name_len)
+-        return STATUS_INFO_LENGTH_MISMATCH;
 +    else status = STATUS_BUFFER_OVERFLOW;
-+
+ 
+-    memmove( name->Buffer + symlink_len, name->Buffer + offset, name->Length - offset * sizeof(WCHAR) );
+-    memcpy( name->Buffer, symlink, symlink_len * sizeof(WCHAR) );
+-    name->MaximumLength = required_length;
+-    name->Length = required_length - sizeof(WCHAR);
+-    name->Buffer[name->Length / sizeof(WCHAR)] = 0;
+-    return STATUS_SUCCESS;
 +    return status;
-+}
-+
- static NTSTATUS resolve_drive_symlink( UNICODE_STRING *name, SIZE_T max_name_len, SIZE_T *ret_len, NTSTATUS status )
- {
-     static int enabled = -1;
-@@ -5076,32 +5134,46 @@ static NTSTATUS resolve_drive_symlink( UNICODE_STRING *name, SIZE_T max_name_len
+ }
+ 
  static unsigned int get_memory_section_name( HANDLE process, LPCVOID addr,
                                               MEMORY_SECTION_NAME *info, SIZE_T len, SIZE_T *ret_len )
  {
@@ -105,7 +149,7 @@ index c5fef657cd0..ec036ebc6f9 100644
          req->addr = wine_server_client_ptr( addr );
 -        if (len > sizeof(*info) + sizeof(WCHAR))
 -            wine_server_set_reply( req, info + 1, len - sizeof(*info) - sizeof(WCHAR) );
-+        wine_server_set_reply( req, buffer, MAX_PATH );
++	wine_server_set_reply( req, buffer, MAX_PATH );
          status = wine_server_call( req );
 -        if (!status || status == STATUS_BUFFER_OVERFLOW)
 +        if (!status)
@@ -134,9 +178,11 @@ index c5fef657cd0..ec036ebc6f9 100644
      }
      SERVER_END_REQ;
 -
+-    return resolve_drive_symlink( &info->SectionFileName, len - sizeof(*info), ret_len, status );
 +    free(buffer);
-     return resolve_drive_symlink( &info->SectionFileName, len - sizeof(*info), ret_len, status );
++    return status;
  }
+ 
  
 diff --git a/dlls/psapi/tests/psapi_main.c b/dlls/psapi/tests/psapi_main.c
 index 860598c39c5..e11eac60d01 100644
