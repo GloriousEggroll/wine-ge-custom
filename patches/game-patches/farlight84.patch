@@ -1,0 +1,28 @@
+diff --git a/dlls/msvcrt/environ.c b/dlls/msvcrt/environ.c
+index b23f1196319..cf1b8d99fe5 100644
+--- a/dlls/msvcrt/environ.c
++++ b/dlls/msvcrt/environ.c
+@@ -25,6 +25,8 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(msvcrt);
+ 
++static char userprofile[30] = "C:\\users\\steamuser\0";
++
+ /*********************************************************************
+  *		getenv (MSVCRT.@)
+  */
+@@ -43,6 +45,14 @@ char * CDECL getenv(const char *name)
+             return pos + 1;
+         }
+     }
++
++    //HACK: farlight 84 hack
++    if(strcmp(name, "USERPROFILE") == 0)
++    {
++        FIXME("USERPROFILE %s\n", debugstr_a(userprofile));
++        return userprofile;
++    }
++
+     return NULL;
+ }
+ 

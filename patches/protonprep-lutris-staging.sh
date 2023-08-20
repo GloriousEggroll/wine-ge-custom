@@ -258,6 +258,9 @@
     # ntdll-RtlQueryPackageIdentity
     patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
 
+    # server-default_integrity - ONLY ENABLE FOR WINE BUILDS, NOT PROTON BUILDS. CAUSES STEAM.EXE TO STAY OPEN AFTER GAME ENDS.
+    patch -Np1 < ../wine-staging/patches/server-default_integrity/0005-ntdll-Always-start-the-initial-process-through-start.patch
+
     # packager-DllMain
     patch -Np1 < ../patches/wine-hotfixes/staging/packager-DllMain/0001-packager-Prefer-native-version.patch
 
@@ -309,6 +312,10 @@
     echo "WINE: -GAME FIXES- Fix FFXIV not playing Hydaelyn intro video on new install"
     patch -Np1 < ../patches/game-patches/ffxiv_hydaelyn_intro_playback_fix.patch
 
+    # https://github.com/ValveSoftware/Proton/issues/6717
+    echo "WINE: -GAME FIXES- Fix Farlight 84 dxva crash"
+    patch -Np1 < ../patches/game-patches/farlight84.patch
+
 ### END GAME PATCH SECTION ###
 
 ### (2-4) WINE HOTFIX/BACKPORT SECTION ###
@@ -343,8 +350,8 @@
     echo "WINE: -FSR- fullscreen hack fsr patch"
     patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
     
-    echo "WINE: -FSR- enable FSR flag by default (fixes broken fs hack scaling in some games like Apex and FFXIV)"
-    patch -Np1 < ../patches/proton/71-invert-fsr-logic.patch
+#    echo "WINE: -FSR- enable FSR flag by default (fixes broken fs hack scaling in some games like Apex and FFXIV)"
+#    patch -Np1 < ../patches/proton/71-invert-fsr-logic.patch
 
 ### END PROTON-GE ADDITIONAL CUSTOM PATCHES ###
 ### END WINE PATCHING ###
