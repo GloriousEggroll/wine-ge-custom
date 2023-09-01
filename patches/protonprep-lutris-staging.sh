@@ -203,7 +203,7 @@
     patch -Np1 < ../patches/wine-hotfixes/staging/loader-KeyboardLayouts/0002-user32-Improve-GetKeyboardLayoutList.patch
 
     # ntdll-Exception
-    patch -Np1 < ../wine-staging/patches/ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-Exception/0002-ntdll-OutputDebugString-should-throw-the-exception-a.patch
 
     # ntdll-Hide_Wine_Exports
     patch -Np1 < ../wine-staging/patches/ntdll-Hide_Wine_Exports/0001-ntdll-Add-support-for-hiding-wine-version-informatio.patch
@@ -257,9 +257,6 @@
 
     # ntdll-RtlQueryPackageIdentity
     patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-RtlQueryPackageIdentity/0003-ntdll-tests-Add-basic-tests-for-RtlQueryPackageIdent.patch
-
-    # server-default_integrity - ONLY ENABLE FOR WINE BUILDS, NOT PROTON BUILDS. CAUSES STEAM.EXE TO STAY OPEN AFTER GAME ENDS.
-    patch -Np1 < ../wine-staging/patches/server-default_integrity/0005-ntdll-Always-start-the-initial-process-through-start.patch
 
     # packager-DllMain
     patch -Np1 < ../patches/wine-hotfixes/staging/packager-DllMain/0001-packager-Prefer-native-version.patch
@@ -331,10 +328,6 @@
     # https://bugs.winehq.org/show_bug.cgi?id=51683
     echo "WINE: -PENDING- Guild Wars 2 patch"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-guild_wars_2.patch
-
-    # https://bugs.winehq.org/show_bug.cgi?id=22904
-    echo "WINE: -PENDING- EALink patch"
-    patch -Np1 < ../patches/wine-hotfixes/pending/ealink_fixup.patch
 
 ### END WINE PENDING UPSTREAM SECTION ###
 

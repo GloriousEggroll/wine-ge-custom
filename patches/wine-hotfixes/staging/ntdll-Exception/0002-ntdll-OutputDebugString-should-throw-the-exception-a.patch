@@ -1,0 +1,42 @@
+From da81169743bd7f070186ec5e58c89bab53d0bb7f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sun, 28 Sep 2014 23:39:51 +0200
+Subject: [PATCH] ntdll: OutputDebugString should throw the exception a second
+ time, if a debugger is attached.
+
+---
+ dlls/kernelbase/debug.c      | 17 +++++++++++++++++
+ dlls/ntdll/tests/exception.c |  9 ++++-----
+ 2 files changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/kernelbase/debug.c b/dlls/kernelbase/debug.c
+index 9e954e3ffbe..a6793c20204 100644
+--- a/dlls/kernelbase/debug.c
++++ b/dlls/kernelbase/debug.c
+@@ -200,6 +200,23 @@ void WINAPI DECLSPEC_HOTPATCH OutputDebugStringA( LPCSTR str )
+     __ENDTRY
+     if (caught_by_dbg) return;
+ 
++    /* for some unknown reason Windows sends the exception a second time, if a
++     * debugger is attached, and the event wasn't handled in the first attempt */
++    if (NtCurrentTeb()->Peb->BeingDebugged)
++    {
++        __TRY
++        {
++            ULONG_PTR args[2];
++            args[0] = strlen(str) + 1;
++            args[1] = (ULONG_PTR)str;
++            RaiseException( DBG_PRINTEXCEPTION_C, 0, 2, args );
++        }
++        __EXCEPT(debug_exception_handler)
++        {
++        }
++        __ENDTRY
++    }
++
+     /* send string to a system-wide monitor */
+     if (!mutex_inited)
+     {
+-- 
+2.36.1
+
