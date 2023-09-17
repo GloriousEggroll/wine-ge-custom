@@ -49,63 +49,42 @@ Vagrant.configure(2) do |config|
     v.memory = memory
   end
 
-  #ubuntu1804-based build VM
-  config.vm.define "ubuntu1804", primary: true do |ubuntu1804|
+  #ubuntu2204-based build VM
+  config.vm.define "ubuntu2204", primary: true do |ubuntu2204|
 
-    ubuntu1804.vm.box = "generic/ubuntu1804"
+    ubuntu2204.vm.box = "generic/ubuntu2204"
 
-    ubuntu1804.vm.synced_folder "./vagrant_share/", "/vagrant/", create: true, type: "sshfs", sshfs_opts_append: "-o cache=no"
-    ubuntu1804.vm.synced_folder ".", "/home/vagrant/lutris-buildbot", id: "lutris-buildbot", type: "rsync", rsync__exclude: ["vagrant_share"]
+    ubuntu2204.vm.synced_folder "./vagrant_share/", "/vagrant/", create: true, type: "sshfs", sshfs_opts_append: "-o cache=no"
+    ubuntu2204.vm.synced_folder ".", "/home/vagrant/lutris-buildbot", id: "lutris-buildbot", type: "rsync", rsync__exclude: ["vagrant_share"]
 
-    ubuntu1804.vm.provision "shell-1", type: "shell", inline: <<-SHELL
+    ubuntu2204.vm.provision "shell-1", type: "shell", inline: <<-SHELL
 
       #install dependencies on host vm
-      apt-get update
-      apt-get install -y lxd lxd-client sshpass
+      apt-get update      
+      apt-get install -y sshpass debootstrap
+
+      snap install distrobuilder --edge --classic
 
       # add vagrant user to lxd group to allow lxc permissions
       usermod -aG lxd vagrant
 
-    SHELL
-    ubuntu1804.vm.provision "shell-2", type: "shell", after: "shell-1", :privileged => false, inline: <<-SHELL
-
-      echo "setup lxc containers"
-      cat lutris-buildbot/buildbot/preseed | lxd init --preseed
-      lxc launch images:ubuntu/bionic/i386 buildbot-bionic-i386
-      lxc launch images:ubuntu/bionic/amd64 buildbot-bionic-amd64
+      # setup lxc containers
+      wget https://raw.githubusercontent.com/lxc/lxc-ci/main/images/ubuntu.yaml
       
-      # (0) setup ubuntu user on both containers
-      lxc file push lutris-buildbot/0-buildbot-usersetup.sh buildbot-bionic-i386/home/ubuntu/
-      lxc exec buildbot-bionic-i386 -- sudo bash -c /home/ubuntu/0-buildbot-usersetup.sh
-      lxc file push lutris-buildbot/0-buildbot-usersetup.sh buildbot-bionic-amd64/home/ubuntu/
-      lxc exec buildbot-bionic-amd64 -- sudo bash -c /home/ubuntu/0-buildbot-usersetup.sh
+      # TODO: migrate this from bionic to jammy after we figure out building 32 wine inside 64 bit container
+      # https://github.com/lutris/buildbot/issues/175
+      distrobuilder build-lxd ubuntu.yaml -o image.architecture=i386 -o image.release=bionic
+      mv incus.tar.xz ubuntu32.tar.xz
+      mv rootfs.squashfs rootfs32.squashfs
 
-      # (1) setup host file on VM
-      # this must be done otherwise one of the machines wont have an IP available for the setup.sh script.
-      echo "Sleeping for 10 seconds to allow both containers to be fully started."
-      sleep 10
-      ./lutris-buildbot/1-setup-container-networking.sh buildbot-bionic-i386 buildbot-bionic-amd64
-      # view to verify IPs for both machines have been added to ~/.ssh/config
-      cat ~/.ssh/config
-      
-      # (2) setup /etc/hosts file and buildbot files on containers
-      cd ~/lutris-buildbot/buildbot
-      ./setup-container.sh buildbot-bionic-i386
-      ./setup-container.sh buildbot-bionic-amd64
-      cd ~
+      # TODO: migrate this from bionic to jammy after we figure out building 32 wine inside 64 bit container
+      # https://github.com/lutris/buildbot/issues/175
+      distrobuilder build-lxd ubuntu.yaml -o image.architecture=amd64 -o image.release=bionic
+      mv incus.tar.xz ubuntu64.tar.xz
+      mv rootfs.squashfs rootfs64.squashfs
 
-      # setup ssh keys from host to both containers
-      cat /dev/zero | ssh-keygen -q -N ""
-      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-i386
-      sshpass -p "ubuntu" ssh-copy-id -o StrictHostKeyChecking=no ubuntu@buildbot-bionic-amd64
-
-      # (3) setup ssh keys from 32 bit container to 64 bit container
-      lxc file push lutris-buildbot/3-buildbot32-sshsetup.sh buildbot-bionic-i386/home/ubuntu/
-      lxc exec buildbot-bionic-i386 -- sudo --login --user ubuntu ./3-buildbot32-sshsetup.sh
-
-      # (4) setup ssh keys from 64 bit container to 32 bit container
-      lxc file push lutris-buildbot/4-buildbot64-sshsetup.sh buildbot-bionic-amd64/home/ubuntu/
-      lxc exec buildbot-bionic-amd64 -- sudo --login --user ubuntu ./4-buildbot64-sshsetup.sh
+      lxc image import ubuntu32.tar.xz rootfs32.squashfs --alias ubuntu32
+      lxc image import ubuntu64.tar.xz rootfs64.squashfs --alias ubuntu64
 
     SHELL
   end
