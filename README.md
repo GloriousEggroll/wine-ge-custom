@@ -148,18 +148,28 @@ Additional notes:__
   4. THEN follow the instructions below, using your own repository URL and branch.__
 
 Instructions:  
+
+1. Clone the repository:  
 ```
 $ git clone --recurse-submodules https://github.com/gloriouseggroll/wine-ge-custom  
+```
+2. Prepare the Vagrant host VM and it's containers:  
+```
 $ cd wine-ge-custom  
-$ VAGRANT_DEFAULT_PROVIDER=virtualbox vagrant up  
-$ ./makebuild.sh name winerepo branch  
+$ ./makecontainers.sh
+```
+3. Start your build:  
+```
+$ ./makebuild.sh custom-prefix wine-repository branch  
 ```
 
-Example: `./makebuild.sh lutris http://github.com/gloriouseggroll/wine ge-5.2`  
+Example: `./makebuild.sh lutris-GE http://github.com/gloriouseggroll/proton-wine Proton8-15`  
 
-Final build will be placed in `wine-ge-custom/vagrant_share/ with name format wine-name-branch-x86_64.tar.gz`:  
+Final build will be placed in `wine-ge-custom/vagrant_share/` with name format `wine-prefix-branch-x86_64.tar.gz`:  
 
-Example: `wine-lutris-ge-5.2-x86_64.tar.xz`  
+Example: `wine-lutris-GE-Proton8-15-x86_64.tar.xz`  
+
+After the first time steps 1. and 2. are complete you only need to repeat 3. for additional builds.  
 
 ## Modification
 
