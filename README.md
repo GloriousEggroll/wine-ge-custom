@@ -120,56 +120,36 @@ This section is for manual installation of wine-ge for usage with Lutris.
 
 Requirements:  
 
-1. Vagrant with sshfs plugin
+Install docker/podman:  
 
-Notes: 
-* Most distros include the vagrant sshfs plugin as it's own package. You will need to install this package as the default that vagrant tries to install internally usually causes conflicts/failures. 
-* Example:  
-
-Ubuntu:  
-`# apt install vagrant vagrant-sshfs`  
-
-Fedora:  
-`# dnf install vagrant vagrant-sshfs`  
-
-2. VirtualBox installed
-
-Notes:__
-* This differs per distro. You will need to find instructions for your distro.  
-* Please note that virtualbox is -required-. Libvirt will not work. Specifically libvirt causes segfaults when installing packages in the lxc 32 bit container. Why? who knows.__
-
-Additional notes:__
-* It is important to note that the wine, wine-staging and patches repos/folders are here for my personal use. The build bot does -NOT- pull from any of these folders directly.__
-* It is recommended to:__
-
-  1. replace the wine repository with a clone of your own wine repository,__
-  2. then run `./patches/protonprep.sh` to apply my changes to your own wine repository,__
-  3. then commit + push those changes to a separate branch on your -own- repository.__
-  4. THEN follow the instructions below, using your own repository URL and branch.__
+    On Ubuntu: `sudo apt install podman`
+    On Arch:   `sudo pacman -S podman`
+    On Fedora: `sudo dnf install podman`
 
 Instructions:  
 
-1. Clone the repository:  
-```
-$ git clone --recurse-submodules https://github.com/gloriouseggroll/wine-ge-custom  
-```
-2. Prepare the Vagrant host VM and it's containers:  
-```
-$ cd wine-ge-custom  
-$ ./makecontainers.sh
-```
-3. Start your build:  
-```
-$ ./makebuild.sh custom-prefix wine-repository branch  
-```
+Build wine:
 
-Example: `./makebuild.sh lutris-GE http://github.com/gloriouseggroll/proton-wine Proton8-15`  
+    usage:             `./makebuild.sh name winerepo branch`
+    example:           `./makebuild.sh lutris-GE https://github.com/GloriousEggroll/proton-wine Proton8-15`
+    build name output: vagrant_share/wine-lutris-GE-Proton8-15-x86_64.tar.xz
 
-Final build will be placed in `wine-ge-custom/vagrant_share/` with name format `wine-prefix-branch-x86_64.tar.gz`:  
+* IMPORTANT NOTES: 
+- wine, wine-staging and patches repos/folders are here for my personal use. The build bot does -NOT- pull from any of these folders directly.__
+- GloriousEggroll/proton-wine Proton* branches are PRE-PATCHED, meaning it is ready to compile, no patching needed.
 
-Example: `wine-lutris-GE-Proton8-15-x86_64.tar.xz`  
+Making changes:
 
-After the first time steps 1. and 2. are complete you only need to repeat 3. for additional builds.  
+If you need to make changes to the wine build it is recommended to:
+
+  1. Fork the ValveSoftware/wine repository,
+  2. Clone your fork of the ValveSoftware/wine repository,__
+  3. Add official ValveSoftware/wine repository as a remote branch in your clone/fork,__
+  4. Checkout the latest experimental-wine-bleeding-edge tree and make a new branch from it
+  5. then run `./patches/protonprep.sh` to apply my changes to your own wine repository,__
+  6. then commit + push those changes to your new branch on your -own- repository.__
+  7. THEN follow the makebuild.sh instructions from above, using your own repository URL and branch.__
+
 
 ## Modification
 
