@@ -118,37 +118,31 @@ This section is for manual installation of wine-ge for usage with Lutris.
 
 ## Building
 
-Requirements:  
-
 Install docker/podman:  
 
-    On Ubuntu: `sudo apt install podman`
-    On Arch:   `sudo pacman -S podman`
-    On Fedora: `sudo dnf install podman`
-
-Instructions:  
+    On Ubuntu: sudo apt install podman
+    On Arch:   sudo pacman -S podman
+    On Fedora: sudo dnf install podman
 
 Build wine:
 
-    usage:             `./makebuild.sh name winerepo branch`
-    example:           `./makebuild.sh lutris-GE https://github.com/GloriousEggroll/proton-wine Proton8-15`
+    usage:             ./makebuild.sh name winerepo branch
+    example:           ./makebuild.sh lutris-GE https://github.com/GloriousEggroll/proton-wine Proton8-15
     build name output: vagrant_share/wine-lutris-GE-Proton8-15-x86_64.tar.xz
 
 * IMPORTANT NOTES: 
 - wine, wine-staging and patches repos/folders are here for my personal use. The build bot does -NOT- pull from any of these folders directly.__
 - GloriousEggroll/proton-wine Proton* branches are PRE-PATCHED, meaning it is ready to compile, no patching needed.
 
-Making changes:
-
 If you need to make changes to the wine build it is recommended to:
 
-  1. Fork the ValveSoftware/wine repository,
-  2. Clone your fork of the ValveSoftware/wine repository,__
-  3. Add official ValveSoftware/wine repository as a remote branch in your clone/fork,__
-  4. Checkout the latest experimental-wine-bleeding-edge tree and make a new branch from it
-  5. then run `./patches/protonprep.sh` to apply my changes to your own wine repository,__
-  6. then commit + push those changes to your new branch on your -own- repository.__
-  7. THEN follow the makebuild.sh instructions from above, using your own repository URL and branch.__
+  1. Fork the ValveSoftware/wine repository
+  2. Clone your fork of the ValveSoftware/wine repository
+  3. Add official ValveSoftware/wine repository as a remote branch in your clone/fork
+  4. Checkout the latest experimental-wine-bleeding-edge tree and make a new branch from it.
+  5. then run `./patches/protonprep.sh` to apply my changes to your own wine repository
+  6. then commit + push those changes to your new branch on your -own- repository.
+  7. THEN follow the makebuild.sh instructions from above, using your own repository URL and branch.
 
 
 ## Modification
