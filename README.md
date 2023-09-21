@@ -130,6 +130,28 @@ Build wine:
     example:           ./makebuild.sh lutris-GE https://github.com/GloriousEggroll/proton-wine Proton8-15
     build name output: vagrant_share/wine-lutris-GE-Proton8-15-x86_64.tar.xz
 
+Additional tips:
+
+  To access the container:
+
+    docker start buildbot
+    docker exec -it buildbot bash
+
+  To exit the container:
+
+    exit
+    docker stop buildbot
+
+  To delete the container and view containers list:
+
+    docker container rm buildbot
+    docker container list -a
+
+  To delete the container image and view images list:
+
+    docker rmi docker.io/gloriouseggroll/lutris_buildbot
+    docker images
+
 * IMPORTANT NOTES: 
 - wine, wine-staging and patches repos/folders are here for my personal use. The build bot does -NOT- pull from any of these folders directly.__
 - GloriousEggroll/proton-wine Proton* branches are PRE-PATCHED, meaning it is ready to compile, no patching needed.
