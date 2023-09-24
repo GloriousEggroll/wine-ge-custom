@@ -128,7 +128,7 @@ Build wine:
 
     usage:             ./makebuild.sh name winerepo branch
     example:           ./makebuild.sh lutris-GE https://github.com/GloriousEggroll/proton-wine Proton8-15
-    build name output: vagrant_share/wine-lutris-GE-Proton8-15-x86_64.tar.xz
+    build name output: builds/runners/wine/wine-lutris-GE-Proton8-15-x86_64.tar.xz
 
 Additional tips:
 

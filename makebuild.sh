@@ -2,7 +2,7 @@
 
 # usage: ./makebuild.sh name winerepo branch
 # example: ./makebuild.sh lutris-GE https://github.com/GloriousEggroll/proton-wine Proton8-15
-# build name output: vagrant_share/wine-lutris-GE-Proton8-15-x86_64.tar.xz
+# build name output: builds/runners/wine/wine-lutris-GE-Proton8-15-x86_64.tar.xz
 
 if [[ ! -d builds ]]; then
 	mkdir -p builds
@@ -20,3 +20,6 @@ docker exec buildbot bash -c "rm -Rf /home/vagrant/buildbot/runners/wine/wine-sr
 docker exec buildbot bash -c "cd /home/vagrant/buildbot/runners/wine && ./build.sh --as $1 --version $3 --with $2 --branch $3"
 
 docker stop buildbot
+
+cd builds/runners/wine
+export SHA512NAME=$(ls | grep tar.xz | sed -r 's/tar.xz/sha512sum/g'); sha512sum $(ls | grep tar.xz) > $SHA512NAME
