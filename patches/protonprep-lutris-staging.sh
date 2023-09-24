@@ -329,6 +329,9 @@
     echo "WINE: -PENDING- Guild Wars 2 patch"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-guild_wars_2.patch
 
+    echo "WINE: -PENDING- Genshin Impact long URL patch"
+    patch -Np1 < ../patches/wine-hotfixes/pending/genshin-impact-long-url-hotfix.patch
+
 ### END WINE PENDING UPSTREAM SECTION ###
 
 
