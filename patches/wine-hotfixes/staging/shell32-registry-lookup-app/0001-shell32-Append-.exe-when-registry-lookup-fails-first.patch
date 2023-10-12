@@ -1,0 +1,28 @@
+From 70e0b924b2c89bae3f5723c6397fb00df6283586 Mon Sep 17 00:00:00 2001
+From: Louis Lenders <xerox.xerox2000x@gmail.com>
+Date: Thu, 4 Nov 2021 21:01:24 +1100
+Subject: [PATCH] shell32: Append .exe when registry lookup fails first time
+
+---
+ dlls/shell32/shlexec.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/shell32/shlexec.c b/dlls/shell32/shlexec.c
+index 2d1830ad838..5e2ba987502 100644
+--- a/dlls/shell32/shlexec.c
++++ b/dlls/shell32/shlexec.c
+@@ -437,7 +437,10 @@ static BOOL SHELL_TryAppPathW( LPCWSTR szName, LPWSTR lpResult, WCHAR **env)
+ 
+     wcscat(buffer, szName);
+     res = RegOpenKeyExW(HKEY_LOCAL_MACHINE, buffer, 0, KEY_READ, &hkApp);
+-    if (res) goto end;
++    if (res)
++        res = RegOpenKeyExW(HKEY_LOCAL_MACHINE, lstrcatW(buffer, L".exe"), 0, KEY_READ, &hkApp);
++    if (res)
++        goto end;
+ 
+     len = MAX_PATH*sizeof(WCHAR);
+     res = RegQueryValueW(hkApp, NULL, lpResult, &len);
+-- 
+2.33.0
+

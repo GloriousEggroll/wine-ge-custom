@@ -105,7 +105,8 @@
     -W winex11.drv-Query_server_position \
     -W user32-Mouse_Message_Hwnd \
     -W wined3d-SWVP-shaders \
-    -W wined3d-Indexed_Vertex_Blending
+    -W wined3d-Indexed_Vertex_Blending \
+    -W shell32-registry-lookup-app
 
     # NOTE: Some patches are applied manually because they -do- apply, just not cleanly, ie with patch fuzz.
     # A detailed list of why the above patches are disabled is listed below:
@@ -181,6 +182,7 @@
     # winspool.drv-ClosePrinter - not required, only adds trace lines, for printers.
     # winmm-mciSendCommandA - not needed, only applies to win 9x mode
     # ** winex11-XEMBED - applied manually
+    # ** shell32-registry-lookup-app - applied manually
     #
     # Paul Gofman — Yesterday at 3:49 PM
     # that’s only for desktop integration, spamming native menu’s with wine apps which won’t probably start from there anyway
@@ -286,6 +288,9 @@
     # kernel32-Debugger
     patch -Np1 < ../wine-staging/patches/kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch
 
+    # shell32-registry-lookup-app
+    patch -Np1 < ../patches/wine-hotfixes/staging/shell32-registry-lookup-app/0001-shell32-Append-.exe-when-registry-lookup-fails-first.patch
+
 ### END WINE STAGING APPLY SECTION ###
 
 ### (2-3) GAME PATCH SECTION ###
@@ -329,9 +334,6 @@
     echo "WINE: -PENDING- Guild Wars 2 patch"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-guild_wars_2.patch
 
-    echo "WINE: -PENDING- Genshin Impact long URL patch"
-    patch -Np1 < ../patches/wine-hotfixes/pending/genshin-impact-long-url-hotfix.patch
-
 ### END WINE PENDING UPSTREAM SECTION ###
 
 
@@ -342,6 +344,9 @@
     
     echo "WINE: -PROTON- Fix non-steam controller input"
     patch -Np1 < ../patches/proton/fix-non-steam-controller-input.patch
+
+    echo "WINE: -PROTON- don't pull wine version from git tags, use VERSION file only"
+    patch -Np1 < ../patches/proton/dont-get-wine-version-from-git-tag.patch
 
     echo "WINE: -FSR- fullscreen hack fsr patch"
     patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
