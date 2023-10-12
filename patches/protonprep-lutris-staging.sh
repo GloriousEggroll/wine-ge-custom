@@ -345,9 +345,6 @@
     echo "WINE: -PROTON- Fix non-steam controller input"
     patch -Np1 < ../patches/proton/fix-non-steam-controller-input.patch
 
-    echo "WINE: -PROTON- don't pull wine version from git tags, use VERSION file only"
-    patch -Np1 < ../patches/proton/dont-get-wine-version-from-git-tag.patch
-
     echo "WINE: -FSR- fullscreen hack fsr patch"
     patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
     
