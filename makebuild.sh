@@ -8,7 +8,7 @@ if [[ ! -d builds ]]; then
 	mkdir -p builds
 fi
 if [[ -z $(podman container list -a | grep buildbot) ]]; then
-	docker create --interactive --name buildbot --mount type=bind,source="$PWD"/builds,destination=/builds,readonly=false --mount type=bind,source="$PWD"/buildbot,destination=/home/vagrant/buildbot,readonly=false docker.io/gloriouseggroll/lutris_buildbot:latest
+	docker create --interactive --name buildbot --mount type=bind,source="$PWD"/builds,destination=/builds,readonly=false --mount type=bind,source="$PWD"/buildbot,destination=/home/vagrant/buildbot,readonly=false docker.io/gloriouseggroll/lutris_buildbot:bullseye
 fi
 
 docker start buildbot
