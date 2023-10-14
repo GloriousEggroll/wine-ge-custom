@@ -1,0 +1,260 @@
+From 627181d99c29a95d91c7ac1dc9de220e0f54b321 Mon Sep 17 00:00:00 2001
+From: Etaash Mathamsetty <etaash.mathamsetty@gmail.com>
+Date: Fri, 8 Sep 2023 20:37:37 -0400
+Subject: [PATCH] gdi32: Add stub for D3DKMTQueryAdapterInfo.
+
+---
+ dlls/d3d11/d3d11.spec   |  2 +-
+ dlls/gdi32/gdi32.spec   |  1 +
+ dlls/win32u/driver.c    | 12 ++++++
+ dlls/win32u/syscall.c   |  1 +
+ dlls/win32u/win32u.spec |  2 +-
+ dlls/wow64win/gdi.c     | 22 ++++++++++
+ dlls/wow64win/syscall.h |  1 +
+ include/ddk/d3dkmthk.h  | 92 +++++++++++++++++++++++++++++++++++++++++
+ include/ntgdi.h         |  1 +
+ 9 files changed, 132 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/d3d11/d3d11.spec b/dlls/d3d11/d3d11.spec
+index 383ed6aa9cc..bb755e2e869 100644
+--- a/dlls/d3d11/d3d11.spec
++++ b/dlls/d3d11/d3d11.spec
+@@ -27,7 +27,7 @@
+ @ stub D3DKMTOpenAdapterFromHdc
+ @ stub D3DKMTOpenResource
+ @ stub D3DKMTPresent
+-@ stub D3DKMTQueryAdapterInfo
++@ stdcall D3DKMTQueryAdapterInfo(ptr) gdi32.D3DKMTQueryAdapterInfo
+ @ stub D3DKMTQueryAllocationResidency
+ @ stub D3DKMTQueryResourceInfo
+ @ stub D3DKMTRender
+diff --git a/dlls/gdi32/gdi32.spec b/dlls/gdi32/gdi32.spec
+index d6a0ad90e1e..84c294c286f 100644
+--- a/dlls/gdi32/gdi32.spec
++++ b/dlls/gdi32/gdi32.spec
+@@ -84,6 +84,7 @@
+ @ stdcall D3DKMTOpenAdapterFromGdiDisplayName(ptr)
+ @ stdcall D3DKMTOpenAdapterFromHdc(ptr) win32u.NtGdiDdDDIOpenAdapterFromHdc
+ @ stdcall D3DKMTOpenAdapterFromLuid(ptr) win32u.NtGdiDdDDIOpenAdapterFromLuid
++@ stdcall D3DKMTQueryAdapterInfo(ptr) win32u.NtGdiDdDDIQueryAdapterInfo
+ @ stdcall D3DKMTQueryStatistics(ptr) win32u.NtGdiDdDDIQueryStatistics
+ @ stdcall D3DKMTQueryVideoMemoryInfo(ptr) win32u.NtGdiDdDDIQueryVideoMemoryInfo
+ @ stdcall D3DKMTSetQueuedLimit(ptr) win32u.NtGdiDdDDISetQueuedLimit
+diff --git a/dlls/win32u/driver.c b/dlls/win32u/driver.c
+index ed2e0973d39..e6a24d1a46c 100644
+--- a/dlls/win32u/driver.c
++++ b/dlls/win32u/driver.c
+@@ -1539,6 +1539,18 @@ NTSTATUS WINAPI NtGdiDdDDIDestroyDevice( const D3DKMT_DESTROYDEVICE *desc )
+     return status;
+ }
+ 
++/******************************************************************************
++ *           NtGdiDdDDIQueryAdapterInfo    (win32u.@)
++ */
++NTSTATUS WINAPI NtGdiDdDDIQueryAdapterInfo( D3DKMT_QUERYADAPTERINFO *desc )
++{
++    if (!desc)
++        return STATUS_INVALID_PARAMETER;
++
++    FIXME("desc %p, type %d stub\n", desc, desc->Type);
++    return STATUS_NOT_IMPLEMENTED;
++}
++
+ /******************************************************************************
+  *           NtGdiDdDDIQueryStatistics    (win32u.@)
+  */
+diff --git a/dlls/win32u/syscall.c b/dlls/win32u/syscall.c
+index b5fee3a12c7..5a20409437e 100644
+--- a/dlls/win32u/syscall.c
++++ b/dlls/win32u/syscall.c
+@@ -76,6 +76,7 @@ static void * const syscalls[] =
+     NtGdiCreateSolidBrush,
+     NtGdiDdDDICreateDevice,
+     NtGdiDdDDIOpenAdapterFromHdc,
++    NtGdiDdDDIQueryAdapterInfo,
+     NtGdiDdDDIQueryStatistics,
+     NtGdiDdDDIQueryVideoMemoryInfo,
+     NtGdiDdDDISetQueuedLimit,
+diff --git a/dlls/win32u/win32u.spec b/dlls/win32u/win32u.spec
+index 13ec8cf09b8..24dccb6ec1d 100644
+--- a/dlls/win32u/win32u.spec
++++ b/dlls/win32u/win32u.spec
+@@ -295,7 +295,7 @@
+ @ stub NtGdiDdDDIPresentMultiPlaneOverlay2
+ @ stub NtGdiDdDDIPresentMultiPlaneOverlay3
+ @ stub NtGdiDdDDIPresentRedirected
+-@ stub NtGdiDdDDIQueryAdapterInfo
++@ stdcall -syscall NtGdiDdDDIQueryAdapterInfo(ptr)
+ @ stub NtGdiDdDDIQueryAllocationResidency
+ @ stub NtGdiDdDDIQueryClockCalibration
+ @ stub NtGdiDdDDIQueryFSEBlock
+diff --git a/dlls/wow64win/gdi.c b/dlls/wow64win/gdi.c
+index 1bcfd17cdfb..36af173405c 100644
+--- a/dlls/wow64win/gdi.c
++++ b/dlls/wow64win/gdi.c
+@@ -25,6 +25,7 @@
+ #include "windef.h"
+ #include "winbase.h"
+ #include "ntgdi.h"
++#include "ddk/d3dkmthk.h"
+ #include "wow64win_private.h"
+ 
+ typedef struct
+@@ -585,6 +586,27 @@ NTSTATUS WINAPI wow64_NtGdiDdDDIOpenAdapterFromLuid( UINT *args )
+     return NtGdiDdDDIOpenAdapterFromLuid( desc );
+ }
+ 
++NTSTATUS WINAPI wow64_NtGdiDdDDIQueryAdapterInfo( UINT *args )
++{
++    struct _D3DKMT_QUERYADAPTERINFO
++    {
++        D3DKMT_HANDLE           hAdapter;
++        KMTQUERYADAPTERINFOTYPE Type;
++        ULONG                   pPrivateDriverData;
++        UINT                    PrivateDriverDataSize;
++    } *desc32 = get_ptr( &args );
++    D3DKMT_QUERYADAPTERINFO desc;
++
++    if (!desc32) return STATUS_INVALID_PARAMETER;
++
++    desc.hAdapter = desc32->hAdapter;
++    desc.Type = desc32->Type;
++    desc.pPrivateDriverData = UlongToPtr( desc32->pPrivateDriverData );
++    desc.PrivateDriverDataSize = desc32->PrivateDriverDataSize;
++
++    return NtGdiDdDDIQueryAdapterInfo( &desc );
++}
++
+ NTSTATUS WINAPI wow64_NtGdiDdDDIQueryStatistics( UINT *args )
+ {
+     D3DKMT_QUERYSTATISTICS *stats = get_ptr( &args );
+diff --git a/dlls/wow64win/syscall.h b/dlls/wow64win/syscall.h
+index 452962ad6f0..3d441668f6a 100644
+--- a/dlls/wow64win/syscall.h
++++ b/dlls/wow64win/syscall.h
+@@ -61,6 +61,7 @@
+     SYSCALL_ENTRY( NtGdiCreateSolidBrush ) \
+     SYSCALL_ENTRY( NtGdiDdDDICreateDevice ) \
+     SYSCALL_ENTRY( NtGdiDdDDIOpenAdapterFromHdc ) \
++    SYSCALL_ENTRY( NtGdiDdDDIQueryAdapterInfo ) \
+     SYSCALL_ENTRY( NtGdiDdDDIQueryStatistics ) \
+     SYSCALL_ENTRY( NtGdiDdDDIQueryVideoMemoryInfo ) \
+     SYSCALL_ENTRY( NtGdiDdDDISetQueuedLimit ) \
+diff --git a/include/ddk/d3dkmthk.h b/include/ddk/d3dkmthk.h
+index 69239a45fd9..2d30bdd8777 100644
+--- a/include/ddk/d3dkmthk.h
++++ b/include/ddk/d3dkmthk.h
+@@ -174,6 +174,98 @@ typedef struct _D3DKMT_DESTROYDCFROMMEMORY
+     HANDLE hBitmap;
+ } D3DKMT_DESTROYDCFROMMEMORY;
+ 
++typedef enum _KMTQUERYADAPTERINFOTYPE
++{
++    KMTQAITYPE_UMDRIVERPRIVATE,
++    KMTQAITYPE_UMDRIVERNAME,
++    KMTQAITYPE_UMOPENGLINFO,
++    KMTQAITYPE_GETSEGMENTSIZE,
++    KMTQAITYPE_ADAPTERGUID,
++    KMTQAITYPE_FLIPQUEUEINFO,
++    KMTQAITYPE_ADAPTERADDRESS,
++    KMTQAITYPE_SETWORKINGSETINFO,
++    KMTQAITYPE_ADAPTERREGISTRYINFO,
++    KMTQAITYPE_CURRENTDISPLAYMODE,
++    KMTQAITYPE_MODELIST,
++    KMTQAITYPE_CHECKDRIVERUPDATESTATUS,
++    KMTQAITYPE_VIRTUALADDRESSINFO,
++    KMTQAITYPE_DRIVERVERSION,
++    KMTQAITYPE_ADAPTERTYPE,
++    KMTQAITYPE_OUTPUTDUPLCONTEXTSCOUNT,
++    KMTQAITYPE_WDDM_1_2_CAPS,
++    KMTQAITYPE_UMD_DRIVER_VERSION,
++    KMTQAITYPE_DIRECTFLIP_SUPPORT,
++    KMTQAITYPE_MULTIPLANEOVERLAY_SUPPORT,
++    KMTQAITYPE_DLIST_DRIVER_NAME,
++    KMTQAITYPE_WDDM_1_3_CAPS,
++    KMTQAITYPE_MULTIPLANEOVERLAY_HUD_SUPPORT,
++    KMTQAITYPE_WDDM_2_0_CAPS,
++    KMTQAITYPE_NODEMETADATA,
++    KMTQAITYPE_CPDRIVERNAME,
++    KMTQAITYPE_XBOX,
++    KMTQAITYPE_INDEPENDENTFLIP_SUPPORT,
++    KMTQAITYPE_MIRACASTCOMPANIONDRIVERNAME,
++    KMTQAITYPE_PHYSICALADAPTERCOUNT,
++    KMTQAITYPE_PHYSICALADAPTERDEVICEIDS,
++    KMTQAITYPE_DRIVERCAPS_EXT,
++    KMTQAITYPE_QUERY_MIRACAST_DRIVER_TYPE,
++    KMTQAITYPE_QUERY_GPUMMU_CAPS,
++    KMTQAITYPE_QUERY_MULTIPLANEOVERLAY_DECODE_SUPPORT,
++    KMTQAITYPE_QUERY_HW_PROTECTION_TEARDOWN_COUNT,
++    KMTQAITYPE_QUERY_ISBADDRIVERFORHWPROTECTIONDISABLED,
++    KMTQAITYPE_MULTIPLANEOVERLAY_SECONDARY_SUPPORT,
++    KMTQAITYPE_INDEPENDENTFLIP_SECONDARY_SUPPORT,
++    KMTQAITYPE_PANELFITTER_SUPPORT,
++    KMTQAITYPE_PHYSICALADAPTERPNPKEY,
++    KMTQAITYPE_GETSEGMENTGROUPSIZE,
++    KMTQAITYPE_MPO3DDI_SUPPORT,
++    KMTQAITYPE_HWDRM_SUPPORT,
++    KMTQAITYPE_MPOKERNELCAPS_SUPPORT,
++    KMTQAITYPE_MULTIPLANEOVERLAY_STRETCH_SUPPORT,
++    KMTQAITYPE_GET_DEVICE_VIDPN_OWNERSHIP_INFO,
++    KMTQAITYPE_QUERYREGISTRY,
++    KMTQAITYPE_KMD_DRIVER_VERSION,
++    KMTQAITYPE_BLOCKLIST_KERNEL,
++    KMTQAITYPE_BLOCKLIST_RUNTIME,
++    KMTQAITYPE_ADAPTERGUID_RENDER,
++    KMTQAITYPE_ADAPTERADDRESS_RENDER,
++    KMTQAITYPE_ADAPTERREGISTRYINFO_RENDER,
++    KMTQAITYPE_CHECKDRIVERUPDATESTATUS_RENDER,
++    KMTQAITYPE_DRIVERVERSION_RENDER,
++    KMTQAITYPE_ADAPTERTYPE_RENDER,
++    KMTQAITYPE_WDDM_1_2_CAPS_RENDER,
++    KMTQAITYPE_WDDM_1_3_CAPS_RENDER,
++    KMTQAITYPE_QUERY_ADAPTER_UNIQUE_GUID,
++    KMTQAITYPE_NODEPERFDATA,
++    KMTQAITYPE_ADAPTERPERFDATA,
++    KMTQAITYPE_ADAPTERPERFDATA_CAPS,
++    KMTQUITYPE_GPUVERSION,
++    KMTQAITYPE_DRIVER_DESCRIPTION,
++    KMTQAITYPE_DRIVER_DESCRIPTION_RENDER,
++    KMTQAITYPE_SCANOUT_CAPS,
++    KMTQAITYPE_DISPLAY_UMDRIVERNAME,
++    KMTQAITYPE_PARAVIRTUALIZATION_RENDER,
++    KMTQAITYPE_SERVICENAME,
++    KMTQAITYPE_WDDM_2_7_CAPS,
++    KMTQAITYPE_TRACKEDWORKLOAD_SUPPORT,
++    KMTQAITYPE_HYBRID_DLIST_DLL_SUPPORT,
++    KMTQAITYPE_DISPLAY_CAPS,
++    KMTQAITYPE_WDDM_2_9_CAPS,
++    KMTQAITYPE_CROSSADAPTERRESOURCE_SUPPORT,
++    KMTQAITYPE_WDDM_3_0_CAPS,
++    KMTQAITYPE_WSAUMDIMAGENAME,
++    KMTQAITYPE_VGPUINTERFACEID,
++    KMTQAITYPE_WDDM_3_1_CAPS
++} KMTQUERYADAPTERINFOTYPE;
++
++typedef struct _D3DKMT_QUERYADAPTERINFO
++{
++    D3DKMT_HANDLE           hAdapter;
++    KMTQUERYADAPTERINFOTYPE Type;
++    VOID                    *pPrivateDriverData;
++    UINT                    PrivateDriverDataSize;
++} D3DKMT_QUERYADAPTERINFO;
++
+ typedef enum _D3DKMT_QUERYRESULT_PREEMPTION_ATTEMPT_RESULT
+ {
+     D3DKMT_PreemptionAttempt                               = 0,
+diff --git a/include/ntgdi.h b/include/ntgdi.h
+index f93708d5400..9812ebc9d32 100644
+--- a/include/ntgdi.h
++++ b/include/ntgdi.h
+@@ -477,6 +477,7 @@ NTSTATUS WINAPI NtGdiDdDDIEscape( const D3DKMT_ESCAPE *desc );
+ NTSTATUS WINAPI NtGdiDdDDIOpenAdapterFromHdc( D3DKMT_OPENADAPTERFROMHDC *desc );
+ NTSTATUS WINAPI NtGdiDdDDIOpenAdapterFromDeviceName( D3DKMT_OPENADAPTERFROMDEVICENAME *desc );
+ NTSTATUS WINAPI NtGdiDdDDIOpenAdapterFromLuid( D3DKMT_OPENADAPTERFROMLUID *desc );
++NTSTATUS WINAPI NtGdiDdDDIQueryAdapterInfo( D3DKMT_QUERYADAPTERINFO *desc );
+ NTSTATUS WINAPI NtGdiDdDDIQueryStatistics( D3DKMT_QUERYSTATISTICS *stats );
+ NTSTATUS WINAPI NtGdiDdDDIQueryVideoMemoryInfo( D3DKMT_QUERYVIDEOMEMORYINFO *desc );
+ NTSTATUS WINAPI NtGdiDdDDISetQueuedLimit( D3DKMT_SETQUEUEDLIMIT *desc );
+-- 
+GitLab
+

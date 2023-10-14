@@ -1,0 +1,27 @@
+From bfa433091a379c35a6627bf72b8adb5a6a294f91 Mon Sep 17 00:00:00 2001
+From: Ph42oN <julle.ys.57@gmail.com>
+Date: Mon, 25 Sep 2023 11:53:22 +0300
+Subject: [PATCH] calculate width using height and aspect ratio
+
+---
+ dlls/winex11.drv/fs.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winex11.drv/fs.c b/dlls/winex11.drv/fs.c
+index f2162d2..e67734c 100644
+--- a/dlls/winex11.drv/fs.c
++++ b/dlls/winex11.drv/fs.c
+@@ -360,8 +360,9 @@ static void monitor_get_modes( struct fs_monitor *monitor, DEVMODEW **modes, UIN
+     {
+         for (i = 0; i < ARRAY_SIZE(fs_monitor_sizes_fsr); ++i)
+         {
+-            fs_monitor_sizes_fsr[i].size.cx = (DWORD)(mode_host.dmPelsWidth / fsr_ratios[i] + 0.5f);
+             fs_monitor_sizes_fsr[i].size.cy = (DWORD)(mode_host.dmPelsHeight / fsr_ratios[i] + 0.5f);
++            fs_monitor_sizes_fsr[i].size.cx = (DWORD)(fs_monitor_sizes_fsr[i].size.cy
++                * ((float)mode_host.dmPelsWidth / (float)mode_host.dmPelsHeight) + 0.5f);
+             
+             TRACE("created fsr resolution: %dx%d, ratio: %1.1f\n",
+                   fs_monitor_sizes_fsr[i].size.cx,
+-- 
+2.41.0
+

@@ -1,0 +1,5 @@
+Fixes: Allow selection of audio device for PulseAudio backend
+Fixes: [37042] Implement exclusive mode in PulseAudio backend
+Fixes: Add support for GetPropValue to PulseAudio backend
+Fixes: Use actual program name if available to describe PulseAudio streams
+Fixes: Expose PKEY_AudioEndpoint_PhysicalSpeakers device property in PulseAudio driver
