@@ -1,18 +1,23 @@
-diff --git a/dlls/imm32/ime.c b/dlls/imm32/ime.c
-index 38a2a070117..424b286d0b5 100644
---- a/dlls/imm32/ime.c
-+++ b/dlls/imm32/ime.c
-@@ -701,6 +701,13 @@ BOOL WINAPI NotifyIME( HIMC himc, DWORD action, DWORD index, DWORD value )
-         }
-         case CPS_CANCEL:
-             input_context_set_comp_str( ctx, NULL, 0 );
-+            const char *sgi = getenv("SteamGameId");
-+
-+            if ((!sgi) | (sgi && !strcmp(sgi, "552990"))) {
-+                ImmSetOpenStatus( himc, FALSE );
-+		 break;
-+            };
-+
-             if ((msg = ime_set_composition_status( himc, FALSE ))) ime_send_message( himc, msg, 0, 0 );
-             NtUserNotifyIMEStatus( ctx->hWnd, FALSE );
-             break;
+From 9cab6e6d8f771b7534c2c2b26d217ad439c89e53 Mon Sep 17 00:00:00 2001
+From: Etaash Mathamsetty <etaash.mathamsetty@gmail.com>
+Date: Mon, 16 Oct 2023 15:33:54 -0400
+Subject: [PATCH] winex11.drv: Ensure initialized thread data in X11DRV_get_ic.
+
+---
+ dlls/winex11.drv/xim.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winex11.drv/xim.c b/dlls/winex11.drv/xim.c
+index 209d63f0402..b4d675dc446 100644
+--- a/dlls/winex11.drv/xim.c
++++ b/dlls/winex11.drv/xim.c
+@@ -501,7 +501,7 @@ XIC X11DRV_get_ic( HWND hwnd )
+     XIC ret;
+ 
+     if (!(data = get_win_data( hwnd ))) return 0;
+-    x11drv_thread_data()->last_xic_hwnd = hwnd;
++    x11drv_init_thread_data()->last_xic_hwnd = hwnd;
+     if (!(ret = data->xic) && (xim = x11drv_thread_data()->xim))
+         ret = data->xic = xic_create( xim, hwnd, data->whole_window );
+     release_win_data( data );
+
