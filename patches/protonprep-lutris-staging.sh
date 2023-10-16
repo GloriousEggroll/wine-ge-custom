@@ -323,6 +323,10 @@
     echo "WINE: -GAME FIXES- Fix Farlight 84 dxva crash"
     patch -Np1 < ../patches/game-patches/farlight84.patch
 
+    # https://github.com/ValveSoftware/Proton/issues/333#issuecomment-1763560466
+    echo "WINE: -GAME FIXES- Fix World of Warships login hang"
+    patch -Np1 < ../patches/game-patches/world-of-warships-login-hang-fix.patch
+
 ### END GAME PATCH SECTION ###
 
 ### (2-4) WINE HOTFIX/BACKPORT SECTION ###
