@@ -19,6 +19,7 @@
 
 # Revert proton font changes, Using them as non-proton wine build breaks Uplay
 
+    git revert --no-commit 637902dcd157b3f4df4c497de7ac755115c81c99
     git revert --no-commit fe7901be6de96a7572fff977dd34584d96b5ec29
     git revert --no-commit ba3c43eb34cd10b7cf1c8e76319a2eef86f31f8b
     git revert --no-commit 72508b7d4110b76f90320ff009df1141f6e07901
