@@ -321,8 +321,9 @@
     patch -Np1 < ../patches/game-patches/ffxiv_hydaelyn_intro_playback_fix.patch
 
     # https://github.com/ValveSoftware/Proton/issues/6717
-    echo "WINE: -GAME FIXES- Fix Farlight 84 dxva crash"
-    patch -Np1 < ../patches/game-patches/farlight84.patch
+    # https://gitlab.winehq.org/wine/wine/-/merge_requests/4428
+    echo "WINE: -GAME FIXES- Fix Farlight 84 crash"
+    patch -Np1 < ../patches/wine-hotfixes/pending/4428.patch
 
 ### END GAME PATCH SECTION ###
 

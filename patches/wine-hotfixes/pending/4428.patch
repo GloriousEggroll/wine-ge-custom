@@ -1,0 +1,135 @@
+From ed32c881e266b116e394f0343fc976ab0b6d2962 Mon Sep 17 00:00:00 2001
+From: Etaash Mathamsetty <etaash.mathamsetty@gmail.com>
+Date: Fri, 17 Nov 2023 17:48:10 -0500
+Subject: [PATCH] cfgmgr32: Add CM_Register_Notification stub.
+
+---
+ dlls/cfgmgr32/cfgmgr32.spec |  1 +
+ dlls/cfgmgr32/main.c        |  8 +++++
+ include/cfgmgr32.h          | 72 +++++++++++++++++++++++++++++++++++++
+ 3 files changed, 81 insertions(+)
+
+diff --git a/dlls/cfgmgr32/cfgmgr32.spec b/dlls/cfgmgr32/cfgmgr32.spec
+index 5c9b8f613db..e4cd845e2a4 100644
+--- a/dlls/cfgmgr32/cfgmgr32.spec
++++ b/dlls/cfgmgr32/cfgmgr32.spec
+@@ -154,6 +154,7 @@
+ @ stub CM_Register_Device_InterfaceW
+ @ stub CM_Register_Device_Interface_ExA
+ @ stub CM_Register_Device_Interface_ExW
++@ stdcall CM_Register_Notification(ptr ptr ptr ptr)
+ @ stub CM_Remove_SubTree
+ @ stub CM_Remove_SubTree_Ex
+ @ stub CM_Remove_Unmarked_Children
+diff --git a/dlls/cfgmgr32/main.c b/dlls/cfgmgr32/main.c
+index fee3c42a5c4..d15354367f8 100644
+--- a/dlls/cfgmgr32/main.c
++++ b/dlls/cfgmgr32/main.c
+@@ -21,6 +21,14 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(setupapi);
+ 
++CONFIGRET WINAPI CM_Register_Notification( CM_NOTIFY_FILTER *filter, void *context,
++                                           PCM_NOTIFY_CALLBACK callback, HCMNOTIFICATION *notify_context )
++{
++    FIXME("%p %p %p %p stub!\n", filter, context, callback, notify_context);
++
++    return CR_CALL_NOT_IMPLEMENTED;
++}
++
+ /***********************************************************************
+  *           CM_MapCrToWin32Err (cfgmgr32.@)
+  */
+diff --git a/include/cfgmgr32.h b/include/cfgmgr32.h
+index 04f1f80b174..e07ca4edd6f 100644
+--- a/include/cfgmgr32.h
++++ b/include/cfgmgr32.h
+@@ -187,6 +187,7 @@ typedef DWORD CONFIGRET;
+ typedef DWORD DEVINST, *PDEVINST;
+ typedef DWORD DEVNODE, *PDEVNODE;
+ typedef HANDLE HMACHINE, *PHMACHINE;
++typedef HANDLE HCMNOTIFICATION, *PHCMNOTIFICATION;
+ typedef CHAR *DEVNODEID_A, *DEVINSTID_A;
+ typedef WCHAR *DEVNODEID_W, *DEVINSTID_W;
+ typedef ULONG REGDISPOSITION;
+@@ -208,6 +209,77 @@ typedef enum _PNP_VETO_TYPE
+     PNP_VetoInsufficientRights
+ } PNP_VETO_TYPE, *PPNP_VETO_TYPE;
+ 
++typedef enum _CM_NOTIFY_FILTER_TYPE
++{
++    CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE = 0,
++    CM_NOTIFY_FILTER_TYPE_DEVICEHANDLE,
++    CM_NOTIFY_FILTER_TYPE_DEVICEINSTANCE,
++    CM_NOTIFY_FILTER_TYPE_MAX
++} CM_NOTIFY_FILTER_TYPE, *PCM_NOTIFY_FILTER_TYPE;
++
++typedef enum _CM_NOTIFY_ACTION
++{
++    CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL = 0,
++    CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL,
++    CM_NOTIFY_ACTION_DEVICEQUERYREMOVE,
++    CM_NOTIFY_ACTION_DEVICEQUERYREMOVEFAILED,
++    CM_NOTIFY_ACTION_DEVICEREMOVEPENDING,
++    CM_NOTIFY_ACTION_DEVICEREMOVECOMPLETE,
++    CM_NOTIFY_ACTION_DEVICECUSTOMEVENT,
++    CM_NOTIFY_ACTION_DEVICEINSTANCEENUMERATED,
++    CM_NOTIFY_ACTION_DEVICEINSTANCESTARTED,
++    CM_NOTIFY_ACTION_DEVICEINSTANCEREMOVED,
++    CM_NOTIFY_ACTION_MAX
++} CM_NOTIFY_ACTION, *PCM_NOTIFY_ACTION;
++
++typedef struct _CM_NOTIFY_FILTER
++{
++    DWORD                 cbSize;
++    DWORD                 Flags;
++    CM_NOTIFY_FILTER_TYPE FilterType;
++    DWORD                 Reserved;
++    union {
++        struct {
++            GUID ClassGuid;
++        } DeviceInterface;
++        struct {
++            HANDLE hTarget;
++        } DeviceHandle;
++        struct {
++            WCHAR InstanceId[MAX_DEVICE_ID_LEN];
++        } DeviceInstance;
++    } u;
++} CM_NOTIFY_FILTER, *PCM_NOTIFY_FILTER;
++
++typedef struct _CM_NOTIFY_EVENT_DATA
++{
++    CM_NOTIFY_FILTER_TYPE    FilterType;
++    DWORD                    Reserved;
++    union {
++        struct {
++            GUID    ClassGuid;
++            WCHAR   SymbolicLink[ANYSIZE_ARRAY];
++        } DeviceInterface;
++        struct {
++            GUID    EventGuid;
++            LONG    NameOffset;
++            DWORD   DataSize;
++            BYTE    Data[ANYSIZE_ARRAY];
++        } DeviceHandle;
++        struct {
++            WCHAR   InstanceId[ANYSIZE_ARRAY];
++        } DeviceInstance;
++    } u;
++} CM_NOTIFY_EVENT_DATA, *PCM_NOTIFY_EVENT_DATA;
++
++typedef DWORD (WINAPI *PCM_NOTIFY_CALLBACK)(
++    HCMNOTIFICATION Notify,
++    void *Context,
++    CM_NOTIFY_ACTION Action,
++    CM_NOTIFY_EVENT_DATA *EventData,
++    DWORD EventDataSize
++);
++
+ DECL_WINELIB_CFGMGR32_TYPE_AW(DEVNODEID)
+ DECL_WINELIB_CFGMGR32_TYPE_AW(DEVINSTID)
+ 
+-- 
+GitLab
+
