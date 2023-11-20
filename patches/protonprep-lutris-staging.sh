@@ -349,6 +349,10 @@
     echo "WINE: -PENDING- Guild Wars 2 patch"
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-guild_wars_2.patch
 
+    # https://github.com/ValveSoftware/wine/pull/205
+    echo "WINE: -PENDING- Add WINE_DISABLE_SFN option."
+    patch -Np1 < ../patches/wine-hotfixes/pending/ntdll_add_wine_disable_sfn.patch
+
 ### END WINE PENDING UPSTREAM SECTION ###
 
 

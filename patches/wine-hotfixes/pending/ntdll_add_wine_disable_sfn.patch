@@ -1,0 +1,71 @@
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index 870c5e39271..3162d36a803 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -1511,16 +1511,20 @@ static BOOL append_entry( struct dir_data *data, const char *long_name,
+     if (long_len == ARRAY_SIZE(long_nameW)) return TRUE;
+     long_nameW[long_len] = 0;
+ 
+-    if (short_name)
+-    {
+-        short_len = ntdll_umbstowcs( short_name, strlen(short_name),
+-                                     short_nameW, ARRAY_SIZE( short_nameW ) - 1 );
+-    }
+-    else  /* generate a short name if necessary */
++    short_len = 0;
++
++    if (!disable_sfn)
+     {
+-        short_len = 0;
+-        if (!is_legal_8dot3_name( long_nameW, long_len ))
+-            short_len = hash_short_file_name( long_nameW, long_len, short_nameW );
++        if (short_name)
++        {
++            short_len = ntdll_umbstowcs( short_name, strlen(short_name),
++                                        short_nameW, ARRAY_SIZE( short_nameW ) - 1 );
++        }
++        else  /* generate a short name if necessary */
++        {
++            if (!is_legal_8dot3_name( long_nameW, long_len ))
++                short_len = hash_short_file_name( long_nameW, long_len, short_nameW );
++        }
+     }
+     short_nameW[short_len] = 0;
+     wcsupr( short_nameW );
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index 5f7f114b286..cbea0dc5d2d 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -2152,6 +2152,7 @@ const unixlib_entry_t __wine_unix_call_funcs[] =
+     debugstr_pc,
+ };
+ 
++BOOL disable_sfn;
+ BOOL ac_odyssey;
+ BOOL fsync_simulate_sched_quantum;
+ BOOL alert_simulate_sched_quantum;
+@@ -2175,6 +2176,12 @@ static void hacks_init(void)
+         ERR( "HACK: ram_reporting_bias %lldMB.\n", ram_reporting_bias / (1024 * 1024) );
+     }
+ 
++    env_str = getenv("WINE_DISABLE_SFN");
++    if (env_str)
++        disable_sfn = !!atoi(env_str);
++    else if (main_argc > 1 && (strstr(main_argv[1], "Yakuza5.exe") ))
++        disable_sfn = TRUE;
++
+     env_str = getenv("WINE_SIMULATE_ASYNC_READ");
+     if (env_str)
+         ac_odyssey = !!atoi(env_str);
+diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
+index cae15947bbd..6403dad858d 100644
+--- a/dlls/ntdll/unix/unix_private.h
++++ b/dlls/ntdll/unix/unix_private.h
+@@ -152,6 +152,7 @@ extern BOOL is_wow64 DECLSPEC_HIDDEN;
+ extern struct ldt_copy __wine_ldt_copy DECLSPEC_HIDDEN;
+ #endif
+ 
++extern BOOL disable_sfn DECLSPEC_HIDDEN;
+ extern BOOL ac_odyssey DECLSPEC_HIDDEN;
+ extern BOOL fsync_simulate_sched_quantum DECLSPEC_HIDDEN;
+ extern BOOL alert_simulate_sched_quantum DECLSPEC_HIDDEN;
