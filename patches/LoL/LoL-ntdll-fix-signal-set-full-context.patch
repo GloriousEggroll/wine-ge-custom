@@ -1,0 +1,28 @@
+From b6302b1fe8b172986baa0a4c66917b2e16f3dcd0 Mon Sep 17 00:00:00 2001
+From: "kyechou (moonshadow565)" <kuanyenchou@gmail.com>
+Date: Tue, 12 Dec 2023 05:37:06 +0200
+Subject: [PATCH] ntdll: Fix signal_set_full_context()
+
+---
+ dlls/ntdll/unix/signal_x86_64.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
+index 84b3422d491..5b12e963c1e 100644
+--- a/dlls/ntdll/unix/signal_x86_64.c
++++ b/dlls/ntdll/unix/signal_x86_64.c
+@@ -952,8 +952,9 @@ NTSTATUS signal_set_full_context( CONTEXT *context )
+ {
+     NTSTATUS status = NtSetContextThread( GetCurrentThread(), context );
+ 
+-    if (!status && (context->ContextFlags & CONTEXT_INTEGER) == CONTEXT_INTEGER)
+-        amd64_thread_data()->syscall_frame->restore_flags |= CONTEXT_INTEGER;
++    unsigned int real_mask = CONTEXT_INTEGER & ~CONTEXT_AMD64;
++    if (!status && (context->ContextFlags & real_mask) == real_mask)
++        amd64_thread_data()->syscall_frame->restore_flags |= real_mask;
+     return status;
+ }
+ 
+-- 
+GitLab
+
