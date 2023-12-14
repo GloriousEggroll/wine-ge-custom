@@ -12,7 +12,7 @@ index 8d134c58718..44a2973d13c 100644
 +                           || (strstr(main_argv[1], "RiotClientServices.exe"))
 +                           || (strstr(main_argv[1], "LeagueClient.exe"))))
 +    {
-+        setenv("GST_GL_WINDOW", "surfaceless", 0);
++        setenv("GST_GL_WINDOW", "x11", 0);
 +    }
  }
  

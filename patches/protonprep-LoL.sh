@@ -397,7 +397,7 @@
     patch -Np1 < ../patches/LoL/LoL-ntdll-fix-signal-set-full-context.patch
 
     # https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/2997
-    patch -Np1 < ../patches/LoL/LoL-set-gstreamer-surfaceless-window.patch
+    patch -Np1 < ../patches/LoL/LoL-set-gstreamer-x11-window.patch
 
 ### END WINE PATCHING ###
     # need to run these after applying patches
