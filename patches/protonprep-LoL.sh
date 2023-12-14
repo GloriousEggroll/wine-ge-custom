@@ -143,8 +143,8 @@
     # ** loader-KeyboardLayouts - applied manually -- needed to prevent Overwatch huge FPS drop
     # msxml3-FreeThreadedXMLHTTP60 - already applied
     # ntdll-ForceBottomUpAlloc - already applied
-    # ntdll-WRITECOPY - already applied
-    # ntdll-Builtin_Prot - already applied
+    # ** ntdll-WRITECOPY - applied manually
+    # ** ntdll-Builtin_Prot - applied manually
     # ntdll-CriticalSection - breaks ffxiv and deep rock galactic
     # ** ntdll-Exception - applied manually
     # ** ntdll-Hide_Wine_Exports - applied manually
@@ -217,6 +217,16 @@
 
     # ntdll-Serial_Port_Detection
     patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-Serial_Port_Detection/0001-ntdll-Do-a-device-check-before-returning-a-default-s.patch
+
+    # ntdll-WRITECOPY
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-WRITECOPY/0001-ntdll-Trigger-write-watches-before-passing-userdata-.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-WRITECOPY/0003-ntdll-Setup-a-temporary-signal-handler-during-proces.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-WRITECOPY/0004-ntdll-Properly-handle-PAGE_WRITECOPY-protection.-try.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-WRITECOPY/0005-ntdll-Track-if-a-WRITECOPY-page-has-been-modified.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-WRITECOPY/0006-ntdll-Support-WRITECOPY-on-x64.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-WRITECOPY/0007-ntdll-Report-unmodified-WRITECOPY-pages-as-shared.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-WRITECOPY/0008-ntdll-Fallback-to-copy-pages-for-WRITECOPY.patch
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-WRITECOPY/0009-kernel32-tests-psapi-tests-Update-tests.patch
 
     # mouse rawinput
     # per discussion with remi:
@@ -369,24 +379,21 @@
     echo "WINE: -FSR- fullscreen hack fsr patch"
     patch -Np1 < ../patches/proton/47-proton-fshack-AMD-FSR-complete.patch
 
-    #echo "WINE: -FSR- fullscreen hack fsr patch"
-    #patch -Np1 < ../patches/proton/48-proton-fshack_amd_fsr.patch
-
-    #echo "WINE: -FSR- fullscreen hack resolution calculation fixup"
-    #patch -Np1 < ../patches/proton/49-fsr-width-using-height-and-aspect-ratio.patch
-    #echo "WINE: -FSR- fullscreen hack fix washed colors when FSR disabled"
-    #patch -Np1 < ../patches/proton/50-fsr-fix-washed-colors-when-disabled.patch
-
-    #echo "WINE: -FSR- enable FSR flag by default (fixes broken fs hack scaling in some games like Apex and FFXIV)"
+    #echo "WINE: -FSR- enable FSR flag by default
     #patch -Np1 < ../patches/proton/71-invert-fsr-logic.patch
 
 ### END PROTON-GE ADDITIONAL CUSTOM PATCHES ###
+
+    # fixed in wine 8.16 and higher
+    # https://gitlab.winehq.org/wine/wine/-/commit/ea640f6cece7660ffc853b7d574fbe52af34901a
+    echo "LoL backports -- for ignore segments"
+    patch -Np1 < ../patches/LoL/LoL-ignore-segments-reg-x86_64.patch
 
     echo "LoL fixes"
     patch -Np1 < ../patches/LoL/LoL-broken-client-update-fix.patch
     patch -Np1 < ../patches/LoL/LoL-client-slow-start-fix.patch
     patch -Np1 < ../patches/LoL/LoL-ntdll-nopguard-call_vectored_handlers.patch
-    patch -Np1 < ../patches/LoL/LoL-ntdll-implement-ntcontinueex.patch
+    patch -Np1 < ../patches/LoL/LoL-ntdll-implement-ntcontinueex-no-backports.patch
     patch -Np1 < ../patches/LoL/LoL-ntdll-fix-signal-set-full-context.patch
 
 ### END WINE PATCHING ###

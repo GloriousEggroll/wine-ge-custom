@@ -1,0 +1,269 @@
+From ea640f6cece7660ffc853b7d574fbe52af34901a Mon Sep 17 00:00:00 2001
+From: Alexandre Julliard <julliard@winehq.org>
+Date: Mon, 11 Sep 2023 11:25:29 +0200
+Subject: [PATCH] ntdll: Ignore attempts to change segment registers on x86-64.
+
+---
+ dlls/ntdll/signal_x86_64.c      |  4 --
+ dlls/ntdll/tests/exception.c    | 31 ++++++------
+ dlls/ntdll/unix/signal_x86_64.c | 85 +++++++++++++--------------------
+ 3 files changed, 47 insertions(+), 73 deletions(-)
+
+diff --git a/dlls/ntdll/signal_x86_64.c b/dlls/ntdll/signal_x86_64.c
+index 66cabfd5e64..2f7715a0a60 100644
+--- a/dlls/ntdll/signal_x86_64.c
++++ b/dlls/ntdll/signal_x86_64.c
+@@ -559,10 +559,6 @@ NTSTATUS WINAPI dispatch_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
+                      context->R12, context->R13, context->R14, context->R15 );
+     }
+ 
+-    /* Legends of Runeterra depends on having SegDs == SegSs in an exception
+-     * handler. */
+-    context->SegDs = context->SegSs;
+-
+     if (call_vectored_handlers( rec, context ) == EXCEPTION_CONTINUE_EXECUTION)
+         NtContinue( context, FALSE );
+ 
+diff --git a/dlls/ntdll/tests/exception.c b/dlls/ntdll/tests/exception.c
+index e469aa33643..ef3ccb68f17 100644
+--- a/dlls/ntdll/tests/exception.c
++++ b/dlls/ntdll/tests/exception.c
+@@ -1820,8 +1820,8 @@ static void test_thread_context(void)
+     ok( context.SegDs == LOWORD(expect.SegDs), "wrong SegDs %08lx/%08lx\n", context.SegDs, expect.SegDs );
+     ok( context.SegEs == LOWORD(expect.SegEs), "wrong SegEs %08lx/%08lx\n", context.SegEs, expect.SegEs );
+     ok( context.SegFs == LOWORD(expect.SegFs), "wrong SegFs %08lx/%08lx\n", context.SegFs, expect.SegFs );
+-    ok( context.SegGs == LOWORD(expect.SegGs), "wrong SegGs %08lx/%08lx\n", context.SegGs, expect.SegGs );
+-    ok( context.SegSs == LOWORD(expect.SegSs), "wrong SegSs %08lx/%08lx\n", context.SegSs, expect.SegGs );
++    if (LOWORD(expect.SegGs)) ok( context.SegGs == LOWORD(expect.SegGs), "wrong SegGs %08lx/%08lx\n", context.SegGs, expect.SegGs );
++    ok( context.SegSs == LOWORD(expect.SegSs), "wrong SegSs %08lx/%08lx\n", context.SegSs, expect.SegSs );
+ 
+     ok( LOWORD(context.FloatSave.ControlWord) == LOWORD(expect.x87_control),
+             "wrong x87 control word %#lx/%#lx.\n", context.FloatSave.ControlWord, expect.x87_control );
+@@ -3106,9 +3106,9 @@ static DWORD WINAPI handler( EXCEPTION_RECORD *rec, ULONG64 frame,
+     ok( context->SegSs == ss, "%u: ss %#x does not match %#x\n", entry, context->SegSs, ss );
+     ok( context->SegDs == context->SegSs,
+         "%u: ds %#x does not match ss %#x\n", entry, context->SegDs, context->SegSs );
+-    todo_wine ok( context->SegEs == context->SegSs,
++    ok( context->SegEs == context->SegSs,
+         "%u: es %#x does not match ss %#x\n", entry, context->SegEs, context->SegSs );
+-    todo_wine ok( context->SegGs == context->SegSs,
++    ok( context->SegGs == context->SegSs,
+         "%u: gs %#x does not match ss %#x\n", entry, context->SegGs, context->SegSs );
+     todo_wine ok( context->SegFs && context->SegFs != context->SegSs,
+         "%u: got fs %#x\n", entry, context->SegFs );
+@@ -3441,14 +3441,12 @@ static void test_exceptions(void)
+     ok( ctx.SegDs == ds, "wrong ds %04x / %04x\n", ctx.SegDs, ds );
+     ok( ctx.SegEs == es, "wrong es %04x / %04x\n", ctx.SegEs, es );
+     ok( ctx.SegFs == fs, "wrong fs %04x / %04x\n", ctx.SegFs, fs );
+-    ok( ctx.SegGs == gs, "wrong gs %04x / %04x\n", ctx.SegGs, gs );
++    ok( ctx.SegGs == gs || !gs, "wrong gs %04x / %04x\n", ctx.SegGs, gs );
+     ok( ctx.SegSs == ss, "wrong ss %04x / %04x\n", ctx.SegSs, ss );
+-    todo_wine ok( ctx.SegDs == ctx.SegSs, "wrong ds %04x / %04x\n", ctx.SegDs, ctx.SegSs );
+-    todo_wine ok( ctx.SegEs == ctx.SegSs, "wrong es %04x / %04x\n", ctx.SegEs, ctx.SegSs );
++    ok( ctx.SegDs == ctx.SegSs, "wrong ds %04x / %04x\n", ctx.SegDs, ctx.SegSs );
++    ok( ctx.SegEs == ctx.SegSs, "wrong es %04x / %04x\n", ctx.SegEs, ctx.SegSs );
+     ok( ctx.SegFs != ctx.SegSs, "wrong fs %04x / %04x\n", ctx.SegFs, ctx.SegSs );
+-    todo_wine ok( ctx.SegGs == ctx.SegSs, "wrong gs %04x / %04x\n", ctx.SegGs, ctx.SegSs );
+-    if (ctx.SegDs == ctx.SegSs)  /* FIXME: remove once Wine is fixed */
+-    {
++    ok( ctx.SegGs == ctx.SegSs, "wrong gs %04x / %04x\n", ctx.SegGs, ctx.SegSs );
+     ctx.SegDs = 0;
+     ctx.SegEs = ctx.SegFs;
+     ctx.SegFs = ctx.SegSs;
+@@ -3464,13 +3462,12 @@ static void test_exceptions(void)
+     ok( ctx.SegDs == ds, "wrong ds %04x / %04x\n", ctx.SegDs, ds );
+     ok( ctx.SegEs == es, "wrong es %04x / %04x\n", ctx.SegEs, es );
+     ok( ctx.SegFs == fs, "wrong fs %04x / %04x\n", ctx.SegFs, fs );
+-    ok( ctx.SegGs == gs, "wrong gs %04x / %04x\n", ctx.SegGs, gs );
++    ok( ctx.SegGs == gs || !gs, "wrong gs %04x / %04x\n", ctx.SegGs, gs );
+     ok( ctx.SegSs == ss, "wrong ss %04x / %04x\n", ctx.SegSs, ss );
+     ok( ctx.SegDs == ctx.SegSs, "wrong ds %04x / %04x\n", ctx.SegDs, ctx.SegSs );
+     ok( ctx.SegEs == ctx.SegSs, "wrong es %04x / %04x\n", ctx.SegEs, ctx.SegSs );
+     ok( ctx.SegFs != ctx.SegSs, "wrong fs %04x / %04x\n", ctx.SegFs, ctx.SegSs );
+-    todo_wine ok( ctx.SegGs == ctx.SegSs, "wrong gs %04x / %04x\n", ctx.SegGs, ctx.SegSs );
+-    }
++    ok( ctx.SegGs == ctx.SegSs, "wrong gs %04x / %04x\n", ctx.SegGs, ctx.SegSs );
+ }
+ 
+ static DWORD WINAPI simd_fault_handler( EXCEPTION_RECORD *rec, ULONG64 frame,
+@@ -4000,10 +3997,10 @@ static void test_debugger(DWORD cont_status, BOOL with_WaitForDebugEventEx)
+                     USHORT ss;
+                     __asm__( "movw %%ss,%0" : "=r" (ss) );
+                     ok( ctx.SegSs == ss, "wrong ss %04x / %04x\n", ctx.SegSs, ss );
+-                    todo_wine ok( ctx.SegDs == ctx.SegSs, "wrong ds %04x / %04x\n", ctx.SegDs, ctx.SegSs );
+-                    todo_wine ok( ctx.SegEs == ctx.SegSs, "wrong es %04x / %04x\n", ctx.SegEs, ctx.SegSs );
++                    ok( ctx.SegDs == ctx.SegSs, "wrong ds %04x / %04x\n", ctx.SegDs, ctx.SegSs );
++                    ok( ctx.SegEs == ctx.SegSs, "wrong es %04x / %04x\n", ctx.SegEs, ctx.SegSs );
+                     ok( ctx.SegFs != ctx.SegSs, "wrong fs %04x / %04x\n", ctx.SegFs, ctx.SegSs );
+-                    todo_wine ok( ctx.SegGs == ctx.SegSs, "wrong gs %04x / %04x\n", ctx.SegGs, ctx.SegSs );
++                    ok( ctx.SegGs == ctx.SegSs, "wrong gs %04x / %04x\n", ctx.SegGs, ctx.SegSs );
+                     ctx.SegSs = 0;
+                     ctx.SegDs = 0;
+                     ctx.SegEs = ctx.SegFs;
+@@ -4269,7 +4266,7 @@ static void test_thread_context(void)
+     COMPARE( SegDs );
+     COMPARE( SegEs );
+     COMPARE( SegFs );
+-    COMPARE( SegGs );
++    if (expect.SegGs) COMPARE( SegGs );
+     COMPARE( SegSs );
+ 
+     /* AMD CPUs don't save the opcode or data pointer if no exception is
+diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
+index e43d84cfe2c..ff475585cda 100644
+--- a/dlls/ntdll/unix/signal_x86_64.c
++++ b/dlls/ntdll/unix/signal_x86_64.c
+@@ -793,17 +793,7 @@ static inline void set_sigcontext( const CONTEXT *context, ucontext_t *sigcontex
+     RIP_sig(sigcontext) = context->Rip;
+     CS_sig(sigcontext)  = context->SegCs;
+     FS_sig(sigcontext)  = context->SegFs;
+-    GS_sig(sigcontext)  = context->SegGs;
+     EFL_sig(sigcontext) = context->EFlags;
+-#ifdef DS_sig
+-    DS_sig(sigcontext) = context->SegDs;
+-#endif
+-#ifdef ES_sig
+-    ES_sig(sigcontext) = context->SegEs;
+-#endif
+-#ifdef SS_sig
+-    SS_sig(sigcontext) = context->SegSs;
+-#endif
+ }
+ 
+ 
+@@ -832,6 +822,16 @@ static inline void leave_handler( const ucontext_t *sigcontext )
+     if (fs32_sel && !is_inside_signal_stack( (void *)RSP_sig(sigcontext )) && !is_inside_syscall(sigcontext))
+         __asm__ volatile( "movw %0,%%fs" :: "r" (fs32_sel) );
+ #endif
++#ifdef DS_sig
++    DS_sig(sigcontext) = ds64_sel;
++#else
++    __asm__ volatile( "movw %0,%%ds" :: "r" (ds64_sel) );
++#endif
++#ifdef ES_sig
++    ES_sig(sigcontext) = ds64_sel;
++#else
++    __asm__ volatile( "movw %0,%%es" :: "r" (ds64_sel) );
++#endif
+ }
+ 
+ 
+@@ -864,23 +864,11 @@ static void save_context( struct xcontext *xcontext, const ucontext_t *sigcontex
+     context->Rip    = RIP_sig(sigcontext);
+     context->SegCs  = CS_sig(sigcontext);
+     context->SegFs  = FS_sig(sigcontext);
+-    context->SegGs  = GS_sig(sigcontext);
+     context->EFlags = EFL_sig(sigcontext);
+-#ifdef DS_sig
+-    context->SegDs  = DS_sig(sigcontext);
+-#else
+-    __asm__("movw %%ds,%0" : "=m" (context->SegDs));
+-#endif
+-#ifdef ES_sig
+-    context->SegEs  = ES_sig(sigcontext);
+-#else
+-    __asm__("movw %%es,%0" : "=m" (context->SegEs));
+-#endif
+-#ifdef SS_sig
+-    context->SegSs  = SS_sig(sigcontext);
+-#else
+-    __asm__("movw %%ss,%0" : "=m" (context->SegSs));
+-#endif
++    context->SegDs  = ds64_sel;
++    context->SegEs  = ds64_sel;
++    context->SegGs  = ds64_sel;
++    context->SegSs  = ds64_sel;
+     context->Dr0    = amd64_thread_data()->dr0;
+     context->Dr1    = amd64_thread_data()->dr1;
+     context->Dr2    = amd64_thread_data()->dr2;
+@@ -1037,15 +1025,6 @@ NTSTATUS WINAPI NtSetContextThread( HANDLE handle, const CONTEXT *context )
+         frame->rbp    = context->Rbp;
+         frame->rip    = context->Rip;
+         frame->eflags = context->EFlags;
+-        frame->cs     = context->SegCs;
+-        frame->ss     = context->SegSs;
+-    }
+-    if (flags & CONTEXT_SEGMENTS)
+-    {
+-        frame->ds = context->SegDs;
+-        frame->es = context->SegEs;
+-        frame->fs = context->SegFs;
+-        frame->gs = context->SegGs;
+     }
+     if (flags & CONTEXT_FLOATING_POINT)
+     {
+@@ -1113,16 +1092,16 @@ NTSTATUS WINAPI NtGetContextThread( HANDLE handle, CONTEXT *context )
+         context->Rbp    = frame->rbp;
+         context->Rip    = frame->rip;
+         context->EFlags = frame->eflags;
+-        context->SegCs  = frame->cs;
+-        context->SegSs  = frame->ss;
++        context->SegCs  = cs64_sel;
++        context->SegSs  = ds64_sel;
+         context->ContextFlags |= CONTEXT_CONTROL;
+     }
+     if (needed_flags & CONTEXT_SEGMENTS)
+     {
+-        context->SegDs  = frame->ds;
+-        context->SegEs  = frame->es;
+-        context->SegFs  = frame->fs;
+-        context->SegGs  = frame->gs;
++        context->SegDs  = ds64_sel;
++        context->SegEs  = ds64_sel;
++        context->SegFs  = amd64_thread_data()->fs;
++        context->SegGs  = ds64_sel;
+         context->ContextFlags |= CONTEXT_SEGMENTS;
+     }
+     if (needed_flags & CONTEXT_FLOATING_POINT)
+@@ -1350,16 +1329,16 @@ NTSTATUS get_thread_wow64_context( HANDLE handle, void *ctx, ULONG size )
+         context->Ebp    = wow_frame->Ebp;
+         context->Eip    = wow_frame->Eip;
+         context->EFlags = wow_frame->EFlags;
+-        context->SegCs  = wow_frame->SegCs;
+-        context->SegSs  = wow_frame->SegSs;
++        context->SegCs  = cs32_sel;
++        context->SegSs  = ds64_sel;
+         context->ContextFlags |= CONTEXT_I386_CONTROL;
+     }
+     if (needed_flags & CONTEXT_I386_SEGMENTS)
+     {
+-        context->SegDs = wow_frame->SegDs;
+-        context->SegEs = wow_frame->SegEs;
+-        context->SegFs = wow_frame->SegFs;
+-        context->SegGs = wow_frame->SegGs;
++        context->SegDs = ds64_sel;
++        context->SegEs = ds64_sel;
++        context->SegFs = amd64_thread_data()->fs;
++        context->SegGs = ds64_sel;
+         context->ContextFlags |= CONTEXT_I386_SEGMENTS;
+     }
+     if (needed_flags & CONTEXT_I386_EXTENDED_REGISTERS)
+@@ -2509,11 +2488,11 @@ void DECLSPEC_HIDDEN call_init_thunk( LPTHREAD_START_ROUTINE entry, void *arg, B
+         wow_context->Esp = get_wow_teb( teb )->Tib.StackBase - 16;
+         wow_context->Eip = pLdrSystemDllInitBlock->pRtlUserThreadStart;
+         wow_context->SegCs = cs32_sel;
+-        wow_context->SegDs = context.SegDs;
+-        wow_context->SegEs = context.SegEs;
+-        wow_context->SegFs = context.SegFs;
+-        wow_context->SegGs = context.SegGs;
+-        wow_context->SegSs = context.SegSs;
++        wow_context->SegDs = ds64_sel;
++        wow_context->SegEs = ds64_sel;
++        wow_context->SegFs = thread_data->fs;
++        wow_context->SegGs = ds64_sel;
++        wow_context->SegSs = ds64_sel;
+         wow_context->EFlags = 0x202;
+         wow_context->FloatSave.ControlWord = context.FltSave.ControlWord;
+         *(XSAVE_FORMAT *)wow_context->ExtendedRegisters = context.FltSave;
+@@ -2527,6 +2506,8 @@ void DECLSPEC_HIDDEN call_init_thunk( LPTHREAD_START_ROUTINE entry, void *arg, B
+     memset( frame, 0, sizeof(*frame) );
+     NtSetContextThread( GetCurrentThread(), ctx );
+ 
++    frame->cs  = cs64_sel;
++    frame->ss  = ds64_sel;
+     frame->rsp = (ULONG64)ctx - 8;
+     frame->rip = (ULONG64)pLdrInitializeThunk;
+     frame->rcx = (ULONG64)ctx;
+-- 
+GitLab
+

@@ -1,0 +1,158 @@
+From 92baac3e4dcec94bb0c75b38640af2ce5c77e3a5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?D=C4=81vis=20Mos=C4=81ns?= <davispuh@gmail.com>
+Date: Tue, 28 Nov 2023 23:59:07 +0200
+Subject: [PATCH] ntdll: Implement NtContinueEx
+
+Co-authored-by: Etaash Mathamsetty <etaash.mathamsetty@gmail.com>
+---
+ dlls/ntdll/ntdll.spec    |   2 +
+ dlls/ntdll/unix/server.c |  19 +
+ dlls/wow64/process.c     |  14 +-
+ include/winternl.h       |  21 +
+ 5 files changed, 475 insertions(+), 421 deletions(-)
+
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index 1908a089d44..fa4e18f3566 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -166,6 +166,7 @@
+ # @ stub NtCompressKey
+ @ stdcall -syscall NtConnectPort(ptr ptr ptr ptr ptr ptr ptr ptr)
+ @ stdcall -syscall NtContinue(ptr long)
++@ stdcall -syscall NtContinueEx(ptr ptr)
+ @ stdcall -syscall NtCreateDebugObject(ptr long ptr long)
+ @ stdcall -syscall NtCreateDirectoryObject(ptr long ptr)
+ @ stdcall -syscall NtCreateEvent(ptr long ptr long long)
+@@ -1216,6 +1217,7 @@
+ # @ stub ZwCompressKey
+ @ stdcall -private -syscall ZwConnectPort(ptr ptr ptr ptr ptr ptr ptr ptr) NtConnectPort
+ @ stdcall -private -syscall ZwContinue(ptr long) NtContinue
++@ stdcall -private -syscall ZwContinueEx(ptr ptr) NtContinueEx
+ # @ stub ZwCreateDebugObject
+ @ stdcall -private -syscall ZwCreateDirectoryObject(ptr long ptr) NtCreateDirectoryObject
+ @ stdcall -private -syscall ZwCreateEvent(ptr long ptr long long) NtCreateEvent
+diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
+index 1245f1aa508..04867b91ac5 100644
+--- a/dlls/ntdll/unix/server.c
++++ b/dlls/ntdll/unix/server.c
+@@ -818,9 +818,28 @@ unsigned int server_wait( const select_op_t *select_op, data_size_t size, UINT f
+  *              NtContinue  (NTDLL.@)
+  */
+ NTSTATUS WINAPI NtContinue( CONTEXT *context, BOOLEAN alertable )
++{
++    /* NtContinueEx accepts both */
++    return NtContinueEx(context, (PCONTINUE_OPTIONS)(intptr_t)alertable);
++}
++
++
++/***********************************************************************
++ *              NtContinueEx  (NTDLL.@)
++ */
++NTSTATUS WINAPI NtContinueEx( CONTEXT *context, PCONTINUE_OPTIONS options )
+ {
+     user_apc_t apc;
+     NTSTATUS status;
++    BOOLEAN alertable;
++
++    if (options <= 0xff) {
++        alertable = (BOOLEAN)(intptr_t)options;
++    } else {
++        alertable = !!(options->ContinueFlags & CONTINUE_FLAG_TEST_ALERT);
++        /* FIXME: no idea how to handle rest of CONTINUE_OPTIONS stuff */
++        FIXME("NtContinueEx is not implemented!");
++    }
+ 
+     if (alertable)
+     {
+diff --git a/dlls/wow64/process.c b/dlls/wow64/process.c
+index 2af7bf75de2..438fa83c296 100644
+--- a/dlls/wow64/process.c
++++ b/dlls/wow64/process.c
+@@ -441,9 +441,19 @@ NTSTATUS WINAPI wow64_NtClose( UINT *args )
+  *           wow64_NtContinue
+  */
+ NTSTATUS WINAPI wow64_NtContinue( UINT *args )
++{
++    return wow64_NtContinueEx( args );
++}
++
++
++/**********************************************************************
++ *           wow64_NtContinueEx
++ */
++NTSTATUS WINAPI wow64_NtContinueEx( UINT *args )
+ {
+     void *context = get_ptr( &args );
+-    BOOLEAN alertable = get_ulong( &args );
++    CONTINUE_OPTIONS *options = get_ptr( &args );
++    BOOL alertable = options > (CONTINUE_OPTIONS *)0xFF ? options->ContinueFlags & CONTINUE_FLAG_DELIVER_APC : !!options;
+ 
+     NTSTATUS status = get_context_return_value( context );
+     struct user_apc_frame *frame = NtCurrentTeb()->TlsSlots[WOW64_TLS_APCLIST];
+diff --git a/include/winternl.h b/include/winternl.h
+index ff8756211a1..a3325f5c398 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -4283,6 +4283,26 @@ typedef struct _API_SET_VALUE_ENTRY
+     ULONG ValueLength;
+ } API_SET_VALUE_ENTRY;
+ 
++typedef enum _CONTINUE_TYPE
++{
++    CONTINUE_UNWIND,
++    CONTINUE_RESUME,
++    CONTINUE_LONGJUMP,
++    CONTINUE_SET,
++    CONTINUE_LAST,
++} CONTINUE_TYPE;
++
++typedef struct _CONTINUE_OPTIONS
++{
++    CONTINUE_TYPE ContinueType;
++    ULONG ContinueFlags;
++    ULONGLONG Reserved[2];
++} CONTINUE_OPTIONS, *PCONTINUE_OPTIONS;
++
++#define CONTINUE_FLAG_TEST_ALERT  0x00000001
++#define CONTINUE_FLAG_DELIVER_APC 0x00000002
++
++
+ /***********************************************************************
+  * Function declarations
+  */
+@@ -4358,6 +4378,7 @@ NTSYSAPI NTSTATUS  WINAPI NtCompareObjects(HANDLE,HANDLE);
+ NTSYSAPI NTSTATUS  WINAPI NtCompleteConnectPort(HANDLE);
+ NTSYSAPI NTSTATUS  WINAPI NtConnectPort(PHANDLE,PUNICODE_STRING,PSECURITY_QUALITY_OF_SERVICE,PLPC_SECTION_WRITE,PLPC_SECTION_READ,PULONG,PVOID,PULONG);
+ NTSYSAPI NTSTATUS  WINAPI NtContinue(PCONTEXT,BOOLEAN);
++NTSYSAPI NTSTATUS  WINAPI NtContinueEx(PCONTEXT,PCONTINUE_OPTIONS); /* PCONTINUE_OPTIONS can also be BOOLEAN */
+ NTSYSAPI NTSTATUS  WINAPI NtCreateDebugObject(HANDLE*,ACCESS_MASK,OBJECT_ATTRIBUTES*,ULONG);
+ NTSYSAPI NTSTATUS  WINAPI NtCreateDirectoryObject(PHANDLE,ACCESS_MASK,POBJECT_ATTRIBUTES);
+ NTSYSAPI NTSTATUS  WINAPI NtCreateEvent(PHANDLE,ACCESS_MASK,const OBJECT_ATTRIBUTES *,EVENT_TYPE,BOOLEAN);
+-- 
+GitLab
+
+diff --git a/dlls/wow64/syscall.h b/dlls/wow64/syscall.h
+index d4216b8c04c..287a92244a9 100644
+--- a/dlls/wow64/syscall.h
++++ b/dlls/wow64/syscall.h
+@@ -48,6 +48,7 @@
+     SYSCALL_ENTRY( NtCompleteConnectPort ) \
+     SYSCALL_ENTRY( NtConnectPort ) \
+     SYSCALL_ENTRY( NtContinue ) \
++    SYSCALL_ENTRY( NtContinueEx ) \
+     SYSCALL_ENTRY( NtCreateDebugObject ) \
+     SYSCALL_ENTRY( NtCreateDirectoryObject ) \
+     SYSCALL_ENTRY( NtCreateEvent ) \
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index e1f7038425e..051d737cbbc 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -149,6 +149,7 @@ static void * const syscalls[] =
+     NtCompleteConnectPort,
+     NtConnectPort,
+     NtContinue,
++    NtContinueEx,
+     NtCreateDebugObject,
+     NtCreateDirectoryObject,
+     NtCreateEvent,
