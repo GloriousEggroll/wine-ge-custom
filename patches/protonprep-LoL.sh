@@ -396,6 +396,9 @@
     patch -Np1 < ../patches/LoL/LoL-ntdll-implement-ntcontinueex-no-backports.patch
     patch -Np1 < ../patches/LoL/LoL-ntdll-fix-signal-set-full-context.patch
 
+    # https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/2997
+    patch -Np1 < ../patches/LoL/LoL-disable-gstreamer-uxrender.patch
+
 ### END WINE PATCHING ###
     # need to run these after applying patches
     ./dlls/winevulkan/make_vulkan
