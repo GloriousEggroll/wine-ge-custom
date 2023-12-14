@@ -1,0 +1,178 @@
+From d87b3ff060a52b851aec1f66ff4b04fceebfc8ab Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 4 Oct 2014 02:53:22 +0200
+Subject: [PATCH] ntdll: Setup a temporary signal handler during process
+ startup to handle page faults. (v2)
+
+---
+ dlls/ntdll/unix/loader.c        |  2 ++
+ dlls/ntdll/unix/signal_arm.c    |  6 ++++
+ dlls/ntdll/unix/signal_arm64.c  |  6 ++++
+ dlls/ntdll/unix/signal_i386.c   | 52 +++++++++++++++++++++++++++++++++
+ dlls/ntdll/unix/signal_x86_64.c |  6 ++++
+ dlls/ntdll/unix/unix_private.h  |  1 +
+ dlls/ntdll/unix/virtual.c       |  2 +-
+ 7 files changed, 74 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index 4d95c29ab24..4406c1eb634 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -2532,6 +2532,8 @@ void __wine_main( int argc, char *argv[], char *envp[] )
+ #endif
+ 
+     virtual_init();
++    signal_init_early();
++
+     init_environment( argc, argv, envp );
+ 
+ #ifdef __APPLE__
+diff --git a/dlls/ntdll/unix/signal_arm.c b/dlls/ntdll/unix/signal_arm.c
+index fe51629838c..a39f158530a 100644
+--- a/dlls/ntdll/unix/signal_arm.c
++++ b/dlls/ntdll/unix/signal_arm.c
+@@ -1584,6 +1584,12 @@ void signal_init_process(void)
+     exit(1);
+ }
+ 
++/**********************************************************************
++ *    signal_init_early
++ */
++void signal_init_early(void)
++{
++}
+ 
+ /***********************************************************************
+  *           call_init_thunk
+diff --git a/dlls/ntdll/unix/signal_arm64.c b/dlls/ntdll/unix/signal_arm64.c
+index 794aa7b2925..bf8e69f1661 100644
+--- a/dlls/ntdll/unix/signal_arm64.c
++++ b/dlls/ntdll/unix/signal_arm64.c
+@@ -1381,6 +1381,12 @@ void signal_init_process(void)
+     exit(1);
+ }
+ 
++/**********************************************************************
++ *    signal_init_early
++ */
++void signal_init_early(void)
++{
++}
+ 
+ /***********************************************************************
+  *           call_init_thunk
+diff --git a/dlls/ntdll/unix/signal_i386.c b/dlls/ntdll/unix/signal_i386.c
+index cc8605c2a4f..bfd0c3eb7ef 100644
+--- a/dlls/ntdll/unix/signal_i386.c
++++ b/dlls/ntdll/unix/signal_i386.c
+@@ -1839,6 +1839,30 @@ static BOOL handle_syscall_trap( ucontext_t *sigcontext )
+ }
+ 
+ 
++/**********************************************************************
++ *    segv_handler_early
++ *
++ * Handler for SIGSEGV and related errors. Used only during the initialization
++ * of the process to handle virtual faults.
++ */
++static void segv_handler_early( int signal, siginfo_t *siginfo, void *sigcontext )
++{
++    ucontext_t *ucontext = sigcontext;
++
++    switch (TRAP_sig(ucontext))
++    {
++    case TRAP_x86_PAGEFLT:  /* Page fault */
++        if (!virtual_handle_fault( siginfo->si_addr, (ERROR_sig(ucontext) >> 1) & 0x09,
++                NULL))
++            return;
++        /* fall-through */
++    default:
++        WINE_ERR( "Got unexpected trap %d during process initialization\n", TRAP_sig(ucontext) );
++        abort_thread(1);
++        break;
++    }
++}
++
+ /**********************************************************************
+  *		segv_handler
+  *
+@@ -2410,6 +2434,34 @@ void signal_init_process(void)
+     exit(1);
+ }
+ 
++/**********************************************************************
++ *    signal_init_early
++ */
++void signal_init_early(void)
++{
++    struct sigaction sig_act;
++
++    sig_act.sa_mask = server_block_set;
++    sig_act.sa_flags = SA_SIGINFO | SA_RESTART;
++#ifdef SA_ONSTACK
++    sig_act.sa_flags |= SA_ONSTACK;
++#endif
++#ifdef __ANDROID__
++    sig_act.sa_flags |= SA_RESTORER;
++    sig_act.sa_restorer = rt_sigreturn;
++#endif
++    sig_act.sa_sigaction = segv_handler_early;
++    if (sigaction( SIGSEGV, &sig_act, NULL ) == -1) goto error;
++    if (sigaction( SIGILL, &sig_act, NULL ) == -1) goto error;
++#ifdef SIGBUS
++    if (sigaction( SIGBUS, &sig_act, NULL ) == -1) goto error;
++#endif
++    return;
++
++error:
++    perror("sigaction");
++    exit(1);
++}
+ 
+ /***********************************************************************
+  *           call_init_thunk
+diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
+index cc070dda5ae..3b0f671afe2 100644
+--- a/dlls/ntdll/unix/signal_x86_64.c
++++ b/dlls/ntdll/unix/signal_x86_64.c
+@@ -2462,6 +2462,12 @@ void signal_init_process(void)
+     exit(1);
+ }
+ 
++/**********************************************************************
++ *    signal_init_early
++ */
++void signal_init_early(void)
++{
++}
+ 
+ /***********************************************************************
+  *           call_init_thunk
+diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
+index fa7b97117ff..12a484d079a 100644
+--- a/dlls/ntdll/unix/unix_private.h
++++ b/dlls/ntdll/unix/unix_private.h
+@@ -241,6 +241,7 @@ extern void signal_init_threading(void) DECLSPEC_HIDDEN;
+ extern NTSTATUS signal_alloc_thread( TEB *teb ) DECLSPEC_HIDDEN;
+ extern void signal_free_thread( TEB *teb ) DECLSPEC_HIDDEN;
+ extern void signal_init_process(void) DECLSPEC_HIDDEN;
++extern void signal_init_early(void) DECLSPEC_HIDDEN;
+ extern void DECLSPEC_NORETURN signal_start_thread( PRTL_THREAD_START_ROUTINE entry, void *arg,
+                                                    BOOL suspend, TEB *teb ) DECLSPEC_HIDDEN;
+ extern void DECLSPEC_NORETURN signal_exit_thread( int status, void (*func)(int), TEB *teb ) DECLSPEC_HIDDEN;
+diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
+index 45089ae5845..0a9c4f2feb0 100644
+--- a/dlls/ntdll/unix/virtual.c
++++ b/dlls/ntdll/unix/virtual.c
+@@ -3279,7 +3279,7 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
+ 
+     mutex_lock( &virtual_mutex );  /* no need for signal masking inside signal handler */
+     vprot = get_page_vprot( page );
+-    if (!is_inside_signal_stack( stack ) && (vprot & VPROT_GUARD))
++    if (stack && !is_inside_signal_stack( stack ) && (vprot & VPROT_GUARD))
+     {
+         struct thread_stack_info stack_info;
+         if (!is_inside_thread_stack( page, &stack_info ))
+-- 
+2.38.1
+

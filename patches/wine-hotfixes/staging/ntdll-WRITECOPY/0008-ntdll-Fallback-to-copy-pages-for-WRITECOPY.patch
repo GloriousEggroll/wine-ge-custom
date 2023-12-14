@@ -1,0 +1,65 @@
+From f26f4f9338473fee2ad3901fe5b259ac26e66f3c Mon Sep 17 00:00:00 2001
+From: Andrew Wesie <awesie@gmail.com>
+Date: Tue, 28 Apr 2020 03:27:16 -0500
+Subject: [PATCH] ntdll: Fallback to copy pages for WRITECOPY.
+
+When a file is first mapped, whether it is mapped shared or private is
+determined by whether it is mapped with WRITECOPY. If the page protection later
+changes to include WRITECOPY, then virtual_handle_fault needs to change the page
+from shared to private. The only way to do this on Linux is to copy the page
+contents to a temporary location, map an anonymous page to the old location,
+then copy the contents to the new page.
+
+Signed-off-by: Andrew Wesie <awesie@gmail.com>
+---
+ dlls/ntdll/unix/virtual.c | 25 +++++++++++++++++++++----
+ 1 file changed, 21 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
+index 8346baf77a9..457468b47d9 100644
+--- a/dlls/ntdll/unix/virtual.c
++++ b/dlls/ntdll/unix/virtual.c
+@@ -1587,8 +1587,9 @@ static BOOL set_vprot( struct file_view *view, void *base, size_t size, BYTE vpr
+         return TRUE;
+     }
+ 
+-    /* check that we can map this memory with PROT_WRITE since we cannot fail later */
+-    if (vprot & VPROT_WRITECOPY)
++    /* check that we can map this memory with PROT_WRITE since we cannot fail later,
++     * but we fallback to copying pages for read-only mappings in virtual_handle_fault */
++    if ((vprot & VPROT_WRITECOPY) && (view->protect & VPROT_WRITECOPY))
+         unix_prot |= PROT_WRITE;
+ 
+     if (mprotect_exec( base, size, unix_prot )) return FALSE;
+@@ -3335,10 +3336,26 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
+             set_page_vprot_bits( page, page_size, 0, VPROT_WRITEWATCH );
+             mprotect_range( page, page_size, 0, 0 );
+         }
+-        if (vprot & VPROT_WRITECOPY)
++        if ((vprot & VPROT_WRITECOPY) && (vprot & VPROT_COMMITTED))
+         {
++            struct file_view *view = find_view( page, 0 );
++
+             set_page_vprot_bits( page, page_size, VPROT_WRITE | VPROT_COPIED, VPROT_WRITECOPY );
+-            mprotect_range( page, page_size, 0, 0 );
++            if (view->protect & VPROT_WRITECOPY)
++            {
++                mprotect_range( page, page_size, 0, 0 );
++            }
++            else
++            {
++                static BYTE *temp_page = NULL;
++                if (!temp_page)
++                    temp_page = anon_mmap_alloc( page_size, PROT_READ | PROT_WRITE );
++
++                /* original mapping is shared, replace with a private page */
++                memcpy( temp_page, page, page_size );
++                anon_mmap_fixed( page, page_size, get_unix_prot( vprot | VPROT_WRITE | VPROT_COPIED ), 0 );
++                memcpy( page, temp_page, page_size );
++            }
+         }
+         /* ignore fault if page is writable now */
+         if (get_unix_prot( get_page_vprot( page ) ) & PROT_WRITE) ret = STATUS_SUCCESS;
+-- 
+2.30.2
+
