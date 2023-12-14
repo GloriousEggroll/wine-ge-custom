@@ -1,0 +1,19 @@
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index 8d134c58718..44a2973d13c 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -2411,6 +2411,14 @@ static void hacks_init(void)
+         setenv("vk_x11_override_min_image_count", "2", 0);
+         setenv("vk_x11_strict_image_count", "true", 0);
+     }
++    if (main_argc > 1 &&
++                          (strstr(main_argv[1], "RiotClientUxRender.exe")
++                           || (strstr(main_argv[1], "LeagueClientUxRender.exe"))
++                           || (strstr(main_argv[1], "RiotClientServices.exe"))
++                           || (strstr(main_argv[1], "LeagueClient.exe"))))
++    {
++        setenv("GST_GL_WINDOW", "surfaceless", 0);
++    }
+ }
+ 
+ #ifdef _WIN64
