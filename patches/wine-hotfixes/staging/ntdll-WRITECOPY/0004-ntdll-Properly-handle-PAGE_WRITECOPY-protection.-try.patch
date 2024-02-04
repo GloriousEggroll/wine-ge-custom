@@ -1,0 +1,105 @@
+From 4a297f731112822e51086826f975bf5db9178e52 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20M=C3=BCller?= <michael@fds-team.de>
+Date: Sat, 4 Oct 2014 03:22:09 +0200
+Subject: [PATCH] ntdll: Properly handle PAGE_WRITECOPY protection. (try 5)
+
+For now, only enable it when a special environment variable is set.
+---
+ dlls/ntdll/unix/virtual.c | 46 +++++++++++++++++++++++++++++++++------
+ 1 file changed, 39 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
+index cf0c1598720..ff585c647bc 100644
+--- a/dlls/ntdll/unix/virtual.c
++++ b/dlls/ntdll/unix/virtual.c
+@@ -495,6 +495,21 @@ static void reserve_area( void *addr, void *end )
+ #endif /* __APPLE__ */
+ }
+ 
++/* This might look like a hack, but it actually isn't - the 'experimental' version
++ * is correct, but it already has revealed a couple of additional Wine bugs, which
++ * were not triggered before, and there are probably some more.
++ * To avoid breaking Wine for everyone, the new correct implementation has to be
++ * manually enabled, until it is tested a bit more. */
++static inline BOOL experimental_WRITECOPY( void )
++{
++    static int enabled = -1;
++    if (enabled == -1)
++    {
++        const char *str = getenv("WINE_SIMULATE_WRITECOPY");
++        enabled = str && (atoi(str) != 0);
++    }
++    return enabled;
++}
+ 
+ static void mmap_init( const struct preload_info *preload_info )
+ {
+@@ -852,8 +867,19 @@ static int get_unix_prot( BYTE vprot )
+     {
+         if (vprot & VPROT_READ) prot |= PROT_READ;
+         if (vprot & VPROT_WRITE) prot |= PROT_WRITE | PROT_READ;
+-        if (vprot & VPROT_WRITECOPY) prot |= PROT_WRITE | PROT_READ;
+         if (vprot & VPROT_EXEC) prot |= PROT_EXEC | PROT_READ;
++#if defined(__i386__)
++        if (vprot & VPROT_WRITECOPY)
++        {
++            if (experimental_WRITECOPY())
++                prot = (prot & ~PROT_WRITE) | PROT_READ;
++            else
++                prot |= PROT_WRITE | PROT_READ;
++        }
++#else
++        /* FIXME: Architecture needs implementation of signal_init_early. */
++        if (vprot & VPROT_WRITECOPY) prot |= PROT_WRITE | PROT_READ;
++#endif
+         if (vprot & VPROT_WRITEWATCH && !use_kernel_writewatch) prot &= ~PROT_WRITE;
+     }
+     if (!prot) prot = PROT_NONE;
+@@ -1457,7 +1483,7 @@ static void update_write_watches( void *base, size_t size, size_t accessed_size
+ {
+     TRACE( "updating watch %p-%p-%p\n", base, (char *)base + accessed_size, (char *)base + size );
+     /* clear write watch flag on accessed pages */
+-    set_page_vprot_bits( base, accessed_size, 0, VPROT_WRITEWATCH );
++    set_page_vprot_bits( base, accessed_size, VPROT_WRITE, VPROT_WRITEWATCH | VPROT_WRITECOPY );
+     /* restore page protections on the entire range */
+     mprotect_range( base, size, 0, 0 );
+ }
+@@ -2985,12 +3011,13 @@ NTSTATUS virtual_handle_fault( void *addr, DWORD err, void *stack )
+             set_page_vprot_bits( page, page_size, 0, VPROT_WRITEWATCH );
+             mprotect_range( page, page_size, 0, 0 );
+         }
+-        /* ignore fault if page is writable now */
+-        if (get_unix_prot( get_page_vprot( page )) & PROT_WRITE)
++        if (vprot & VPROT_WRITECOPY)
+         {
+-            if ((vprot & VPROT_WRITEWATCH) || is_write_watch_range( page, page_size ))
+-                ret = STATUS_SUCCESS;
++            set_page_vprot_bits( page, page_size, VPROT_WRITE, VPROT_WRITECOPY );
++            mprotect_range( page, page_size, 0, 0 );
+         }
++        /* ignore fault if page is writable now */
++        if (get_unix_prot( get_page_vprot( page ) ) & PROT_WRITE) ret = STATUS_SUCCESS;
+     }
+     mutex_unlock( &virtual_mutex );
+     return ret;
+@@ -3067,11 +3094,16 @@ static NTSTATUS check_write_access( void *base, size_t size, BOOL *has_write_wat
+     {
+         BYTE vprot = get_page_vprot( addr + i );
+         if (!use_kernel_writewatch && vprot & VPROT_WRITEWATCH) *has_write_watch = TRUE;
++        if (!use_kernel_writewatch && vprot & VPROT_WRITECOPY)
++        {
++            vprot = (vprot & ~VPROT_WRITECOPY) | VPROT_WRITE;
++            *has_write_watch = TRUE;
++        }
+         if (!(get_unix_prot( vprot & ~VPROT_WRITEWATCH ) & PROT_WRITE))
+             return STATUS_INVALID_USER_BUFFER;
+     }
+     if (!use_kernel_writewatch && *has_write_watch)
+-        mprotect_range( addr, size, 0, VPROT_WRITEWATCH );  /* temporarily enable write access */
++        mprotect_range( addr, size, VPROT_WRITE, VPROT_WRITEWATCH | VPROT_WRITECOPY );  /* temporarily enable write access */
+     return STATUS_SUCCESS;
+ }
+
+-- 
+2.28.0
+

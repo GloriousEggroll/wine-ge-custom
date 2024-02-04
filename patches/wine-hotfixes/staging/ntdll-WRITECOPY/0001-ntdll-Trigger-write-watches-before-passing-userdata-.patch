@@ -1,0 +1,35 @@
+From 00a5e4e8b55ad439d5c3d8faa876d08df8be759f Mon Sep 17 00:00:00 2001
+From: Sebastian Lackner <sebastian@fds-team.de>
+Date: Sat, 4 Oct 2014 02:35:44 +0200
+Subject: [PATCH] ntdll: Trigger write watches before passing userdata pointer
+ to wait_reply.
+
+---
+ dlls/ntdll/unix/server.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
+index 6af8effe9e1..6dbd9cb3ea0 100644
+--- a/dlls/ntdll/unix/server.c
++++ b/dlls/ntdll/unix/server.c
+@@ -282,9 +282,17 @@ unsigned int server_call_unlocked( void *req_ptr )
+  */
+ unsigned int CDECL wine_server_call( void *req_ptr )
+ {
++    struct __server_request_info * const req = req_ptr;
+     sigset_t old_set;
+     unsigned int ret;
+ 
++    /* trigger write watches, otherwise read() might return EFAULT */
++    if (req->u.req.request_header.reply_size &&
++        !virtual_check_buffer_for_write( req->reply_data, req->u.req.request_header.reply_size ))
++    {
++        return STATUS_ACCESS_VIOLATION;
++    }
++
+     pthread_sigmask( SIG_BLOCK, &server_block_set, &old_set );
+     ret = server_call_unlocked( req_ptr );
+     pthread_sigmask( SIG_SETMASK, &old_set, NULL );
+-- 
+2.20.1
+

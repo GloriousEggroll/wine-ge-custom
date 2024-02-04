@@ -1,0 +1,30 @@
+From 52baf4b2f68a78a2d0a0ad16fac8e25af70400ff Mon Sep 17 00:00:00 2001
+From: Andrew Wesie <awesie@gmail.com>
+Date: Fri, 24 Apr 2020 14:55:17 -0500
+Subject: [PATCH] ntdll: Report unmodified WRITECOPY pages as shared.
+
+We also need to clear the modified bit after we clear memory in map_image to
+match the behavior of Windows.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=48665
+Signed-off-by: Andrew Wesie <awesie@gmail.com>
+---
+ dlls/ntdll/unix/virtual.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
+index 6c530304442..05d4d517aeb 100644
+--- a/dlls/ntdll/unix/virtual.c
++++ b/dlls/ntdll/unix/virtual.c
+@@ -4420,7 +4422,7 @@ static NTSTATUS get_working_set_ex( HANDLE process, LPCVOID addr,
+             }
+ 
+             p->VirtualAttributes.Valid = !(vprot & VPROT_GUARD) && (vprot & 0x0f) && (pagemap >> 63);
+-            p->VirtualAttributes.Shared = !is_view_valloc( view ) && ((pagemap >> 61) & 1);
++            p->VirtualAttributes.Shared = (!is_view_valloc( view ) && ((pagemap >> 61) & 1)) || ((view->protect & VPROT_WRITECOPY) && !(vprot & VPROT_COPIED));
+             if (p->VirtualAttributes.Shared && p->VirtualAttributes.Valid)
+                 p->VirtualAttributes.ShareCount = 1; /* FIXME */
+             if (p->VirtualAttributes.Valid)
+-- 
+2.35.1
+

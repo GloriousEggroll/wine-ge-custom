@@ -6,7 +6,7 @@
 
 ### (2) WINE PATCHING ###
 
-    cd proton-wine
+    pushd proton-wine
     git reset --hard HEAD
     git clean -xdf
 
@@ -109,7 +109,8 @@
     -W wined3d-Indexed_Vertex_Blending \
     -W shell32-registry-lookup-app \
     -W winepulse-PulseAudio_Support \
-    -W d3dx9_36-D3DXStubs
+    -W d3dx9_36-D3DXStubs \
+    -W ntdll-ext4-case-folder
 
     # NOTE: Some patches are applied manually because they -do- apply, just not cleanly, ie with patch fuzz.
     # A detailed list of why the above patches are disabled is listed below:
@@ -149,7 +150,7 @@
     # ** ntdll-Exception - applied manually
     # ** ntdll-Hide_Wine_Exports - applied manually
     # ** ntdll-Serial_Port_Detection - applied manually
-    # server-default_integrity - causes steam.exe to stay open after game closes
+    # server-default_integrity - causes steam.exe to stay open after a game closes
     # user32-rawinput-mouse - already applied
     # user32-rawinput-mouse-experimental - already applied
     # user32-recursive-activation - already applied
@@ -187,6 +188,8 @@
     # ** winex11-XEMBED - applied manually
     # ** shell32-registry-lookup-app - applied manually
     # ** winepulse-PulseAudio_Support - applied manually
+    # d3dx9_36-D3DXStubs - already applied
+    # ** ntdll-ext4-case-folder - applied manually
     #
     # Paul Gofman — Yesterday at 3:49 PM
     # that’s only for desktop integration, spamming native menu’s with wine apps which won’t probably start from there anyway
@@ -195,7 +198,6 @@
     # winemenubuilder-integration -- winemenubuilder is disabled in proton and is not needed
     # wined3d-SWVP-shaders -- interferes with proton's wined3d
     # wined3d-Indexed_Vertex_Blending -- interferes with proton's wined3d
-    # d3dx9_36-D3DXStubs -- implemented in proton
 
     echo "WINE: -STAGING- applying staging Compiler_Warnings revert for steamclient compatibility"
     # revert this, it breaks lsteamclient compilation
@@ -217,6 +219,9 @@
 
     # ntdll-Serial_Port_Detection
     patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-Serial_Port_Detection/0001-ntdll-Do-a-device-check-before-returning-a-default-s.patch
+
+    # ntdll-WRITECOPY
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-WRITECOPY/0007-ntdll-Report-unmodified-WRITECOPY-pages-as-shared.patch
 
     # mouse rawinput
     # per discussion with remi:
@@ -286,10 +291,10 @@
 
     # shell32-NewMenu_Interface
     patch -Np1 < ../patches/wine-hotfixes/staging/shell32-NewMenu_Interface/0001-shell32-Implement-NewMenu-with-new-folder-item.patch
-    
+
     # user32-FlashWindowEx
     patch -Np1 < ../patches/wine-hotfixes/staging/user32-FlashWindowEx/0001-user32-Improve-FlashWindowEx-message-and-return-valu.patch
-    
+
     # kernel32-Debugger
     patch -Np1 < ../wine-staging/patches/kernel32-Debugger/0001-kernel32-Always-start-debugger-on-WinSta0.patch
 
@@ -298,6 +303,9 @@
 
     # winepulse-PulseAudio_Support
     patch -Np1 < ../patches/wine-hotfixes/staging/winepulse-PulseAudio_Support/0001-winepulse.drv-Use-a-separate-mainloop-and-ctx-for-pu.patch
+
+    # ntdll-ext4-case-folder
+    patch -Np1 < ../patches/wine-hotfixes/staging/ntdll-ext4-case-folder/0002-ntdll-server-Mark-drive_c-as-case-insensitive-when-c.patch
 
 ### END WINE STAGING APPLY SECTION ###
 
@@ -352,7 +360,8 @@
     patch -Np1 < ../patches/wine-hotfixes/pending/hotfix-guild_wars_2.patch
 
     # https://github.com/ValveSoftware/wine/pull/205
-    echo "WINE: -PENDING- Add WINE_DISABLE_SFN option."
+    # https://github.com/ValveSoftware/Proton/issues/4625
+    echo "WINE: -PENDING- Add WINE_DISABLE_SFN option. (Yakuza 5 cutscenes fix)"
     patch -Np1 < ../patches/wine-hotfixes/pending/ntdll_add_wine_disable_sfn.patch
 
 ### END WINE PENDING UPSTREAM SECTION ###
@@ -362,7 +371,7 @@
 
     echo "WINE: -PROTON- Remove steamclient patches for normal WINE usage"
     patch -Np1 < ../patches/proton/0001-De-steamify-proton-s-WINE-so-it-can-be-used-as-a-sta.patch
-    
+
     echo "WINE: -PROTON- Fix non-steam controller input"
     patch -Np1 < ../patches/proton/fix-non-steam-controller-input.patch
 
@@ -386,3 +395,4 @@
     ./dlls/winevulkan/make_vulkan
     ./tools/make_requests
     autoreconf -f
+    popd

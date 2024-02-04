@@ -1,0 +1,5 @@
+Fixes: [29384] Multiple applications expect correct handling of WRITECOPY memory protection (Voobly fails to launch Age of Empires II, MSYS2)
+#Depends: ntdll-ForceBottomUpAlloc
+# Causes regressions?
+# https://bugs.wine-staging.com/show_bug.cgi?id=207
+# https://bugs.wine-staging.com/show_bug.cgi?id=521

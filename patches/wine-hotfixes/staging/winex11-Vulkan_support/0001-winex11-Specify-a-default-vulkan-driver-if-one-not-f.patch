@@ -72,7 +72,7 @@ index f4fe202dfaf..1768444b2e5 100644
 -{
 -}
 -
--void resize_vk_surfaces(HWND hwnd, Window active, int mask, XWindowChanges changes)
+-void resize_vk_surfaces(HWND hwnd, Window active, int mask, XWindowChanges *changes)
 -{
 -}
 -
