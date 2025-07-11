@@ -1,5 +1,5 @@
 
-## THIS REPO IS DEAD. UMU-LAUNCHER IS IT'S SUCCESSOR:
+## THIS REPO IS DEAD. UMU-LAUNCHER IS ITS SUCCESSOR:
 https://github.com/Open-Wine-Components/umu-launcher
 
 
