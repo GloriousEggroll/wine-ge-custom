@@ -1,3 +1,8 @@
+
+## THIS REPO IS DEAD. UMU-LAUNCHER IS IT'S SUCCESSOR:
+https://github.com/Open-Wine-Components/umu-launcher
+
+
 # wine-ge-custom
 
 This is my build of WINE based on/forked from the most recent bleeding-edge proton experimental wine repo. This is meant to be used with non-steam games outside of Steam.
